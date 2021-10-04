@@ -1,112 +1,42 @@
 <template>
-  <v-app>
-    <!--
-    <v-navigation-drawer
-      v-model="drawer"
-      :mini-variant="miniVariant"
-      :clipped="clipped"
-      fixed
-      app
-    >
-      <v-list>
-        <v-list-item
-          v-for="(item, i) in items"
-          :key="i"
-          :to="item.to"
-          router
-          exact
-        >
-          <v-list-item-action>
-            <v-icon>{{ item.icon }}</v-icon>
-          </v-list-item-action>
-          <v-list-item-content>
-            <v-list-item-title v-text="item.title" />
-          </v-list-item-content>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
-    -->
-    <v-app-bar
-      :clipped-left="clipped"
-      fixed
-      app
-      color="primary"
-      dark
-      dense
-    >
-      <!--
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer" />
-      <v-btn
-        icon
-        @click.stop="miniVariant = !miniVariant"
-      >
-        <v-icon>mdi-{{ `chevron-${miniVariant ? 'right' : 'left'}` }}</v-icon>
-      </v-btn>
-      -->
-      <!--
-      <v-btn
-        icon
-        @click.stop="clipped = !clipped"
-      >
-        <v-icon>mdi-application</v-icon>
-      </v-btn>
-      -->
-      <!--
-      <v-btn
-        icon
-        @click.stop="fixed = !fixed"
-      >
-        <v-icon>mdi-minus</v-icon>
-      </v-btn>
-      -->
-      <!-- nuxt to="/" -->
-      <v-btn icon @click="sendToHome()"><img src="/fhir-app/images/seal_logo.png" style="height:30px;width:30px;"/></v-btn>
-      
-      <v-toolbar-title v-text="pageTitle()" />
-      <v-spacer />
-      <!--
-      <v-btn
-        icon
-        @click.stop="rightDrawer = !rightDrawer"
-      >
-        <v-icon>mdi-menu</v-icon>
-      </v-btn>
-      -->
-    </v-app-bar>
-    <v-main>
-      <v-container fluid>
+  <b-container fluid style="height:100vh" class="nopadding">
+    <b-row no-gutters>
+      <b-col cols="12">
+        <b-navbar variant="primary" id="sealnav">
+          <b-navbar-brand>
+            <b-img src="seal_home.png" rounded @click="sendToHome()" 
+            style="height:30px;width:30px;" class="mr-3"
+            v-b-tooltip.hover title="SEAL Home"></b-img>
+          </b-navbar-brand>
+          <b-navbar-toggle target="nav-collapse"></b-navbar-toggle>
+          <b-collapse id="nav-collapse" is-nav> 
+            <b-nav-text style="font-size:1.6em;font-weight:bold;" class="text-white">{{pageTitle()}}</b-nav-text>
+            <b-navbar-nav class="ml-auto">
+              <b-button variant="link" size="sm" class="mr-1"
+                v-b-tooltip.hover title="Home" @click="sendToHome()">  
+                <b-img src="home_white.png" style="height:26px;width:26px;"></b-img>
+                <!--<b-icon icon="house-door-fill" variant="light" font-scale="2"></b-icon>-->
+              </b-button>              
+              <b-button v-b-modal.feedback-modal variant="link" size="sm" class="mr-1"
+                v-b-tooltip.hover title="Feedback">
+                <b-icon icon="chat-dots-fill" variant="light" font-scale="2"></b-icon>
+              </b-button>
+              <b-button variant="link" size="sm" class="mr-2"
+                v-b-tooltip.hover title="Help" @click="openHelp()">
+                <b-icon icon="question-circle-fill" variant="light" font-scale="2"></b-icon>
+              </b-button>
+            </b-navbar-nav>
+          </b-collapse>
+        </b-navbar>    
+      </b-col>
+    </b-row>
+    <b-row no-gutters>
+      <b-col cols="12">
         <nuxt />
-        <feedback-form/>
-      </v-container>
-    </v-main>
-    <!--
-    <v-navigation-drawer
-      v-model="rightDrawer"
-      :right="right"
-      temporary
-      fixed
-    >
-      <v-list>
-        <v-list-item @click.native="right = !right">
-          <v-list-item-action>
-            <v-icon light>
-              mdi-repeat
-            </v-icon>
-          </v-list-item-action>
-          <v-list-item-title>Switch drawer (click me)</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-navigation-drawer>
-    -->
-    <!--
-    <v-footer
-      :absolute="!fixed"
-      app
-    >
-      <span>&copy; {{ new Date().getFullYear() }}</span>
-    </v-footer>
-    -->
-  </v-app>
+      </b-col>
+    </b-row>
+    <feedback-form />
+  </b-container>
 </template>
 
 <script>
@@ -115,24 +45,6 @@ export default {
   components: { FeedbackForm },
   data () {
     return {
-      clipped: true,
-      drawer: false,
-      fixed: false,
-      items: [
-        {
-          icon: 'mdi-apps',
-          title: 'SEAL Home',
-          to: '/'
-        },
-        {
-          icon: 'mdi-calculator',
-          title: 'CHA2DS2-VAsc Calc',
-          to: '/strokeriskcalc'
-        }
-      ],
-      miniVariant: false,
-      right: false,
-      rightDrawer: false,
       title: 'SEAL'
     }
   },
@@ -141,9 +53,49 @@ export default {
       return this.$store.state.pageTitle ;
     },
     sendToHome() {
-      console.log("Redirecting it to :" + window.location.origin + '/fhir-app/' ) ;
-      window.location.href=window.location.origin + '/fhir-app/' ;
+      this.$nuxt.$router.push("/") ;
+    },
+    openHelp() {
+      if (this.$store.state.currentApp.help) {
+        this.$bvModal.show(this.$store.state.currentApp.help) ;
+      }
     }
   }  
 }
 </script>
+
+<style scoped>
+
+  #sealnav {
+    background-image: linear-gradient(to right, #8d2c38 , #47a3ff);
+  }
+
+  .navbar {
+    padding-top: 0.3em ;
+    padding-bottom: 0.3em ;
+    padding-right: 0.5em ;
+    padding-left: 0.5em ;
+  }
+
+  .navbar-text {
+    padding-top: 0 ;
+    padding-bottom: 0;
+  }
+    
+</style>
+
+<style>
+  a {
+    color: black ;
+  }
+  .rounded-lg {
+    border-radius: .8em !important ;
+  }
+  .nav-tabs .nav-link {
+      background-color: #b7b7b7;
+      font-weight: bold;        
+  }
+  .smallfont {
+      font-size: .95em !important;
+  } 
+</style>

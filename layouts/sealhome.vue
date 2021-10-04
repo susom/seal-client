@@ -1,30 +1,7 @@
 <template>
-  <v-app>
-    <v-app-bar
-      fixed
-      app
-      color="primary"
-      dark
-      dense
-    >
-      <v-toolbar-title v-text="title"/>
-      <v-spacer />
-    </v-app-bar>
-    <v-main class="sealhome">
-      <v-container fluid>
+    <b-container class="nopadding" fluid>
         <nuxt />
-      </v-container>
-    </v-main>
-    <!--
-    <v-footer
-      app
-      dark
-      color="primary"
-    >
-      <span>&copy; {{ new Date().getFullYear() }}</span>
-    </v-footer>
-    -->
-  </v-app>
+    </b-container>
 </template>
 
 <script>
@@ -38,14 +15,13 @@ export default {
 </script>
 
 <style>
-    .sealhome {
-        background-color: #daf7ff ;     
-        background-image: url(/fhir-app/images/seal_banner.jpg);       
-        background-position-y: bottom;
-        background-repeat: no-repeat;
-        background-size: contain;
+    .body345 {
+        background-image: url('../assets/02-TransparentBg.png');
+        background-repeat: repeat;
+        background-size: contain;  
     }
-    .homeTitleBar {
-      background-color: blue;
+    div.nopadding {
+      padding-right: 0px;
+      padding-left: 0px ;
     }
 </style>

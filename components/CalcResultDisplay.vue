@@ -2,7 +2,7 @@
     <table>
         <thead>
             <tr>
-                <th  class="text-h6 text-center" v-for="(row, index) in rows" :key="row.text" >
+                <th  class="text-h6 text-center" v-for="row in rows" :key="row.text" >
                     <span v-html="row.text"></span>
                 </th>
             </tr>

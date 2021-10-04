@@ -1,146 +1,92 @@
 <template>
-  <v-container html2canvas-ignore="true">
-  <v-row justify="center">
-    <v-dialog v-model="dialog" persistent max-width="600px">
-      <template v-slot:activator="{ on, attrs }">
-        <v-fab-transition>
-          <v-btn
-            color="primary"
-            class="mb-10"
-            dark
-            absolute            
-            right
-            fab
-            v-bind="attrs"
-            v-on="on"
-            style="bottom:50%"
-          >
-            <v-icon>mdi-pencil</v-icon>
-          </v-btn>
-        </v-fab-transition>
-      </template>
-      <v-card id="modalDiv">
-        <v-card-title>
-          <span class="headline">Feedback</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-form v-model="valid">
-            <v-row dense>
-              <v-col cols="12">
-                <v-text-field
-                  label="Title*"
+  <!-- eslint-disable -->
+  <b-container>
+    <!--
+    <b-button size="lg" variant="primary" v-b-modal.feedback-modal class="mb-2" style="position:fixed;right:5px;bottom:50%;">
+      <b-icon icon="chat-dots-fill" aria-label="Feedback"></b-icon>
+    </b-button>
+    -->
+    <b-modal id="feedback-modal" button-size="sm" hide-footer centered title="Feedback" data-html2canvas-ignore>
+      <b-form novalidate >
+          <b-form-group id="title">
+              <b-form-input
+                  id="title"
                   v-model="title"
-                  placeholder="Feedback title"
-                  outlined
-                  required
-                  hide-details
-                  dense
-                  :rules="[rules.required]"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12">
-                <v-textarea
-                  label="Comment"
+                  type="text"
+                  placeholder="Feedback Title"                  
+                  size="sm"                  
+              ></b-form-input>              
+          </b-form-group>
+          <b-form-group id="comment">
+              <b-form-textarea
+                  id="comment"
                   v-model="comment"
-                  outlined
-                  hide-details
-                  dense
                   placeholder="Please tell us what bug or issue you've found, provide as much detail as possible."
-                >
-                </v-textarea>
-              </v-col>
-              <v-col cols="12">
-                <v-switch
-                  v-model="include_screenshot"
-                  inset
-                  dense
-                  label="Include Screenshot"
-                ></v-switch>
-              </v-col>
-              <!--
-              <v-col cols="12">
-                <v-text-field
-                  label="Email*"
+                  rows="4"
+                  size="sm"
+              ></b-form-textarea>
+          </b-form-group>
+          <b-form-group id="include_screenshot">
+            <b-checkbox v-model="include_screenshot" switch>Include Screenshot</b-checkbox>
+          </b-form-group>
+          <b-form-group id="email">
+              <b-form-input
+                  id="email"
                   v-model="email"
-                  outlined
-                  required
-                  dense
-                  hide-details
-                ></v-text-field>
-              </v-col>
-              -->
-            </v-row>
-            </v-form>
-          </v-container>
-          <small>*indicates required field</small>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="dialog = false">
-            Close
-          </v-btn>
-          <v-btn
-            color="blue darken-1"
-            text
-            :disabled="!valid"
-            @click="dialog = false; submitForm();"
-          >
-            Submit Feedback
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-row>
-
-    <v-bottom-sheet
-      v-model="sheet"
-      inset
-    >
-      <v-sheet
-        class="text-center"
-        height="150px"
-      >
-        <v-btn
-          class="mt-8"
-          text
-          color="error"
-          @click="sheet = !sheet"
-        >
-          close
-        </v-btn>
-        <div class="my-3">
-          Sorry! We have encountered problem in submitting your request. Please try again later.
-        </div>
-      </v-sheet>
-    </v-bottom-sheet>
-  </v-container>
+                  type="text"
+                  placeholder="Your Email Address"
+                  disabled
+                  size="sm"                  
+              ></b-form-input>
+              <p class="text-danger" style="font-size:smaller">If the above email is not correct, please include the correct email address in the feedback.</p>
+          </b-form-group>          
+          <b-row v-if="error">
+            <b-col class="text-danger mb-3">Sorry! We have encountered problem in submitting your request. Please try again later.</b-col>
+          </b-row>
+          <b-button variant="primary" @click="submitForm()">Submit Feedback</b-button>
+          <b-button variant="primary" @click="$bvModal.hide('feedback-modal')">Close</b-button>
+      </b-form>
+    </b-modal>
+  </b-container>
 </template>
 
 <script>
+
+/* eslint-disable */
+
 import html2canvas from "html2canvas";
 
 export default {
   data: () => ({
-    dialog: false,
-    title: "",
+    error: false,
+    title: null,
     comment: "",
-    include_screenshot: true,
-    screenshot: "",
     email: "",
-    sheet: false,
-    valid: true,
-    rules: {
-        required: value => !!value || 'Required.'
-    }
+    include_screenshot: true,
+    screenshot: ""    
   }),
+  mounted() {
+    this.email = this.$store.state.user.email ; 
+    console.log("In mounted method of feedback component ") ;    
+    if (!this.email)
+      this.email = "Email does not exist" ;  
+  },
+  computed: {
+  },
   methods: {
+    resetFeedback() {
+      this.title = "" ;
+      this.comment = "" ;
+      this.error = false ;
+    },
     submitForm() {
       console.log("submit feedback form called");
       var _self = this ;
+
       var feedback = {
         title: this.title,
         comment: this.comment,
+        email: this.email,
         screenshot: ""
       };
 
@@ -153,8 +99,13 @@ export default {
                   feedback,
                   _self.$store.state.patientId,
                   _self.$store.state.appId
-              ).catch(err => {
-                _self.sheet = true ;
+              ).then( response => {
+                 _self.resetFeedback() ;
+                _self.$bvModal.hide('feedback-modal') ;
+              }).catch(err => {
+                console.log("Error in feedback submission with screenshot") ;
+                console.log(err) ;
+                _self.error = true ;
               }) ;
           });
         }, 100) ;
@@ -163,11 +114,19 @@ export default {
             feedback,
             this.$store.state.patientId,
             this.$store.state.appId
-        );
+        ).then( response =>{
+           _self.resetFeedback() ;
+          _self.$bvModal.hide('feedback-modal') ;
+        }).catch (err => {
+            console.log("Error in feedback submission without screenshot") ;
+            console.log(err) ;
+          _self.error = true ;
+        });
       }
     },
   },
 };
+/* eslint-enable */
 </script>
 
 <style>

@@ -1,7 +1,11 @@
+/* eslint-disable */
+
 export const state = () => ({
     pageTitle: "",
+    user : { user_id: 0, full_name: ""},
     patientId: "",
-    appId: 0
+    appId: 0,
+    currentApp : {}
 })
 
 export const mutations = {
@@ -13,5 +17,17 @@ export const mutations = {
     },
     setAppId(state, aid) {
         state.appId = aid ;
+    },
+    setUser(state, user) {
+        state.user = user ;
+    },
+    setCurrentApp(state, app) {
+        state.currentApp = app ;
     }
 }
+
+export const getters = {
+
+}
+
+/* eslint-enable */

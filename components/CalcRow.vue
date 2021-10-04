@@ -1,27 +1,20 @@
 <template>
-    <v-container>
-        <v-row v-for="row in rows" :key="row.text">
-            <v-col cols="5">
+    <b-container class="mb-3">
+        <b-row  v-for="(row, rowIdx) in rows" :key="row.text" class="mt-4">
+            <b-col cols="6">
                 {{row.text}}
-            </v-col>
-            <v-col>
-                <v-chip-group dense @change="onChoiceChange" v-model="row.value" color="primary" mandatory>
-                    <v-chip v-for="btn in row.buttons" :key="btn.text" rounded :value="btn.points" class="mr-3">
+            </b-col>
+            <b-col>
+                <b-button-group size="sm" id="calcBtns">
+                    <b-button pill v-for="(btn, btnIdx) in row.buttons" :key="btn.text" pressed
+                        :variant="getVariant(rowIdx, btnIdx)" @click="chooseButton(rowIdx, btnIdx)" class="mr-3 smallfont"
+                        :style="{width: parseInt(250/row.buttons.length) + 'px'}">
                         {{btn.text}} (+{{btn.points}})
-                    </v-chip>                    
-                    <v-chip :value="minusOne" rounded hidden class="mr-3" style="display:none">-1</v-chip>
-                </v-chip-group>
-                <!--
-                <v-btn-toggle dense @change="onChoiceChange" v-model="row.value" color="primary" mandatory>
-                    <v-btn v-for="btn in row.buttons" :key="btn.text" rounded :value="btn.points" class="mr-3">
-                        {{btn.text}} (+{{btn.points}})
-                    </v-btn>
-                    <v-btn :value="minusOne" rounded hidden class="mr-3" style="display:none">-1</v-btn>
-                </v-btn-toggle>
-                -->
-            </v-col>
-        </v-row>    
-    </v-container>
+                    </b-button>
+                </b-button-group>
+            </b-col>
+        </b-row>
+    </b-container>
 </template>
 
 <script>
@@ -51,8 +44,35 @@ export default {
         }) ;                
         //console.log(this.rows) ;
     },
+    computed : {
+
+    },
     methods : {
-        
+        getVariant(rowIdx, btnIdx) {
+          if (this.rows[rowIdx].value == this.rows[rowIdx].buttons[btnIdx].points) {
+            return "primary" ;
+          } else {
+            return "secondary" ;
+          }
+        },
+        chooseButton(rowIdx, btnIdx) {
+            this.rows[rowIdx].value = this.rows[rowIdx].buttons[btnIdx].points ;
+
+            this.totalPoints = 0 ;
+
+            for (var i=0;i<this.rows.length;i++) {
+                var row = this.rows[i] ;
+                if (row.value == -1) {
+                    this.totalPoints = -1 ;
+                    break ;
+                } else {
+                    this.totalPoints = this.totalPoints + row.value ;
+                    //this.totalPoints = this.totalPoints + row.buttons[row.value].points ;
+                }
+            }
+            if (this.totalPoints > -1)
+                this.$emit('input', this.totalPoints)    ;            
+        },
         onChoiceChange(event) {
 
             this.totalPoints = 0 ;
@@ -73,16 +93,30 @@ export default {
         selectButton(rowText, buttonText) {
             var btnRow = this.rows.find(row => row.text === rowText) ;
             if (btnRow) {
-                var btn = btnRow.buttons.find(btn => btn.text === buttonText) ;
-                if (btn) {
-                    btnRow.value = btn.points ;
+                for (var btnIdx = 0 ; btnIdx < btnRow.buttons.length; btnIdx++) {
+                    if (btnRow.buttons[btnIdx].text === buttonText) {
+                        btnRow.value = btnRow.buttons[btnIdx].points ;
+                        break ;
+                    }
                 }
             }
+        },
+
+        resetRiskCategory(rowText) {
+            var btnRow = this.rows.find(row => row.text === rowText) ;
+            btnRow.value = -1 ;
         }
     }
 }
 </script>
 
+<style>
+    #calcBtns .btn {
+        padding-top: .1em;
+        padding-bottom: .1em;
+        font-size: 0.85em;         
+    }
+</style>
 <style scoped>
     * {
         text-transform: none !important;

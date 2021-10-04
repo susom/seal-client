@@ -1,103 +1,176 @@
 <template>
-    <v-container fluid>
-        <v-row>
-            <v-col cols="10">
+    <!-- eslint-disable -->
+    <b-container fluid>
+        <b-row>
+            <b-col cols="10">
                 <p class="mt-2">
                     Something about the A3 Pain Management 
                 </p>
-            </v-col>
-        </v-row>
-        <v-row>
-            <v-col cols="10" offset="1">
-                <v-card color="green">
-                    <v-card-title>Report</v-card-title>
-                    <v-card-text>
-                        <v-row>
-                            <v-col cols="3">
-                                <v-text-field v-model="report_date" dense label="Report Date"></v-text-field>
-                            </v-col>
-                            <v-col cols="3">
-                                <v-text-field v-model="number_of_weeks_back" dense label="Number of Weeks back"></v-text-field>
-                            </v-col>
-                            <v-col cols="3">
-                                <v-text-field v-model="number_of_weeks_ahead" dense label="Number of Weeks ahead"></v-text-field>
-                            </v-col>     
-                            <v-col cols="2">
-                                <v-btn @click="populateData" color="primary">Run Report</v-btn>
-                            </v-col>     
-                        </v-row>
-                    </v-card-text>
-                </v-card>                
-            </v-col>
-        </v-row>
-        <v-row>
-            <v-col cols="10" offset="1">
-                <!-- :update="['options.title', 'options.series']" -->
-                <v-card color="green">
-                    <v-card-title>Pain Score</v-card-title>
-                    <v-card-text>
-                        <highchart :options="getPainChart()" :update="['options.series']" />
-                    </v-card-text>
-                </v-card>
-            </v-col>            
-        </v-row>        
-        <!--
-        <v-row>
-            <v-col cols="10" offset="1">
-                <v-card color="green">
-                    <v-card-title>MME - morphine milligram equivalents</v-card-title>
-                    <v-card-text>
-                        <highchart :options="getMMEChart()" :update="['options.series']" />
-                    </v-card-text>
-                </v-card>
-            </v-col>                        
-        </v-row>
-        -->
-        <v-row>
-            <v-col cols="10" offset="1">
-                <!-- :update="['options.title', 'options.series']" -->
-                <v-card color="green">
-                    <v-card-title>Pain Meds</v-card-title>
-                    <v-card-text>
+            </b-col>
+        </b-row>
+        <b-row>
+            <b-col cols="10" offset="1">
+                <b-card bg-variant="success">
+                    <b-card-title>Report</b-card-title>
+                    <b-card-text>
+                        <b-row>
+                            <b-col cols="3">                                
+                                <b-form-input v-model="report_date" dense label="Report Date"></b-form-input>
+                            </b-col>
+                            <b-col cols="3">
+                                <b-form-input v-model="number_of_weeks_back" dense label="Number of Weeks back"></b-form-input>
+                            </b-col>
+                            <b-col cols="3">
+                                <b-form-input v-model="number_of_weeks_ahead" dense label="Number of Weeks ahead"></b-form-input>
+                            </b-col>     
+                            <b-col cols="2">
+                                <b-button @click="populateData" color="primary">Run Report</b-button>
+                            </b-col>     
+                        </b-row>
+                    </b-card-text>
+                </b-card>                
+            </b-col>
+        </b-row>
+        <b-row class="mt-3">
+            <b-col cols="10" offset="1">                
+                <b-card color="green">
+                    <b-card-title>Pain Meds</b-card-title>
+                    <b-card-text>
                         <highchart 
                             :options="medChartOptions" 
                             :modules="['xrange']" 
+                            @mousemove="mousemove"
                              />
-                    </v-card-text>
-                </v-card>
-            </v-col>
-        </v-row>
-        <v-row>
-            <v-col cols="10" offset="1">
+                    </b-card-text>
+                </b-card>
+            </b-col>
+        </b-row>
+        <b-row class="mt-3">
+            <b-col cols="10" offset="1">
                 <!-- :update="['options.title', 'options.series']" -->
-                <v-card color="green">
-                    <v-card-title>MME - morphine milligram equivalents</v-card-title>
-                    <v-card-text>
+                <b-card color="green">
+                    <b-card-title>MME & Pain Level</b-card-title>
+                    <b-card-text>
                         <highchart 
                             :options="mmeChartOptions" 
+                            @mousemove="mousemove"
                         />
-                    </v-card-text>
-                </v-card>
-            </v-col>
-        </v-row>        
-        <v-row>
-            <v-col cols="10" offset="1">
-                <v-card color="green">
-                    <v-card-title>Result</v-card-title>
-                    <v-card-text>
-                        <v-textarea v-model="resultText" rows="10" auto-grow />
-                    </v-card-text>
-                </v-card>
-            </v-col>                        
-        </v-row>
-    </v-container>
+                    </b-card-text>
+                </b-card>
+            </b-col>
+        </b-row>
+        <b-row class="mt-3">
+            <b-col cols="10" offset="1">
+                <b-card color="green">
+                    <b-card-title>MME - Distribution</b-card-title>
+                    <b-card-text>
+                        <highchart 
+                            :options="mmeStackedChartOptions" 
+                            @mousemove="mousemove"
+                        />
+                    </b-card-text>
+                </b-card>
+            </b-col>
+        </b-row>        
+        <!--
+        <b-row class="mt-3">
+            <b-col cols="10" offset="1">                
+                <b-card color="green">
+                    <b-card-title>Pain Score</b-card-title>
+                    <b-card-text>
+                        <highchart :options="getPainChart()" :update="['options.series']" 
+                        @mousemove="mousemove"/>                        
+                    </b-card-text>
+                </b-card>
+            </b-col>            
+        </b-row>                
+        -->
+        <b-row class="mt-3">
+            <b-col cols="10" offset="1">
+                <b-card color="green">
+                    <b-card-title>Debug Info</b-card-title>
+                    <b-card-text>
+                        <b-textarea v-model="resultText" rows="10" auto-grow />
+                    </b-card-text>
+                </b-card>
+            </b-col>                        
+        </b-row>
+    </b-container>
 </template>
 
 <script>
 
+/* eslint-disable */
+
 import Highcharts, { chart } from 'highcharts' ;
 
-var colorIdx = 2 ;
+    var colorIdx = 2 ;
+
+    /**
+     * Set the global timezone to PST
+     */
+    Highcharts.setOptions({
+        time: {
+            //timezone: 'America/Los_Angeles',
+            timezoneOffset: new Date().getTimezoneOffset(),
+            useUTC: false
+        }
+    });
+
+    /**
+     * Override the reset function, we don't need to hide the tooltips and
+     * crosshairs.
+     */
+
+    Highcharts.Pointer.prototype.reset = function () {
+        for (var i = 0; i < Highcharts.charts.length; i++) {
+            var chart = Highcharts.charts[i];
+            if (chart && chart.tooltip)
+                chart.tooltip.hide() ;
+        }                
+        return undefined;
+    };
+
+    /**
+     * Highlight a point by showing tooltip, setting hover state and draw crosshair
+     */
+    Highcharts.Point.prototype.highlight = function (event) {
+        event = this.series.chart.pointer.normalize(event);
+        this.onMouseOver(); // Show the hover marker
+        this.series.chart.tooltip.refresh(this); // Show the tooltip
+        this.series.chart.xAxis[0].drawCrosshair(event, this); // Show the crosshair
+    };
+
+    /**
+     * Synchronize zooming through the setExtremes event handler.
+     */
+    function syncExtremes(e) {
+        var thisChart = this.chart;
+
+        if (e.trigger !== 'syncExtremes') { // Prevent feedback loop
+            Highcharts.charts.forEach(function(chart, idx) {
+            //$.each(Highcharts.charts, function(idx, chart) {
+                if (chart !== thisChart) {
+                    try {
+                        if (chart.xAxis[0].setExtremes) { // It is null while updating
+                            setTimeout(function() {
+                                chart.xAxis[0].setExtremes(
+                                    e.min,
+                                    e.max,
+                                    true, //undefined,
+                                    false,
+                                    {trigger: 'syncExtremes'}
+                                );
+                            }, 0) ;
+                        }
+                    }catch (e) {
+                        console.log("Error in synxExtrement for " + chart) ;
+                        console.log(e) ;
+                    }
+                }
+            });
+        }
+    }
 
 export default {
     data () {
@@ -108,6 +181,7 @@ export default {
             resultText: "",
             medChartOptions: {},
             mmeChartOptions: {},
+            mmeStackedChartOptions: {},
             patient: {}
         }
     },
@@ -130,6 +204,8 @@ export default {
         this.report_date = (dt.getMonth() + 1) + "/" + dt.getDate() + "/" + dt.getFullYear() ;
         this.medChartOptions = this.getMedsChart() ;
         this.mmeChartOptions = this.getMMEChart2() ;
+        this.mmeStackedChartOptions = this.getMMEStackedChart() ;
+
         //this.medChartOptions = this.noIdeaOptions() ;
      },
     computed : {
@@ -335,24 +411,7 @@ export default {
     },
     methods : {
         async populateData() {
-            /*
-            if (1 == 1) {
-                alert("I am in 1==1 area") ;
-                this.resultText += "\n___________________________Static chartr data" ;
-                var co =                 
-                    {"chart":{"marginLeft":100,"spacingTop":20,"spacingBottom":20,"zoomType":"x","displayErrors":true},"title":{"text":"Opioids Chart","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1620198000000,"max":1622012400000},"yAxis":[{"title":{"text":null},"min":0,"categories":["fentaNYL 50 mcg/mL injection","acetaminophen (Tylenol) oral solution 650 mg","HYDROmorphone (Dilaudid) syringe 0.2 mg","oxyCODONE (Roxicodone) oral solution 5-10 mg","acetaminophen (Tylenol) oral solution 325 mg","acetaminophen (Ofirmev) injection 500 mg","acetaminophen (Tylenol) oral solution 500 mg","oxyCODONE (Roxicodone) tablet 2.5-5 mg","acetaminophen (Tylenol) tablet 500 mg","oxyCODONE (Roxicodone) tablet 10 mg","oxyCODONE (Roxicodone) tablet 5 mg","oxyCODONE (Roxicodone) tablet 5-10 mg","HYDROmorphone (Dilaudid) syringe 0.4 mg"]}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10}},"series":[{"name":"Opioids Chart","type":"scatter","fillOpacity":0.3,"xDateormat":"%m/%d/%Y","tooltip":{"shared":true},"data":[{"x":1620943110000,"x2":1620943110000,"y":0,"name":"fentaNYL 50 mcg/mL injection","color": "red", "dose":"25","unit":"mcg"},{"x":1620942608000,"x2":1620942608000,"y":0,"color":"red", "name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg"},{"x":1620942083000,"x2":1620942083000,"y":0,"name":"fentaNYL 50 mcg/mL injection","color":"red", "dose":"50","unit":"mcg"},{"x":1620239700000,"x2":1620239700000,"y":1,"name":"acetaminophen (Tylenol) oral solution 650 mg","dose":"650","unit":"mg"},{"x":1620227220000,"x2":1620227220000,"y":2,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg"},{"x":1620461280000,"x2":1620461280000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620437220000,"x2":1620437220000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620414720000,"x2":1620414720000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620393420000,"x2":1620393420000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620366780000,"x2":1620366780000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620337560000,"x2":1620337560000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620316380000,"x2":1620316380000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620292680000,"x2":1620292680000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620252480000,"x2":1620252480000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620230640000,"x2":1620230640000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"10","unit":"mg"},{"x":1620263700000,"x2":1620263700000,"y":4,"name":"acetaminophen (Tylenol) oral solution 325 mg","dose":"325","unit":"mg"},{"x":1620239700000,"x2":1620239700000,"y":1,"name":"acetaminophen (Tylenol) oral solution 650 mg","dose":"650","unit":"mg"},{"x":1620273780000,"x2":1620273780000,"y":2,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg"},{"x":1620488340000,"x2":1620488340000,"y":3,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"5","unit":"mg"},{"x":1620780480000,"x2":1620780480000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620758640000,"x2":1620758640000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620737940000,"x2":1620737940000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620716280000,"x2":1620716280000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620696780000,"x2":1620696780000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620675000000,"x2":1620675000000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620654300000,"x2":1620654300000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620631980000,"x2":1620631980000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620610380000,"x2":1620610380000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620575640000,"x2":1620575640000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620549480000,"x2":1620549480000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620531780000,"x2":1620531780000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620510420000,"x2":1620510420000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620517560000,"x2":1620517560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621254120000,"x2":1621254120000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621238100000,"x2":1621238100000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621211880000,"x2":1621211880000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621168140000,"x2":1621168140000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621149780000,"x2":1621149780000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621127940000,"x2":1621127940000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621102380000,"x2":1621102380000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621080900000,"x2":1621080900000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621058640000,"x2":1621058640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621044840000,"x2":1621044840000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621021560000,"x2":1621021560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1620997860000,"x2":1620997860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1620976080000,"x2":1620976080000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1620955440000,"x2":1620955440000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1620886860000,"x2":1620886860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1620867660000,"x2":1620867660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1620780480000,"x2":1620780480000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1620758640000,"x2":1620758640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621210440000,"x2":1621210440000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621179960000,"x2":1621179960000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621164540000,"x2":1621164540000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621149840000,"x2":1621149840000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621134300000,"x2":1621134300000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621119780000,"x2":1621119780000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621104600000,"x2":1621104600000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621089360000,"x2":1621089360000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621074540000,"x2":1621074540000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621057680000,"x2":1621057680000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621035840000,"x2":1621035840000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621021740000,"x2":1621021740000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1621005720000,"x2":1621005720000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620990660000,"x2":1620990660000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620976080000,"x2":1620976080000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620961560000,"x2":1620961560000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620929820000,"x2":1620929820000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620915960000,"x2":1620915960000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620900780000,"x2":1620900780000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620886200000,"x2":1620886200000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620871320000,"x2":1620871320000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620856620000,"x2":1620856620000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620841860000,"x2":1620841860000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620826740000,"x2":1620826740000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620812460000,"x2":1620812460000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620796800000,"x2":1620796800000,"y":7,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg"},{"x":1620943110000,"x2":1620943110000,"y":0,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg"},{"x":1620942608000,"x2":1620942608000,"y":0,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg"},{"x":1620942083000,"x2":1620942083000,"y":0,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg"},{"x":1620949560000,"x2":1620949560000,"y":9,"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg"},{"x":1621141620000,"x2":1621141620000,"y":2,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg"},{"x":1621141560000,"x2":1621141560000,"y":10,"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg"},{"x":1621204440000,"x2":1621204440000,"y":0,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg"},{"x":1621204140000,"x2":1621204140000,"y":0,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg"},{"x":1621203240000,"x2":1621203240000,"y":0,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg"},{"x":1621201920000,"x2":1621201920000,"y":0,"name":"fentaNYL 50 mcg/mL injection","dose":"100","unit":"mcg"},{"x":1621254180000,"x2":1621254180000,"y":11,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1621239000000,"x2":1621239000000,"y":11,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1621225500000,"x2":1621225500000,"y":11,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1621213680000,"x2":1621213680000,"y":12,"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg"},{"x":1621450680000,"x2":1621450680000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621431540000,"x2":1621431540000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621404240000,"x2":1621404240000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621385520000,"x2":1621385520000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621340640000,"x2":1621340640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621323720000,"x2":1621323720000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621298460000,"x2":1621298460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"},{"x":1621278060000,"x2":1621278060000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg"}]}]}
-                    ;
 
-                co.tooltip.formatter = function () {
-                        return this.point.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit ;
-                } ;
-                //co.series[0].color = "purple" ;
-                co.plotOptions =  {column: {colorByPoint: true}} ;
-
-                this.medChartOptions =  co ;
-                return ;
-            }
-            */
             this.resultText += "\n___________________________Pop data: before Patient data" ;
 
             this.patient = await this.$services.a3pain.patient() ;      
@@ -407,8 +466,6 @@ export default {
                 return tip ;
             }
 
-            var mmeChartOptions = this.getMMEChart2(medstats.start_time, medstats.end_time) ;
-
             //mmeChartOptions.tooltip.formatter = function () {
             //    return this.point.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit ;
             //}
@@ -422,13 +479,14 @@ export default {
             var mdata = [] ;
             var mdata1 = {} ;
 
-            try {
+            var mmedata = await this.$services.a3pain.mmedata() ;
+            console.log(mmedata) ;
+            this.resultText += "\n--------------------******mme data***************************" ;
+            this.resultText += JSON.stringify(mmedata) ;
 
+            try {
                 // https://masteringjs.io/tutorials/axios/all
                 // https://www.storyblok.com/tp/how-to-send-multiple-requests-using-axios
-                
-
-                //this.$services.a3pain.mardata(wsjson).then(this.$axios.spread((...responses) => {
                 this.$services.a3pain.mardata(wsjson).then(responses => {
                     console.log("responses length " + responses.length) ;
                     
@@ -437,30 +495,54 @@ export default {
                     //this.resultText += "\n------------------------------------MARDATA webservice response  END " + "\n" ;
 
                     responses.forEach(response => {
-                        response.data.Orders.forEach(order => {
+                        response.data.Orders.forEach(order => {                                                        
                             this.resultText += "\n----------------------------------Processing Order :" + order.Name ;
-                            this.resultText += "\nTotal MedAdmin Data :" + order.MedicationAdministrations.length ;
-                            if (categories.indexOf(order.Name) > -1)
-                                catIdx = categories.indexOf(order.Name) ;
-                            else {
-                                catIdx = categories.length ;
-                                categories.push(order.Name) ;                                
+                            var cIdx = medstats.cats.findIndex(function (cat) { return (cat.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
+                            var mmeFactor = 0 ;
+
+                            if (cIdx >= 0) {
+                                this.resultText += " med order name :" + medstats.cats[cIdx].name ;
+                                var mIdx = mmedata.findIndex(function (mme) { return (mme.med_name.toLowerCase() == medstats.cats[cIdx].name.toLowerCase() ) }) ;
+                                if (mIdx >= 0) {
+                                    this.resultText += " found mme data :" + mmedata[mIdx].mme_factor ;
+                                    mmeFactor = parseFloat(mmedata[mIdx].mme_factor) ;
+                                } else {
+                                    this.resultText += " no matching mme data ";
+                                }
                             }
+
+                            this.resultText += "\nTotal MedAdmin Data :" + order.MedicationAdministrations.length ;
+                            catIdx = categories.findIndex(function(cat) { return cat.name == order.Name }) ;
+
                             for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
                                 var ma = order.MedicationAdministrations[mIdx] ;
                                 if (ma.Action == "Given") {
+                                    
+                                    // Initializing here instead of before loop - so only cats added if there is data to be added
+                                    if (catIdx == -1) {
+                                        catIdx = categories.length ;
+                                        categories.push({ name: order.Name, pointWidth: 30, data: [] } ) ;
+                                    }
+                                    ma.mme = parseFloat(ma.Dose.Value) * mmeFactor ;
                                     // ma.Dose.Value and ma.Dose.Unit
                                     cdata.push({ x: new Date(ma.AdministrationInstant).getTime(), x2: new Date(ma.AdministrationInstant).getTime(), y: catIdx, 
                                     name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme }) ;
                                     if (ma.mme && ma.mme > 0) {
                                         var dt = ma.AdministrationInstant.substr(0, ma.AdministrationInstant.indexOf("T")) ;
+                                        ma.mme = (+ma.mme.toFixed(2)) ;
                                         if (mdata1[dt]) {
                                             mdata1[dt] = mdata1[dt] + ma.mme ;
                                         } else {
                                             mdata1[dt] = ma.mme ;
                                         }
+                                        var dtlong = new Date(dt).getTime() ;
+                                        var dtIdx = categories[catIdx].data.findIndex(function(row) { return (row.x == dtlong) }) ;
+                                        if (dtIdx > -1) {
+                                            categories[catIdx].data[dtIdx].y = categories[catIdx].data[dtIdx].y + ma.mme ;
+                                        } else {
+                                            categories[catIdx].data.push({ x: dtlong, y: ma.mme, name: order.Name }) ;
+                                        }
                                     }
-                                    mdata.push({ x: new Date(ma.AdministrationInstant).getTime(), y: ma.mme }) ;
                                 }
                             }
                         }) ; 
@@ -469,25 +551,74 @@ export default {
                     this.resultText += "\nTotal chart data :" + cdata.length ;
 
                     medChartOptions.series[0].data = cdata ;
-                    medChartOptions.yAxis[0].categories = categories ;
+                    medChartOptions.yAxis[0].categories = categories.map(function(cat) { return cat.name }) ;
 
                     _self.medChartOptions = medChartOptions ;
                     
-                    // sort mdata
-                    mdata.sort(function (a, b) {
-                        return a.x - b.x ;
-                    }) ;
-
                     mdata = [] ;
                     Object.keys(mdata1).forEach(function(dt, idx) {
                         mdata.push({ x: new Date(dt).getTime(), y: mdata1[dt]}) ;
                     }) ;
 
-                    mmeChartOptions.series[0].data = mdata ;
-                    _self.mmeChartOptions = mmeChartOptions ;
+                    // sort mdata
+                    mdata.sort(function (a, b) {
+                        return a.x - b.x ;
+                    }) ;
 
-                    //this.resultText += "\n--------------------******MME CHARTOPTIONS***************************" ;
-                    //this.resultText += JSON.stringify(mmeChartOptions) ;
+                    var mmeChartOptions = this.getMMEChart2(medstats.start_time, medstats.end_time) ;
+                    mmeChartOptions.series[0].data = mdata ;
+
+                    // getting pain data
+                    this.$services.a3pain.pain(this.report_date, this.number_of_weeks_ahead, this.number_of_weeks_back, _self.patient.epicPatientId)
+                        .then(response => {
+                            mmeChartOptions.series[1] =  {
+                                        "name": "Pain Score",
+                                        "yAxis": 1,
+                                        "color": "purple"
+                            } ;
+                            console.log("response from pain call") ;
+                            console.log(response) ;
+                            
+                            mmeChartOptions.series[1].data = response.map(function(pn) { return { x: pn.recorded_time, y: pn.meas_value }}) ; ;
+
+                            _self.mmeChartOptions = mmeChartOptions ;
+                            this.resultText += "\n--------------------******MME CHARTOPTIONS***************************" ;
+                            this.resultText += JSON.stringify(mmeChartOptions) ;
+
+                        }) ;
+                    
+                    /*
+                                "data": [
+                                    {
+                                        "x": 1620172800000,
+                                        "y": 4
+                                    },
+                                    {
+                                        "x": 1620518400000,
+                                        "y": 10
+                                    },
+                                    {
+                                        "x": 1620691200000,
+                                        "y": 7
+                                    },
+                                    {
+                                        "x": 1620864000000,
+                                        "y": 4
+                                    },
+                                    {
+                                        "x": 1621209600000,
+                                        "y": 2
+                                    }
+                                ]
+                            } ;
+                    */
+
+                    var mmeStackedChartOptions = this.getMMEStackedChart(medstats.start_time, medstats.end_time) ;
+                    mmeStackedChartOptions.series = categories ;
+                    _self.mmeStackedChartOptions = mmeStackedChartOptions ;
+
+                    this.resultText += "\n--------------------******MME STACKED CHARTOPTIONS***************************" ;
+                    this.resultText += JSON.stringify(mmeStackedChartOptions) ;
 
                 }) ;
 
@@ -496,40 +627,299 @@ export default {
             }
 
         },
+        mousemove(e) {
+            var chart,
+                point,
+                i,
+                event;
+
+            for (i = 0; i < Highcharts.charts.length; i = i + 1) {
+                chart = Highcharts.charts[i];
+                // Find coordinates within the chart
+                if (chart && chart.pointer) {
+                    event = chart.pointer.normalize(e);
+                    // Get the hovered point
+                    point = chart.series[0].searchPoint(event, false);
+                    if (point) {
+                        point.highlight(e);
+                    }
+                }
+            }
+        },
         getMMEChart2(start_time_long, end_time_long) {
+
+            var co = {
+                        "chart": {
+                            "marginLeft": 100,
+                            "spacingTop": 20,
+                            "spacingBottom": 20,
+                            "zoomType": "x",
+                            "displayErrors": true,
+                            "height": 350,
+                            "title": ""
+                        },
+                        "title": {
+                            "text": "MME",
+                            "align": "center"
+                        },
+                        "credits": {
+                            "enabled": false
+                        },
+                        "legend": {
+                            "enabled": true
+                        },
+                        "xAxis": {
+                            "crosshair": true,
+                            "events": {},
+                            "type": "datetime",
+                            "min": 1619938800000,
+                            "max": 1621148400000
+                        },
+                        "yAxis": [
+                            {
+                                "title": {
+                                    "text": "MME"
+                                },
+                                "min": 0
+                            },
+                            {
+                                "title": {
+                                    "text": "Pain Score"
+                                },
+                                "opposite": true
+                            }
+                        ],
+                        "tooltip": {
+                            "shadow": false,
+                            "valueDecimals": 2
+                        },
+                        "plotOptions": {
+                            "series": {
+                                "dataLabels": {
+                                    "allowOverlap": true
+                                },
+                                "minPointLength": 10
+                            },
+                            "line": {
+                                "dataLabels": {
+                                    "enabled": true
+                                }
+                            }
+                        },
+                        "series": [
+                            {
+                                "name": "MME",
+                                "yAxis": 0,
+                                "data": [
+                                    {
+                                        "x": 1620172800000,
+                                        "y": 30.8
+                                    },
+                                    {
+                                        "x": 1620259200000,
+                                        "y": 45.8
+                                    },
+                                    {
+                                        "x": 1620345600000,
+                                        "y": 45
+                                    },
+                                    {
+                                        "x": 1620432000000,
+                                        "y": 45
+                                    },
+                                    {
+                                        "x": 1620518400000,
+                                        "y": 22.5
+                                    },
+                                    {
+                                        "x": 1620604800000,
+                                        "y": 30
+                                    },
+                                    {
+                                        "x": 1620691200000,
+                                        "y": 30
+                                    },
+                                    {
+                                        "x": 1620777600000,
+                                        "y": 45
+                                    },
+                                    {
+                                        "x": 1620864000000,
+                                        "y": 52.5
+                                    },
+                                    {
+                                        "x": 1620950400000,
+                                        "y": 45
+                                    },
+                                    {
+                                        "x": 1621036800000,
+                                        "y": 37.5
+                                    },
+                                    {
+                                        "x": 1621123200000,
+                                        "y": 38.3
+                                    },
+                                    {
+                                        "x": 1621209600000,
+                                        "y": 7.5
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "Pain Score",
+                                "yAxis": 1,
+                                "color": "purple",
+                                "data": [
+                                    {
+                                        "x": 1620172800000,
+                                        "y": 4
+                                    },
+                                    {
+                                        "x": 1620518400000,
+                                        "y": 10
+                                    },
+                                    {
+                                        "x": 1620691200000,
+                                        "y": 7
+                                    },
+                                    {
+                                        "x": 1620864000000,
+                                        "y": 4
+                                    },
+                                    {
+                                        "x": 1621209600000,
+                                        "y": 2
+                                    }
+                                ]
+                            }
+                        ]
+                    } ;
+
+            //if (1 == 1) return co ;
 
             var chartOptions = this.getDefaultChartConfig({
                 start_time: start_time_long,
                 end_time: end_time_long,
                 min: 0,
-                //max: 10,
                 name: 'MME',
                 type: 'line',   //xrange 
-                title: 'MME',
-                //height: 350,
+                //title: 'MME',
+                height: 350,
                 color: "green"
             }) ;
 
-            chartOptions.chart.title = "MME" ;
+            chartOptions.chart.title = "" ;
 
             chartOptions.yAxis[0].title.text = "MME" ;
 
-            /*
-            chartOptions.yAxis[1] =  {
-                linkedTo: 0,
-                opposite: true,
-                title: { text: "MME" }
+            chartOptions.yAxis[1] = {
+                title: {
+                    text: "Pain Score"
+                },
+                opposite: true
+            }
+            chartOptions.series[0] = {
+                name : "MME",
+                yAxis: 0
             } ;
-            */
+            chartOptions.series[1] = {
+                name : "Pain Score",
+                yAxis: 1
+            } ;
+
             chartOptions.plotOptions.line = {
-                    dataLabels: {
-                        enabled: true
-                    }
+                dataLabels: {
+                    enabled: true
+                }
             } ;
 
             return chartOptions ;
 
         },
+        getMMEStackedChart(start_time_long, end_time_long) {
+
+            //start_time_long = 1619827200000 ;
+            //end_time_long = 1622505600000 ;
+
+            var chartOptions = this.getDefaultChartConfig({
+                start_time: start_time_long,
+                end_time: end_time_long,
+                name: 'MME',
+                type: 'column',
+                title: '',
+                height: 350,
+                color: "green"
+            }) ;
+            chartOptions.chart.type = 'column' ;
+            chartOptions.plotOptions = {
+                column: {
+                    stacking: 'normal',
+                    dataLabels: {
+                        enabled: true
+                    }                    
+                }
+            } ;
+
+            chartOptions.tooltip.formatter = function () {
+                var tip =  this.point.series.name + " <br> MME: " + this.point.y ;
+                return tip ;
+            }
+            /*
+            chartOptions.series = [{
+                name : "first med12",
+                data: [
+                    {
+                        "x": 1581105800000,
+                        "y": 4
+                    },                
+                    {
+                        "x": 1582105800000,
+                        "y": 2
+                    },
+                    {
+                        "x": 1583105800000,
+                        "y": 2
+                    },        
+                    {
+                        "x": 1584105800000,
+                        "y": 6
+                    },                        
+                    {
+                        "x": 1588105800000,
+                        "y": 8
+                    }
+                ]                 
+            }, 
+            {
+                name : "second med",
+                //type: "column",
+                data: [
+                    {
+                        "x": 1581105800000,
+                        "y": 3
+                    },                
+                    {
+                        "x": 1582105800000,
+                        "y": 1
+                    },
+                    {
+                        "x": 1583105800000,
+                        "y": 1
+                    },        
+                    {
+                        "x": 1584105800000,
+                        "y": 5
+                    },                        
+                    {
+                        "x": 1588105800000,
+                        "y": 7
+                    } ]               
+            }
+            ] ;  
+            */   
+            return chartOptions ;
+
+        },        
         getMedsChart(start_time_long, end_time_long) {
 
             var chartOptions = this.getDefaultChartConfig({
@@ -539,8 +929,8 @@ export default {
                 //max: 10,
                 name: 'Opioids Chart',
                 type: 'scatter',   //xrange 
-                title: 'Opioids Chart',
-                //height: 350,
+                //title: 'Opioids Chart',
+                height: 350,
                 color: "purple"
             }) ;
 
@@ -661,7 +1051,8 @@ export default {
             
             return chartOptions ;
 
-        },         
+        },
+
         getDefaultChartConfig(chartData)
         {
             var chartOptions ;
@@ -690,7 +1081,7 @@ export default {
                     xAxis: {
                         crosshair: true,
                         events: {
-                            //setExtremes: syncExtremes
+                            setExtremes: syncExtremes
                         },
                         type: 'datetime',
                         min: chartData.start_time,
