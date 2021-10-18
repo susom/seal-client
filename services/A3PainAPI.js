@@ -20,32 +20,31 @@ export default class A3PainAPI {
         })        
     }
 
-    encounters(report_date, no_of_weeks_ahead, no_of_weeks_back) {    
+    encounters(start_date, end_date) {    
         return this.axios({
             method: 'get',
             url: "/fhir-app/a3pain/api/v1/enc?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID +
-                "&rash_date=" + report_date + "&no_of_weeks_back=" + no_of_weeks_back + "&no_of_weeks_ahead=" + no_of_weeks_ahead
+                    "&start_date=" + start_date + "&end_date=" + end_date 
         }).then((response) => {            
             return response.data.data ;
         })        
     }
     
-    medstats(report_date, no_of_weeks_ahead, no_of_weeks_back) {    
+    medstats(start_date, end_date) {    
         return this.axios({
             method: 'get',
             url: "/fhir-app/a3pain/api/v1/med?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID +
-                 "&rash_date=" + report_date + "&no_of_weeks_back=" + no_of_weeks_back + "&no_of_weeks_ahead=" + no_of_weeks_ahead
+                 "&start_date=" + start_date + "&end_date=" + end_date 
         }).then((response) => {            
             return response.data ;
         })        
     }
 
-    pain(report_date, no_of_weeks_ahead, no_of_weeks_back, epic_patient_id) {    
+    pain(start_date, end_date, epic_patient_id) {    
         return this.axios({
             method: 'get',
             url: "/fhir-app/a3pain/api/v1/pain?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID +
-                "&rash_date=" + report_date + "&no_of_weeks_back=" + no_of_weeks_back + "&no_of_weeks_ahead=" + no_of_weeks_ahead +
-                "&epicPatientId=" + epic_patient_id
+                "&start_date=" + start_date + "&end_date=" + end_date + "&epicPatientId=" + epic_patient_id
         }).then((response) => {            
             return response.data ;
         })        
@@ -83,6 +82,30 @@ export default class A3PainAPI {
         
         return Promise.all(wscalls) ;
         //return this.axios.all(wscalls) ;
+    }
+
+    painwsdata(csnids, epic_patient_id) {
+        var wscalls = [] ;
+
+        csnids.forEach(csn => {
+            var wsjson = {
+                "PatientID": epic_patient_id,
+                "PatientIDType":"EXTERNAL",
+                "ContactID": csn,
+                "ContactIDType":"CSN",
+                "LookbackHours":"72",
+                "UserID":"",
+                "UserIDType":"",
+                "FlowsheetRowIDs":[{"ID":"30404607","Type":"EXTERNAL"}]
+            } ;
+            console.log("getting mar data for " + csn + " json :" + JSON.stringify(wsjson)) ;
+
+            wscalls.push(this.axios
+                .post("/fhir-app/a3pain/api/v1/painwsdata?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID, wsjson)) ;
+            
+        }) ;
+        
+        return Promise.all(wscalls) ;
     }
 
     dblog(act, msg) {

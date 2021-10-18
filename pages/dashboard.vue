@@ -201,6 +201,6 @@ export default {
 <style scoped>
     .counts {
         font-size: 1.5em;
-        color: brow
+        color: brown
     }
 </style>

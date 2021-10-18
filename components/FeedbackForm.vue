@@ -38,7 +38,7 @@
                   disabled
                   size="sm"                  
               ></b-form-input>
-              <p class="text-danger" style="font-size:smaller">If the above email is not correct, please include the correct email address in the feedback.</p>
+              <p class="text-danger" style="font-size:smaller">Please check the email address for accuracy and update if necessary. The SEAL team may contact you at this email address to follow-up on the feedback you provided.</p>
           </b-form-group>          
           <b-row v-if="error">
             <b-col class="text-danger mb-3">Sorry! We have encountered problem in submitting your request. Please try again later.</b-col>
