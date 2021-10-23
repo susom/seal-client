@@ -55,7 +55,7 @@
                   <b-col cols="2" class="text-center">
                     <b-img :src="item.config.app_image_2" class="mr-2" style="width:55px;"/>
                   </b-col>
-                  <b-col cols="9" class="text-center h5">
+                  <b-col cols="9" class="text-center h5 ml-2">
                     {{item.desc}}
                   </b-col>
                 </b-row>
@@ -89,7 +89,7 @@
                   <b-col cols="2" class="text-center">
                     <b-img :src="item.config.app_image_2" class="mr-2" style="width:55px;"/>
                   </b-col>
-                  <b-col cols="9" class="text-center h5">
+                  <b-col cols="9" class="text-center h5 ml-2">
                     {{item.desc}}
                   </b-col>
                 </b-row>

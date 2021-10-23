@@ -46,9 +46,9 @@
         <b-row class="mt-3 ml-2">
             <b-col cols="11">                
                 <b-card class="shadow-lg rounded-lg">
-                    <b-card-title class="chart-title">Figure 1. Administered Analgesics {{analgesicCategory}} during date {{startDateFormatted}} and {{endDateFormatted}}</b-card-title>
+                    <b-card-title class="chart-title">Figure 1. Administered Analgesics ({{analgesicCategory}}) during date {{startDateFormatted}} and {{endDateFormatted}}</b-card-title>
                     <b-card-text>
-                        <b-row>
+                        <b-row class="mb-2">
                             <b-col class="text-right">
                                 <span class="font-weight-bold">Analgesic Category:</span> 
                                 <b-select :options="['All', 'Opioids Only', 'Non-Opioids Only']" 
@@ -65,10 +65,10 @@
                             </b-col>
                         </b-row>
                         <b-row>
-                            <b-col>
+                            <b-col cols="12">
+                                <!-- :modules="['xrange']" -->
                                 <highchart 
-                                    :options="medChartOptions" 
-                                    :modules="['xrange']" 
+                                    :options="medChartOptions"                                     
                                     @mousemove="mousemove"
                                     />
                             </b-col>
@@ -107,20 +107,6 @@
                 <b-card class="shadow-lg rounded-lg">
                     <b-card-title class="chart-title">Figure 2. Opioid MME Aggregated at {{mmeDuration / 60}} Hours and Pain Scores </b-card-title>
                     <b-card-text>
-                        <!--
-                        <b-row>
-                            <b-col cols="12">
-                                    <b-form-radio-group
-                                        id="radio-group-1"
-                                        v-model="mmeDuration"
-                                        :options="[{value: 1440, text: 'Daily'}, {value: 240, text: '4 Hours'}, {value: 120, text: '2 Hours'}, {value: 60, text:'Hourly'}]"                                        
-                                        name="radio-options"
-                                        @change="refreshMMEChart"
-                                        class="text-right mr-5"
-                                    ></b-form-radio-group>
-                            </b-col>
-                        </b-row>
-                        -->
                         <b-row>
                             <b-col>
                                 <highchart 
@@ -145,23 +131,26 @@
                     </b-card-text>
                 </b-card>
             </b-col>
-        </b-row>        
+        </b-row>
         <!--
-        <b-row class="mt-3">
-            <b-col cols="11" offset="1">                
-                <b-card color="green">
-                    <b-card-title>Pain Score</b-card-title>
+        <b-row class="mt-3 ml-2">
+            <b-col cols="11">
+                <b-card class="shadow-lg rounded-lg">
+                    <b-card-title class="chart-title">Figure 4. Non-Opioid Distribution Aggregated at {{mmeDuration / 60}} Hours </b-card-title>
                     <b-card-text>
-                        <highchart :options="getPainChart()" :update="['options.series']" 
-                        @mousemove="mousemove"/>                        
+                        <highchart 
+                            :options="nonOpioidChartOptions" 
+                            @mousemove="mousemove"
+                        />
                     </b-card-text>
                 </b-card>
-            </b-col>            
+            </b-col>
         </b-row>                
         -->
         <b-row class="mt-3 ml-2">
             <b-col cols="11">
-                <b-card color="green">
+                <b-link @click="showDebug = !showDebug" style="font-size:small">Logs</b-link>
+                <b-card v-show="showDebug">                    
                     <b-card-title>Debug Info</b-card-title>
                     <b-card-text>
                         <b-textarea v-model="resultText" rows="10" auto-grow />
@@ -176,13 +165,42 @@
                     <label for="startDate">Start Date</label>
                 </b-col>                
                 <b-col>
+                    <b-input-group>
+                        <b-form-input
+                            id="start_date"
+                            v-model="launchModal.inp_start_date"
+                            :state="errors.start_date"
+                            type="text"
+                            placeholder="MM/DD/YYYY"
+                            autocomplete="off"
+                            @change="startDateChange"                        
+                        ></b-form-input>
+                        <b-input-group-append>
+                            <b-form-datepicker
+                                v-model="launchModal.start_date"
+                                button-only                            
+                                :date-format-options="{ month: 'numeric', day: 'numeric', year: 'numeric' }"
+                                locale="en-US"                        
+                                size="sm"
+                                aria-controls="start_date"                                
+                                hide-header
+                                close-button
+                                no-flip                                
+                                @context="startDatePickerChange"                         
+                            ></b-form-datepicker>
+                        </b-input-group-append>
+                        <b-form-invalid-feedback :state="errors.start_date" id="input-live-feedback">Specify date in mm/dd/yyyy format.</b-form-invalid-feedback>                        
+                    </b-input-group> 
+                    <!--                   
                     <b-form-datepicker                                                
                         id="startDate"
                         v-model="launchModal.start_date"                        
                         :date-format-options="{ year: 'numeric', month: 'numeric', day: 'numeric' }"
                         locale="en"
-                        size="sm"                        
+                        size="sm" 
+                        hide-header                                               
                     ></b-form-datepicker>                                                
+                    -->
                 </b-col>
             </b-row>
             <b-row class="mt-3">
@@ -190,6 +208,32 @@
                     <label for="endDate">End Date</label>
                 </b-col>
                 <b-col>
+                    <b-input-group>
+                        <b-form-input
+                            id="end_date"
+                            v-model="launchModal.inp_end_date"
+                            type="text"
+                            placeholder="MM/DD/YYYY"
+                            autocomplete="off"
+                            @change="endDateChange"                        
+                        ></b-form-input>
+                        <b-input-group-append>
+                            <b-form-datepicker
+                                v-model="launchModal.end_date"
+                                button-only                            
+                                :date-format-options="{ month: 'numeric', day: 'numeric', year: 'numeric' }"
+                                locale="en-US"                        
+                                size="sm"
+                                aria-controls="end_date"
+                                hide-header
+                                close-button
+                                no-flips
+                                @context="endDatePickerChange"                         
+                            ></b-form-datepicker>
+                        </b-input-group-append>
+                        <b-form-invalid-feedback :state="errors.end_date" id="input-live-feedback">Specify date in mm/dd/yyyy format.</b-form-invalid-feedback>                        
+                    </b-input-group>
+                    <!--
                     <b-form-datepicker                                                
                         id="endDate"
                         v-model="launchModal.end_date"                        
@@ -197,6 +241,7 @@
                         locale="en"
                         size="sm"                        
                     ></b-form-datepicker>                                                
+                    -->
                 </b-col>
             </b-row>  
             <b-row>
@@ -213,8 +258,6 @@
 /* eslint-disable */
 
 import Highcharts, { chart } from 'highcharts' ;
-
-    var colorIdx = 2 ;
 
     /**
      * Set the global timezone to PST
@@ -282,6 +325,24 @@ import Highcharts, { chart } from 'highcharts' ;
         }
     }
 
+    //https://identity.stanford.edu/design-elements/color/accent-colors/
+    const sealColors = [ 
+            "#820000" , // dark red
+            "#00548f",  // Dark digital blue
+            "#006F54", // Dark Green
+            "#014240", // Palo Alto
+            "#7A863B", // Olive
+            "#016895", // Dark Sky
+            "#006B81", // Dark Lagunita
+            "#D1660F", // Dark Poppy
+            "#C74632", // Dark Sprint
+            "#FEC51D", // Dark Illumunicate
+            "#350D36", // Dark Plum
+            "#42081B", // Dark Brick
+            "#544948", // Dark Stone
+            "#B6B1A9", // Dark Fog
+    ] ;
+
 export default {
     data () {
         return {
@@ -289,32 +350,43 @@ export default {
             medChartOptions: {},
             mmeChartOptions: {},
             mmeStackedChartOptions: {},
+            nonOpioidChartOptions: {},
             medCategories: [],
             marData: [],
             patient: {},
+            medColors: {},
             mmeDuration: 1440,
             launchModal : {              
                 start_date: '',
-                end_date: ''
+                end_date: '',
+                inp_start_date: '',
+                inp_end_date: '',
+                rpt_start_date: '',
+                rpt_end_date: ''
             },
             analgesicCategory: 'All',
-            routeOfAdmin: 'All'            
+            routeOfAdmin: 'All',
+            showDebug: false,
+            errors : {
+                start_date: null,
+                end_date: null
+            }            
         }
     },
     computed : {
         startDateFormatted () {
-            return this.$moment(this.launchModal.start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+            return this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
         },
         endDateFormatted() {
-            return this.$moment(this.launchModal.end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+            return this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
         }
     },
     async fetch() {
         /*
         console.log("In fetch method of the a3 pain tab page") ;
-        this.resultText += "\n___________________________In Fetch method before getting patient data\n" ; 
+        this.tlog("___________________________In Fetch method before getting patient data\n" ; 
         this.patient = await this.$services.a3pain.patient() ;       
-        this.resultText += "\n___________________________Fetch Patient data \n" + JSON.stringify(this.patient) ;
+        this.tlog("___________________________Fetch Patient data \n" + JSON.stringify(this.patient) ;
         console.log("patient data ") ;
         console.log(this.patient) ;
         
@@ -326,26 +398,68 @@ export default {
         this.$services.a3pain.dblog("A3PainHome", "In A3 Pain Tab Home Page") ;
         this.$store.commit('setPageTitle', "Opioid MME and Pain Score Visualization") ;
 
+        this.launchModal.start_date = this.$moment(new Date()).format("YYYY-MM-DD") ;
+        this.launchModal.end_date = this.$moment(new Date()).format("YYYY-MM-DD") ;
+
         this.$bvModal.show("launch-modal") ;
 
-        var dt = new Date() ;
+        //var dt = new Date() ;
         //this.report_date = (dt.getMonth() + 1) + "/" + dt.getDate() + "/" + dt.getFullYear() ;
         
         this.medChartOptions = this.getMedsChart() ;
-        this.mmeChartOptions = this.getMMEChart2() ;
+        this.mmeChartOptions = this.getMMEChart() ;
         this.mmeStackedChartOptions = this.getMMEStackedChart() ;
+        
+        //this.marData = this.getLocalMarData() ;
+        //this.medCategories = this.getLocalMedCategories() ;
+        //this.medChartOptions = this.getLocalMedChartOptions() ;
+
+        //this.nonOpioidChartOptions = this.getNonOpioidChart() ;
     },
-    methods : {
+    methods : { 
+        startDateChange() {
+            var noidea = this.$moment(this.launchModal.inp_start_date, "MM/DD/YYYY") ;
+            if (noidea.isValid()) {
+                this.launchModal.start_date = noidea.format("YYYY-MM-DD") ;
+                this.errors.start_date = true ;
+            } else {
+                this.errors.start_date = false ;
+                console.log("Invalid start date") ;
+            }
+        },
+        startDatePickerChange() {
+            console.log("start date picked changed") ;
+            this.launchModal.inp_start_date = this.$moment(this.launchModal.start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+            this.errors.start_date = true ;
+        },
+        endDateChange() {
+            var noidea = this.$moment(this.launchModal.inp_end_date, "MM/DD/YYYY") ;
+            if (noidea.isValid()) {
+                this.launchModal.end_date = noidea.format("YYYY-MM-DD") ;
+                this.errors.end_date = true ;
+            } else {
+                console.log("Invalid end date") ;
+                this.errors.end_date = false ;
+            }
+        },
+        endDatePickerChange() {
+            console.log("end date picked changed") ;
+            this.launchModal.inp_end_date = this.$moment(this.launchModal.end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+            this.errors.end_date = true ;
+        },        
         async populateData() {
             try {
             var _self = this ;
 
             this.$bvModal.hide("launch-modal") ;    
+            
+            this.launchModal.rpt_start_date = this.launchModal.start_date ;
+            this.launchModal.rpt_end_date = this.launchModal.end_date ;
 
-            this.resultText += "\n___________________________Pop data: before Patient data" ;
+            this.tlog("___________________________Pop data: before Patient data") ;
 
             this.patient = await this.$services.a3pain.patient() ;      
-            this.resultText += "\n___________________________Pop data: Patient data \n" + JSON.stringify(this.patient) ;
+            this.tlog("___________________________Pop data: Patient data \n" + JSON.stringify(this.patient)) ;
 
             //var encounters = await this.$services.a3pain.encounters(this.report_date, this.number_of_weeks_ahead, this.number_of_weeks_back) ;            
             var encounters = await this.$services.a3pain.encounters(this.launchModal.start_date, this.launchModal.end_date) ;
@@ -354,12 +468,12 @@ export default {
             //var medstats = await this.$services.a3pain.medstats(this.report_date, this.number_of_weeks_ahead, this.number_of_weeks_back) ;
             var medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
             console.log("medstats....{}", medstats) ;
-            this.resultText += "\n___________________________MedStats Data \n" + JSON.stringify(medstats) ;
+            this.tlog("___________________________MedStats Data \n" + JSON.stringify(medstats)) ;
 
             var wsjson = {} ;
             var csnids = [] ;
 
-            this.resultText += "\n___________________________Patient EPIC client id \n" + this.patient.epicPatientId ;
+            this.tlog("___________________________Patient EPIC client id \n" + this.patient.epicPatientId) ;
 
             encounters.forEach(enc => {
                 csnids.push(enc.pat_enc_csn_id) ;
@@ -391,11 +505,11 @@ export default {
 
             var mmedata = await this.$services.a3pain.mmedata() ;
             console.log(mmedata) ;
-            //this.resultText += "\n--------------------******mme data***************************" ;
-            //this.resultText += JSON.stringify(mmedata) ;
+            //this.tlog("--------------------******mme data***************************" ;
+            //this.tlog(JSON.stringify(mmedata) ;
             } catch (err) {
                 console.log("no idea what this error is...{} " , err) ;
-                this.resultText += "\n---------------------------------------\n" + "Error in JS Call 1 \n" + err ;
+                this.resultText += "\n" + "Error in JS Call 1 :" + err ;
             }
             try {
 
@@ -403,7 +517,7 @@ export default {
 
                     console.log("responses length " + responses.length) ;
                     
-                    this.resultText += "\n------------------------------------MARDATA webservice response START " + responses.length + "\n" ;
+                    this.tlog("------------------------------------MARDATA webservice response START " + responses.length + "\n") ;
 
                     var categories = [] ;
                     var cdata = [] ;
@@ -422,9 +536,11 @@ export default {
                             var isOpioid = false ;
                             var isOral = false ;
 
-                            if (cIdx >= 0) {
-                                this.resultText += " med order name :" + medstats.cats[cIdx].name ;
-                                
+                            if (cIdx >= 0) {                                
+                                if (medstats.cats[cIdx].name.toLowerCase().indexOf(" (wrapper record)") > 0)
+                                    medstats.cats[cIdx].name = medstats.cats[cIdx].name.substr(0, medstats.cats[cIdx].name.toLowerCase().indexOf(" (wrapper record)")) ;
+                                this.resultText += ": med order name :" + medstats.cats[cIdx].name + ":" ;
+
                                 if (medstats.cats[cIdx].pharma_class)
                                     isOpioid = (medstats.cats[cIdx].pharma_class.toLowerCase().indexOf("opioid") >= 0) ;
                                 if (medstats.cats[cIdx].routes)
@@ -435,29 +551,40 @@ export default {
                                     this.resultText += " found mme data :" + mmedata[mIdx].mme_factor ;
                                     mmeFactor = parseFloat(mmedata[mIdx].mme_factor) ;
                                 } else {
-                                    this.resultText += " no matching mme data ";
+                                    this.resultText += " - no matching mme data ";
                                 }
                             }
                             } catch (err) {
-                                this.resultText += "\n---------------------------------------\n" + "Error in JS Call 2 \n" + err ;    
+                                this.resultText += "\n" + "Error in JS Call 2" + err ;    
                             }
-                            this.resultText += "\nTotal MedAdmin Data :" + order.MedicationAdministrations.length ;
+                            this.tlog("Total MedAdmin Data :" + order.MedicationAdministrations.length) ;
                             catIdx = categories.findIndex(function(cat) { return cat.name == order.Name }) ;
                             
                             try {
+                            var medColor = "" ;                                   
                             for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
                                 var ma = order.MedicationAdministrations[mIdx] ;
-                                if (ma.Action != "Not Given" || ma.Action != 'Canceled Entry') {                                    
+                                if (ma.Action != "Not Given" || ma.Action != 'Canceled Entry') {                                     
                                     if (!ma.Dose.Value) continue ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
                                     if (catIdx == -1) {
                                         catIdx = categories.length ;
-                                        categories.push({ name: order.Name, pointWidth: 30, data: [], isOpioid: isOpioid, isOral: isOral } ) ;
+                                        var catColorName = order.Name.split(" ")[0] ;
+                                        if (this.medColors[catColorName]) {
+                                            medColor = this.medColors[catColorName] ;
+                                        } else {
+                                            var medColorIdx = Object.keys(this.medColors).length ;
+                                            medColor = (medColorIdx < sealColors.length?sealColors[medColorIdx]:"") ;
+                                            this.medColors[catColorName] = medColor ;
+                                        }
+                                        categories.push({ name: order.Name, pointWidth: 30, data: [], isOpioid: isOpioid, isOral: isOral, color: medColor} ) ;
+                                    } else {
+                                        medColor = categories[catIdx].color ;
                                     }
                                     ma.mme = parseFloat(ma.Dose.Value) * mmeFactor ;
                                     // ma.Dose.Value and ma.Dose.Unit
-                                    cdata.push({ x: new Date(ma.AdministrationInstant).getTime(), x2: new Date(ma.AdministrationInstant).getTime(), y: catIdx, 
-                                    name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, isOpioid: isOpioid, isOral: isOral }) ;
+                                    cdata.push({ x: new Date(ma.AdministrationInstant).getTime(), y: catIdx, 
+                                        name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, color: medColor }) ;
                                     
                                     if (ma.mme && ma.mme > 0) {
                                         var dt = new Date(ma.AdministrationInstant) ;
@@ -481,17 +608,18 @@ export default {
                             }
                             } catch (err) {
                                 this.resultText += "\nError in MME aggregation :" + err ;
-                                this.resultText += "\n" + JSON.stringify(ma) ;
+                                this.resultText += "\n" + JSON.stringify(ma);
                             }                            
                         }) ; 
                     }) ;
 
-                    this.resultText += "\nTotal chart data :" + cdata.length ;
+                    this.tlog("Total chart data :" + cdata.length) ;
                     
                     try {
                     this.medCategories = categories.map(function(cat) { return { name: cat.name, isOpioid: cat.isOpioid, isOral: cat.isOral } }) ;
                     
                     var medChartOptions = this.getMedsChart(medstats.start_time, medstats.end_time) ;
+
                     // Sort the categories based on name - reverse
                     categories.sort(function(a, b) {
                         return b.name.localeCompare(a.name) ;
@@ -502,8 +630,8 @@ export default {
                         catMap[cat.name] = cIdx ;
                     }) ;
                     // change the y to reflect new cat idx
-                    cdata.forEach(function(cd, idx) {
-                        cdata[idx].y = catMap[cdata[idx].name] ;
+                    cdata.forEach(function(cd) {
+                        cd.y = catMap[cd.name] ;
                     }) ;
                     
                     this.marData = cdata ;
@@ -511,9 +639,9 @@ export default {
                     medChartOptions.series[0].data = cdata ;
                     medChartOptions.yAxis[0].categories = categories.map(function(cat) { return cat.name }) ;
 
-                    this.resultText += "\n MAR DATA " + JSON.stringify(this.marData) ;
-                    this.resultText += "\n MED Categories " + JSON.stringify(this.medCategories) ;
-                    this.resultText += "\n MEDCHARTOPTIONS " + JSON.stringify(medChartOptions) ;
+                    //this.tlog(" MAR DATA " + JSON.stringify(this.marData)) ;
+                    //this.tlog(" MED Categories " + JSON.stringify(this.medCategories)) ;
+                    //this.tlog(" MEDCHARTOPTIONS " + JSON.stringify(medChartOptions)) ;
 
                     _self.medChartOptions = medChartOptions ;
                     
@@ -527,58 +655,72 @@ export default {
                         return a.x - b.x ;
                     }) ;
 
-                    var mmeChartOptions = this.getMMEChart2(medstats.start_time, medstats.end_time) ;
+                    var mmeChartOptions = this.getMMEChart(medstats.start_time, medstats.end_time) ;
                     mmeChartOptions.series[0].data = mdata ;                    
 
                     } catch (err) {
                         this.resultText += "\nError in no idea 1 :" + err ;
                         this.resultText += "\n" + JSON.stringify(ma) ;
                     }
-
+                    try {
                     var mmeStackedChartOptions = this.getMMEStackedChart(medstats.start_time, medstats.end_time) ;
-                    mmeStackedChartOptions.series = categories ;                    
+                    var oCategories = categories.filter(function(c) { return c.isOpioid ; }) ;
+                    mmeStackedChartOptions.series = oCategories ;
                     _self.mmeStackedChartOptions = mmeStackedChartOptions ;
 
-                    this.resultText += "\n--------------------******MME STACKED CHARTOPTIONS***************************" ;
-                    this.resultText += JSON.stringify(mmeStackedChartOptions) ;
+                    this.tlog("--------------------******MME STACKED CHARTOPTIONS***************************") ;
+                    this.tlog(JSON.stringify(mmeStackedChartOptions)) ;
 
+                    /*
+                    var nonOpioidChartOptions = this.getNonOpioidChart(medstats.start_time, medstats.end_time) ;
+                    var nonOpioidCategories = categories.filter(function(c) { return !c.isOpioid ; }) ;
+                    var nonOpData = cdata.filter(function(c) { return !c.isOpioid ; }) ;
 
-                    this.resultText += "\n Before Invoking pain data in BQ" ;
+                    nonOpioidCategories.forEach(function(cat, cIdx) {
+                        var newArr = nonOpData.filter(function(c) { return c.name == cat.name }) ;
+                        cat.data = newArr.map(a => Object.assign({}, a));  // cloning deep cause we are chaging the y values 
+                        cat.data.forEach(function(data) { data.y = parseInt(data.dose) } ) ;
+                    }) ;
 
+                    nonOpioidChartOptions.series = nonOpioidCategories ;
+                    _self.nonOpioidChartOptions = nonOpioidChartOptions ;
+
+                    this.tlog("--------------------******Non Opioid CHARTOPTIONS***************************" ;
+                    this.tlog(JSON.stringify(nonOpioidChartOptions) ;
+                    */
+                    
+                    } catch (err) {
+                        this.resultText += "\nError in mme stacked and nonopioid stuff :" + err ;
+                    }
+                    
+                    this.tlog(" Before Invoking pain data in BQ") ;
                     // getting pain data
                     this.$services.a3pain.pain(_self.launchModal.start_date, _self.launchModal.end_date, _self.patient.epicPatientId)
                         .then(response => {
                             try {
-                            /*                                
-                            mmeChartOptions.series[1] =  {
-                                        "name": "Pain Score",
-                                        "yAxis": 1,
-                                        "color": "purple"
-                            } ;
-                            */
                             console.log("response from pain call") ;
                             console.log(response) ;
                             
-                            this.resultText += "\n Result from Pain BQ Call " + JSON.stringify(response) ;        
+                            //this.tlog(" Result from Pain BQ Call " + JSON.stringify(response) ;        
 
                             mmeChartOptions.series[1].data = response.map(function(pn) { return { x: pn.recorded_time, y: pn.meas_value }}) ; ;
                             _self.mmeChartOptions = mmeChartOptions ;
 
-                            this.resultText += "\n--------------------******MMECHARTOPTIONS after BQ Call only ***************************" ;
-                            this.resultText += JSON.stringify(mmeChartOptions) ;
+                            this.tlog("--------------------******MMECHARTOPTIONS after BQ Call only ***************************") ;
+                            this.tlog(JSON.stringify(mmeChartOptions)) ;
                             
                             } catch (err) {
                                 this.resultText += "\nError in pain bq handler code :" + err ;                                    
                             }
 
-                            this.resultText += "\n Before Invoking pain webservice data for csnids " + csnids ;
+                            this.tlog(" Before Invoking pain webservice data for csnids " + csnids) ;
 
                             this.$services.a3pain.painwsdata(csnids, _self.patient.epicPatientId).then(presponses => {
                                 try {
                                 console.log("pain ws responses length " + presponses.length) ;
-                                this.resultText += "\n------------------------------------Pain webservice response START " + presponses.length + "\n" ;
+                                this.tlog("------------------------------------Pain webservice response START " + presponses.length + "\n") ;
                                 presponses.forEach(presponse => {
-                                    this.resultText += "\n-------------- Pain ws response " + JSON.stringify(presponse) ;
+                                    // this.tlog("-------------- Pain ws response " + JSON.stringify(presponse) ;
                                     presponse.data.forEach(pn => {
                                         var rIdx = mmeChartOptions.series[1].data.findIndex(function(row) { return row.x == pn.recorded_time }) ;
                                         if (rIdx == -1)
@@ -587,81 +729,127 @@ export default {
                                 }) ;
                                 
                                 _self.mmeChartOptions = mmeChartOptions ;
-                                this.resultText += "\n--------------------******MME CHARTOPTIONS after Pain WS Call***************************" ;
-                                this.resultText += JSON.stringify(mmeChartOptions) ;
+                                this.tlog("--------------------******MME CHARTOPTIONS after Pain WS Call***************************") ;
+                                this.tlog(JSON.stringify(mmeChartOptions)) ;
                                 } catch (err) {
-                                    this.resultText += "\nError in pain ws handler code :" + err ;                                    
+                                    this.resultText += "\nError in pain ws handler code :" + err ;
                                 }
                             }) ;
                         }) ;        
                 }) ;
 
             } catch (err) {
-                this.resultText += "\n---------------------------------------\n" + "Error in JS Call \n" + err ;
+                this.resultText += "\nError in JS Call : " + err ;
             }
 
         },
         refreshMarChart() {
-            var categories = [] ;
-            var cdata = [] ;
+            try {
 
-            if (this.analgesicCategory == 'Opioids Only') {
-                categories = this.medCategories.filter(function (cat) { return cat.isOpioid }) ;
-                cdata = this.marData.filter(function (cat) { return cat.isOpioid }) ;
-            } else if (this.analgesicCategory == 'Non-Opioids Only') {
-                categories = this.medCategories.filter(function (cat) { return !cat.isOpioid }) ;
-                cdata = this.marData.filter(function (cat) { return !cat.isOpioid }) ;            
-            } else {
-                categories = this.medCategories ;
-                cdata = this.marData ;
+                var _self = this ;
+
+                this.resultText += "\n in refreshMarChart " ;
+
+                var categories = [] ;
+                var cdata = [] ;
+
+                if (this.analgesicCategory == 'Opioids Only') {
+                    categories = this.medCategories.filter(function (cat) { return cat.isOpioid }) ;
+                    //cdata = this.marData.filter(function (cat) { return cat.isOpioid }) ;
+                } else if (this.analgesicCategory == 'Non-Opioids Only') {
+                    categories = this.medCategories.filter(function (cat) { return !cat.isOpioid }) ;
+                    //cdata = this.marData.filter(function (cat) { return !cat.isOpioid }) ;            
+                } else {
+                    categories = this.medCategories.filter(function(med) {return true ;}) ;  // clone the array
+                    //cdata = this.marData ;
+                }
+                
+                if (this.routeOfAdmin == 'Oral') {
+                    categories = categories.filter(function (cat) { return cat.isOral }) ;
+                    //cdata = cdata.filter(function (cat) { return cat.isOral }) ;
+                } else if (this.routeOfAdmin == 'Non-Oral') {
+                    categories = categories.filter(function (cat) { return !cat.isOral }) ;
+                    //cdata = cdata.filter(function (cat) { return !cat.isOral }) ; 
+                }
+                
+                // Sort the categories based on name
+                categories.sort(function(a, b) {
+                    return b.name.localeCompare(a.name) ;
+                }) ; 
+                // create a map with name and idxs
+                var catMap = {} ;
+                categories.forEach(function(cat, cIdx) {
+                    catMap[cat.name] = cIdx ;
+                }) ;
+                
+                console.log("Before Cat count :" + categories.length  + " marData count :" + this.marData.length) ;
+
+                cdata = this.marData.filter(function (md) {
+                    var cat = categories[catMap[md.name]] ;
+                    if (!cat) {
+                        //console.log(" Cat doesn't exist for mar data {}" , md.name) ;
+                        return false;                        
+                    }
+                    //console.log(" Cat :" + cat.name + " isOral: " + cat.isOral + " Opioid :" + cat.isOpioid) ;
+
+                    var filtered = true ;
+                    if (_self.analgesicCategory == 'All' && _self.routeOfAdmin == 'All') {
+                        return true ;
+                    }
+                    if (_self.analgesicCategory == 'Opioids Only')
+                        filtered = filtered && cat.isOpioid ;
+                    else if (_self.analgesicCategory == 'Non-Opioids Only')
+                        filtered = filtered && !cat.isOpioid ;
+                    
+                    if (_self.routeOfAdmin == 'Oral') 
+                        filtered = filtered && cat.isOral ;
+                    else if (_self.routeOfAdmin == 'Non-Oral') 
+                        filtered = filtered && !cat.isOral ;
+                    
+                    console.log("filter status :" + filtered) ;
+
+                    return filtered ;
+                }) ;
+
+                // change the y to reflect new cat idx
+                cdata.forEach(function(cd) {
+                    cd.y = catMap[cd.name] ;
+                }) ;
+
+                this.resultText += "\n in refreshMarChart: filters & sorting completed " ;
+                console.log("After Cat count :" + categories.length  + " cdata count :" + cdata.length) ;
+
+                var medChartOptions = this.medChartOptions ;
+
+                medChartOptions.yAxis[0].categories = categories.map(function(cat) { return cat.name }) ;
+                medChartOptions.series[0].data = cdata ;
+
+                this.medChartOptions = medChartOptions ;
+
+                this.resultText += "\n in refreshMarChart: medchartoptions updated " ;
+
+                //this.tlog(" MEDCHARTOPTIONS " + JSON.stringify(this.medChartOptions)) ;            
+            
+            } catch (err) {
+                console.log("Error {}", err) ;
+                this.resultText += "\n Error in refreshMarChart " + err ;
             }
 
-            if (this.routeOfAdmin == 'Oral') {
-                categories = categories.filter(function (cat) { return cat.isOral }) ;
-                cdata = cdata.filter(function (cat) { return cat.isOral }) ;
-            } else if (this.routeOfAdmin == 'Non-Oral') {
-                categories = categories.filter(function (cat) { return !cat.isOral }) ;
-                cdata = cdata.filter(function (cat) { return !cat.isOral }) ; 
-            } 
-
-            // Sort the categories based on name
-            categories.sort(function(a, b) {
-                return b.name.localeCompare(a.name) ;
-            }) ; 
-            // create a map with name and idxs
-            var catMap = {} ;
-            categories.forEach(function(cat, cIdx) {
-                catMap[cat.name] = cIdx ;
-            }) ;
-            // change the y to reflect new cat idx
-            cdata.forEach(function(cd) {
-                cd.y = catMap[cd.name] ;
-            }) ;
-            
-            var medChartOptions = this.medChartOptions ;
-
-            medChartOptions.yAxis[0].categories = categories.map(function(cat) { return cat.name }) ;
-            medChartOptions.series[0].data = cdata ;
-
-            this.resultText += "\n in refreshchart " ;
-            this.resultText += "\n MEDCHARTOPTIONS " + JSON.stringify(medChartOptions) ;
-
-            this.medChartOptions = medChartOptions ;
 
         },
         refreshMMEChart() {
             console.log("refreshMMEChart fired {}", this.mmeDuration) ;
             var _self = this ;
 
-            this.resultText += "\n In refreshMMEChart " + this.mmeDuration ;
+            this.tlog(" In refreshMMEChart " + this.mmeDuration) ;
             try {
                 var prdList = this.getTimeChunks(this.mmeDuration) ;
                 var mdata1 = {} ;
                 var catIdx = -1 ;
                 //var categories = this.medChartOptions.yAxis[0].categories.map(function(cat) { return {name: cat, data: []}} ) ;
-                var categories = this.medCategories.map(function(cat) { return {name: cat, data: []}} ) ;
+                var categories = this.medCategories.map(function(cat) { return {name: cat.name, data: []}} ) ;
                 
-                this.resultText += "\n In refreshMMEChart: Categories.... " + JSON.stringify(categories);
+                this.tlog(" In refreshMMEChart: Categories.... " + JSON.stringify(categories)) ;
 
                 this.marData.forEach(function (med) {
                     catIdx = categories.findIndex(function(cat) { return cat.name == med.name }) ;
@@ -696,13 +884,22 @@ export default {
                         
                 this.mmeChartOptions.series[0].data = mdata ;
                 
-                _self.mmeStackedChartOptions.series = categories ;
+                var oCategories = categories.filter(function(c) { return c.isOpioid ; }) ;
+                _self.mmeStackedChartOptions.series = oCategories ;
 
-                this.resultText += "\n--------------------******MME CHARTOPTIONS data in REFRESH MME CHART***************************" ;
-                this.resultText += JSON.stringify(this.mmeChartOptions.series[0].data) ;
+                this.tlog("--------------------******MME CHARTOPTIONS data in REFRESH MME CHART***************************") ;
+                this.tlog(JSON.stringify(this.mmeChartOptions.series[0].data)) ;
+
+                //var nonOpioidCategories = categories.filter(function(c) { return !c.isOpioid ; }) ;
+                //nonOpioidChartOptions.series = nonOpioidCategories ;
+                //_self.nonOpioidChartOptions = nonOpioidChartOptions ;
+
+                //this.tlog("--------------------******Non Opioid ChartOptions REFRESH MME CHART***************************" ;
+                //this.tlog(JSON.stringify(nonOpioidChartOptions) ;
+
 
             } catch (err) {
-                this.resultText += "\n------******Error in refreshMMEChart :" + err ;                
+                this.tlog("------******Error in refreshMMEChart :" + err) ;                
             }
         },
         mousemove(e) {
@@ -724,7 +921,7 @@ export default {
                 }
             }
         },
-        getMMEChart2(start_time_long, end_time_long) {
+        getMMEChart(start_time_long, end_time_long) {
 
             var chartOptions = this.getDefaultChartConfig({
                 start_time: start_time_long,
@@ -733,8 +930,7 @@ export default {
                 name: 'MME',
                 type: 'line',
                 title: '',
-                height: 350,
-                color: "green"
+                height: 400                
             }) ;
 
             chartOptions.xAxis.title = {
@@ -773,11 +969,13 @@ export default {
         
             chartOptions.series[0] = {
                 name : "MME",
-                yAxis: 0
+                yAxis: 0,
+                color: "#820000"
             } ;
             chartOptions.series[1] = {
                 name : "Pain Score",
-                yAxis: 1
+                yAxis: 1,
+                color: "#00548f"
             } ;
 
             chartOptions.plotOptions.line = {
@@ -803,7 +1001,7 @@ export default {
                 name: 'MME',
                 type: 'column',
                 title: '',
-                height: 350,
+                height: 400,
                 color: "green"
             }) ;
 
@@ -841,15 +1039,61 @@ export default {
             return chartOptions ;
 
         },        
+        getNonOpioidChart(start_time_long, end_time_long) {
+
+            var chartOptions = this.getDefaultChartConfig({
+                start_time: start_time_long,
+                end_time: end_time_long,
+                name: 'Non-Opioid',
+                type: 'column',
+                title: '',
+                height: 350,
+                color: "green"
+            }) ;
+
+            chartOptions.chart.type = 'column' ;
+            chartOptions.plotOptions = {
+                column: {
+                    dataLabels: {
+                        enabled: true
+                    }                    
+                }
+            } ;
+
+            chartOptions.xAxis.title = {
+                "text": "Inpatient Time Period",
+                margin: 15,
+                style: {
+                    'font-size': '1.2em',
+                    'font-weight': 'bold'
+                }
+            }
+            chartOptions.yAxis[0].title = {
+                "text": "Non-Opioid Dosage Distribution",
+                margin: 15,
+                style: {
+                    'font-size': '1.2em',
+                    'font-weight': 'bold'
+                }
+            } 
+
+            chartOptions.tooltip.formatter = function () {
+                var tip =  this.point.series.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit + " <br> MME: " + this.point.y ;                
+                return tip ;
+            }
+            return chartOptions ;
+
+        },                
         getMedsChart(start_time_long, end_time_long) {
+
+            var _self = this ;
 
             var chartOptions = this.getDefaultChartConfig({
                 start_time: start_time_long,
                 end_time: end_time_long,
                 min: 0,
                 type: 'scatter',   //xrange 
-                height: 350,
-                color: "purple"
+                height: 400
             }) ;
 
             chartOptions.tooltip.formatter = function () {
@@ -877,6 +1121,13 @@ export default {
                     'font-weight': 'bold'
                 }
             } 
+                        
+            chartOptions.yAxis[0].labels = {
+                formatter () {
+                    return "<span style='color: " + _self.medColors[this.value.split(" ")[0]] + "'>" + this.value + "</span>" ;
+                }
+            } ;          
+            
 
             chartOptions.series[0].showInLegend = false ;
 
@@ -998,7 +1249,22 @@ export default {
             }
             console.log("Periods {}", prd) ;
             return prd ;
-        }
+        },
+        tlog(mesg) {
+            // this.resultText += "\n" + mesg ;
+        },
+        getLocalMarData() {
+            return [{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620488340000,"x2":1620488340000,"y":4,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620737940000,"x2":1620737940000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620716280000,"x2":1620716280000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620696780000,"x2":1620696780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620675000000,"x2":1620675000000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620654300000,"x2":1620654300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620631980000,"x2":1620631980000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620610380000,"x2":1620610380000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620575640000,"x2":1620575640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620549480000,"x2":1620549480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620531780000,"x2":1620531780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620510420000,"x2":1620510420000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620517560000,"x2":1620517560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621254120000,"x2":1621254120000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621238100000,"x2":1621238100000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621211880000,"x2":1621211880000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621168140000,"x2":1621168140000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621149780000,"x2":1621149780000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621127940000,"x2":1621127940000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621102380000,"x2":1621102380000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621080900000,"x2":1621080900000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621058640000,"x2":1621058640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621044840000,"x2":1621044840000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621021560000,"x2":1621021560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620997860000,"x2":1620997860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620955440000,"x2":1620955440000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620886860000,"x2":1620886860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620867660000,"x2":1620867660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621210440000,"x2":1621210440000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621179960000,"x2":1621179960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621164540000,"x2":1621164540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621149840000,"x2":1621149840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621134300000,"x2":1621134300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621119780000,"x2":1621119780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621104600000,"x2":1621104600000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621089360000,"x2":1621089360000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621074540000,"x2":1621074540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621057680000,"x2":1621057680000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621035840000,"x2":1621035840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621021740000,"x2":1621021740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621005720000,"x2":1621005720000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620990660000,"x2":1620990660000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620961560000,"x2":1620961560000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620929820000,"x2":1620929820000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620915960000,"x2":1620915960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620900780000,"x2":1620900780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620886200000,"x2":1620886200000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620871320000,"x2":1620871320000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620856620000,"x2":1620856620000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620841860000,"x2":1620841860000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620826740000,"x2":1620826740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620812460000,"x2":1620812460000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620796800000,"x2":1620796800000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620949560000,"x2":1620949560000,"y":3,"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621141620000,"x2":1621141620000,"y":6,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621141560000,"x2":1621141560000,"y":1,"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621204440000,"x2":1621204440000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621204140000,"x2":1621204140000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621203240000,"x2":1621203240000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621201920000,"x2":1621201920000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"100","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621254180000,"x2":1621254180000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621239000000,"x2":1621239000000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621225500000,"x2":1621225500000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621213680000,"x2":1621213680000,"y":5,"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621623180000,"x2":1621623180000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621602300000,"x2":1621602300000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621579860000,"x2":1621579860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621559340000,"x2":1621559340000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621539960000,"x2":1621539960000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621515660000,"x2":1621515660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621472460000,"x2":1621472460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621450680000,"x2":1621450680000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621431540000,"x2":1621431540000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621404240000,"x2":1621404240000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621385520000,"x2":1621385520000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621340640000,"x2":1621340640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621323720000,"x2":1621323720000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621298460000,"x2":1621298460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621278060000,"x2":1621278060000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true}]
+        },
+        getLocalMedCategories() {
+            return [{"name":"fentaNYL 50 mcg/mL injection","isOpioid":true,"isOral":false},{"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","isOpioid":true,"isOral":true},{"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","isOpioid":true,"isOral":true},{"name":"acetaminophen (Tylenol) tablet 500 mg","isOpioid":false,"isOral":true},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","isOpioid":true,"isOral":true},{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","isOpioid":true,"isOral":false},{"name":"oxyCODONE (Roxicodone) tablet 5 mg","isOpioid":true,"isOral":true},{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","isOpioid":true,"isOral":true},{"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","isOpioid":true,"isOral":false}]
+        },
+        getLocalMedChartOptions() {
+            return {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":350},"title":{"align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},
+            "xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1620457200000,"max":1621666800000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},
+            "yAxis":[{"title":{"text":"Administrered Analgesics","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,
+            "categories":["oxyCODONE (Roxicodone) tablet 5-10 mg","oxyCODONE (Roxicodone) tablet 5 mg","oxyCODONE (Roxicodone) tablet 2.5-5 mg","oxyCODONE (Roxicodone) tablet 10 mg","oxyCODONE (Roxicodone) oral solution 5-10 mg","HYDROmorphone (Dilaudid) syringe 0.4 mg","HYDROmorphone (Dilaudid) syringe 0.2 mg","fentaNYL 50 mcg/mL injection","acetaminophen (Tylenol) tablet 500 mg"]}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10}},"series":[{"type":"scatter","color":"purple","fillOpacity":0.3,"xDateormat":"%m/%d/%Y","tooltip":{"shared":true},"showInLegend":false,"data":[{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620488340000,"x2":1620488340000,"y":4,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620737940000,"x2":1620737940000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620716280000,"x2":1620716280000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620696780000,"x2":1620696780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620675000000,"x2":1620675000000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620654300000,"x2":1620654300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620631980000,"x2":1620631980000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620610380000,"x2":1620610380000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620575640000,"x2":1620575640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620549480000,"x2":1620549480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620531780000,"x2":1620531780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620510420000,"x2":1620510420000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620517560000,"x2":1620517560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621254120000,"x2":1621254120000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621238100000,"x2":1621238100000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621211880000,"x2":1621211880000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621168140000,"x2":1621168140000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621149780000,"x2":1621149780000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621127940000,"x2":1621127940000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621102380000,"x2":1621102380000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621080900000,"x2":1621080900000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621058640000,"x2":1621058640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621044840000,"x2":1621044840000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621021560000,"x2":1621021560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620997860000,"x2":1620997860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620955440000,"x2":1620955440000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620886860000,"x2":1620886860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620867660000,"x2":1620867660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621210440000,"x2":1621210440000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621179960000,"x2":1621179960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621164540000,"x2":1621164540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621149840000,"x2":1621149840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621134300000,"x2":1621134300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621119780000,"x2":1621119780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621104600000,"x2":1621104600000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621089360000,"x2":1621089360000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621074540000,"x2":1621074540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621057680000,"x2":1621057680000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621035840000,"x2":1621035840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621021740000,"x2":1621021740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621005720000,"x2":1621005720000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620990660000,"x2":1620990660000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620961560000,"x2":1620961560000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620929820000,"x2":1620929820000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620915960000,"x2":1620915960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620900780000,"x2":1620900780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620886200000,"x2":1620886200000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620871320000,"x2":1620871320000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620856620000,"x2":1620856620000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620841860000,"x2":1620841860000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620826740000,"x2":1620826740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620812460000,"x2":1620812460000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620796800000,"x2":1620796800000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620949560000,"x2":1620949560000,"y":3,"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621141620000,"x2":1621141620000,"y":6,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621141560000,"x2":1621141560000,"y":1,"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621204440000,"x2":1621204440000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621204140000,"x2":1621204140000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621203240000,"x2":1621203240000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621201920000,"x2":1621201920000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"100","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621254180000,"x2":1621254180000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621239000000,"x2":1621239000000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621225500000,"x2":1621225500000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621213680000,"x2":1621213680000,"y":5,"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621623180000,"x2":1621623180000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621602300000,"x2":1621602300000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621579860000,"x2":1621579860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621559340000,"x2":1621559340000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621539960000,"x2":1621539960000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621515660000,"x2":1621515660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621472460000,"x2":1621472460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621450680000,"x2":1621450680000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621431540000,"x2":1621431540000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621404240000,"x2":1621404240000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621385520000,"x2":1621385520000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621340640000,"x2":1621340640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621323720000,"x2":1621323720000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621298460000,"x2":1621298460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621278060000,"x2":1621278060000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true}]}]}
+        }        
     },
     head() {
         return {
