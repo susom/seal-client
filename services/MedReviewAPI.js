@@ -15,6 +15,53 @@ export default class MedReviewAPI {
         this.seal.dblog(act, msg, this.APP_ID) ;
     }
 
+    chartdata(chartId) {
+      return this.axios({
+        method: 'get',
+        url: "/fhir-app/medreview/api/v2/obs?id=" + chartId + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+      }).then((response) => {            
+          return response.data ;
+      })
+    }
+
+    syndromes() {
+      return this.axios({
+        method: 'get',
+        url: "/fhir-app/medreview/api/v2/syndromeconfigs?type=short&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+      }).then((response) => {            
+          return response.data ;
+      })      
+    }
+
+    syndrome(code) {
+      return this.axios({
+        method: 'get',
+        url: "/fhir-app/medreview/api/v2/syndromeconfig?syndrome=" + code + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+      }).then((response) => {            
+          return response.data ;
+      })            
+    }
+
+    saveOutsideMed(oMed) {        
+      oMed.patient_id = this.store.state.patientId ;
+
+      return this.axios
+          .post("/fhir-app/medreview/api/v2/custommed?aid=" + this.APP_ID + "&pid=" + this.store.state.patientId, oMed)
+          .then( (response) => { 
+              return response.data ;
+          }) ;        
+    }
+
+    deleteOutsideMed(oMed) {
+      oMed.patient_id = this.store.state.patientId ;
+      oMed.action = "delete" ;
+      
+      return this.axios
+          .post("/fhir-app/medreview/api/v2/custommed?aid=" + this.APP_ID + "&pid=" + this.store.state.patientId, oMed)
+          .then( (response) => { 
+              return response.data ;
+          }) ;        
+    }
     /**
      * Removes duplicates and merges
      * 
@@ -23,7 +70,13 @@ export default class MedReviewAPI {
      * @returns combined string with unique values in it
      * 
      */
-    unique_merge(string1, string2) {        
+    unique_merge(string1, string2) {
+        
+        if (!string1) return string2 ;
+        if (!string2) return string1 ;
+        console.log("String1 {}", string1) ;
+        console.log("String2 {}", string2) ;
+        
         var arr1 = string1.split(",") ;
         var arr2 = string2.split(",") ;
 
@@ -40,6 +93,36 @@ export default class MedReviewAPI {
         return arr.join(",") ;       
     }
 
+    merge_meds(med1, med2)
+    {
+        console.log("Merge categories invoked for " + med1.name + " and " + med2.name) ;
+        console.log(med1) ;
+        console.log(med2) ;
+
+        var cat = {} ;
+        cat.id = med1.id ;
+        cat.name = med1.name ;
+        cat.ingredient = med1.ingredient ;
+        cat.routes = this.unique_merge(med1.routes, med2.routes) ;
+        cat.thera_class = this.unique_merge(med1.thera_class, med2.thera_class) ;
+        cat.pharma_class = this.unique_merge(med1.pharma_class, med2.pharma_class) ;
+        cat.data = med1.data.concat(med2.data) ;        
+        cat.med_order_ids = med1.med_order_ids.concat(med2.med_order_ids) ;
+        cat.syndromes = this.unique_merge(med1.syndromes, med2.syndromes) ;
+        cat.pcat = this.unique_merge(med1.pcat, med2.pcat) ;
+
+        if (med1.last_used_long > med2.last_used_long) {
+            cat.last_used_long = med1.last_used_long ;
+            cat.last_used = med1.last_used ;
+        } else {
+            cat.last_used_long = med2.last_used_long ;
+            cat.last_used = med2.last_used ;
+        }
+        console.log("and the final merged cat is ") ;
+        console.log(cat) ;
+        return cat ;
+    }
+
     getDefaultChartConfig(chartData)
     {
         var chartOptions ;
@@ -48,8 +131,8 @@ export default class MedReviewAPI {
             {
                 chart: {
                     marginLeft: 100, // Keep all charts left aligned
-                    spacingTop: 20,
-                    spacingBottom: 20,
+                    //spacingTop: 20,
+                    //spacingBottom: 20,
                     zoomType: 'x',
                     displayErrors: true,
                     height: chartData.height
@@ -63,12 +146,36 @@ export default class MedReviewAPI {
                     enabled: false
                 },
                 legend: {
-                    enabled: true
+                    enabled: false
                 },
                 xAxis: {
                     crosshair: true,
                     events: {
-                        //setExtremes: syncExtremes
+                        setExtremes: function(e) {
+                          var thisChart = this.chart;
+                          if (e.trigger !== 'syncExtremes') { // Prevent feedback loop                              
+                              Highcharts.charts.forEach(function(chart, idx) {                                                              
+                                  if (chart !== thisChart) {
+                                      try {
+                                          if (chart.xAxis[0].setExtremes) { // It is null while updating
+                                              setTimeout(function() {
+                                                  chart.xAxis[0].setExtremes(
+                                                      e.min,
+                                                      e.max,
+                                                      true, //undefined,
+                                                      false,
+                                                      {trigger: 'syncExtremes'}
+                                                  );
+                                              }, 0) ;
+                                          }
+                                      } catch (ex) {
+                                          console.log("Error in synxExtrement for " + chart) ;
+                                          console.log(ex) ;
+                                      }
+                                  }
+                              });
+                          }                          
+                        }
                     },
                     type: 'datetime',
                     min: chartData.start_time,
@@ -129,7 +236,7 @@ export default class MedReviewAPI {
                     type: chartData.type,
                     color: chartData.color,
                     fillOpacity: 0.3,
-                    xDateormat: '%m/%d/%Y',
+                    xDateFormat: '%m/%d/%Y',
                     tooltip: {
                         //valueSuffix: ' ' + chartData.unit,
                         shared: true

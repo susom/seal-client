@@ -7,7 +7,7 @@ export default class A3PainAPI {
     constructor ($axios, $store) {
         this.axios = $axios ;
         this.store = $store ;
-        this.APP_ID = 7 ;            
+        this.APP_ID = 6 ;            
         this.seal = new SealAPI($axios) ;
     }
 
@@ -30,14 +30,31 @@ export default class A3PainAPI {
         })        
     }
     
-    medstats(start_date, end_date) {    
+    medstats(start_date, end_date, nextUrl) {    
+
+        var url = "/fhir-app/a3pain/api/v1/med?start_date=" + start_date +
+            "&end_date=" + end_date + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID ;
+        
+        if (nextUrl && nextUrl !== '') {
+            url = "/fhir-app/a3pain/api/v1/med?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID + "&next=" + encodeURIComponent(nextUrl) ;
+        }
+
+        return this.axios({
+            method: 'get',
+            url: url
+        }).then((response) => {            
+            return response.data ;
+        }) ;
+        
+        /*
         return this.axios({
             method: 'get',
             url: "/fhir-app/a3pain/api/v1/med?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID +
                  "&start_date=" + start_date + "&end_date=" + end_date 
         }).then((response) => {            
             return response.data ;
-        })        
+        })
+        */        
     }
 
     pain(start_date, end_date, epic_patient_id) {    

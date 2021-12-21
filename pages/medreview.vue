@@ -1,50 +1,102 @@
 <template>
     <b-container fluid  class="nopadding">
-        <b-row align-content="center">
-            <b-col cols="10" class="text-center h5 pt-2 pb-2">
-                Medications administered and laboratory results between {{launchModal.start_date}} and {{launchModal.end_date}}
+        <b-row class="my-2" no-gutters id="appBlockDiv">
+            <b-col sm="2" xl="1" class="text-center">
+                <b-img src="drug_reaction_app.png" style="height:100px"></b-img>
             </b-col>
+            <b-col sm="9" xl="10" class="text-left">                 
+                <p class="pt-2">
+                    Drug Reaction Diagnostic Assistant is a clinical decision support tool developed by SEAL.
+                <p>
+                <p>
+                    This app allows clinicians to rapidly display a synchronized timeline showing the interactions over time between 
+                    selected drug administration records and lab results.                    
+                </p>                
+            </b-col>
+        </b-row>
+        
+        <b-row align-content="center">
+            <b-col cols="10" class="text-center h5 pb-2">
+                Medications administered and laboratory results between {{startDateFormatted}} and {{endDateFormatted}}  
+                <b-button class="ml-4" size="sm" variant="primary" @click="$bvModal.show('launch-modal')">Modify Report</b-button>
+            </b-col>
+            <!--
             <b-col class="mt-2">
                 <b-button variant="primary" text disabled size="sm" v-if="showStatus">
                     <b-spinner small type="grow"></b-spinner>
                     {{loadingMessage}}
                 </b-button>                
             </b-col>
+            -->
+        </b-row> 
+        <b-row align-content="center">
+            <b-col class="text-right">
+                <span class="font-weight-bold">Syndrome:</span> 
+                <b-select :options="syndromes" 
+                    v-model="syndromeCode"                     
+                    size="sm"
+                    @change="syndromeChange"
+                    class="ml-2 mb-2" style="width:60%"/>
+            </b-col>
+            <b-col class="text-left ml-3">
+                <div v-if="syndromeCode != 'ALL'" style="display:inline">
+                <b-link @click="showSyndromeModal('meds')">{{syndromeCode}} Meds</b-link>
+                <b-link @click="showSyndromeModal('labs')" class="ml-3">{{syndromeCode}} Labs</b-link>
+                <b-link @click="showSyndromeModal('vitals')" class="ml-3">{{syndromeCode}} Vitals</b-link>
+                </div>
+                <outside-meds v-model="patient" @change="popOutsideMeds" @deleted="deletedOutsideMed" />                
+            </b-col>
         </b-row>
         <b-row class="ml-1 mr-1">
             <b-col cols="12">
-                <splitpanes style="height:100vh" class="default-theme">
-                    <pane size="20">
+                <splitpanes class="default-theme" id="splitPaneDiv" @resized="resizePane">
+                    <pane size="40">
+                        <div :style="rightPaneStyle()" id="leftPaneDiv">
                         <b-card no-body>
-                            <b-tabs card>
+                            <b-tabs card  fill nav-wrapper-class="bg-white" active-nav-item-class="bg-primary">
                                 <b-tab title="Meds" active>
-                                    <b-card-text>
-                                        <b-form-input
-                                            id="filter-input"
-                                            v-model="meds.search"
-                                            type="search"    
-                                            placeholder="Type to Search"
-                                            size="sm"
-                                            class="mb-2"
-                                        ></b-form-input>                                        
-                                        <b-table striped :items="meds.data" :fields="meds.fields"
+                                    <b-card-text>   
+                                        <b-input-group size="sm" class="mb-2">
+                                            <b-form-input
+                                                id="filter-input"
+                                                v-model="meds.search"
+                                                type="search"    
+                                                placeholder="Type to Search"
+                                                debounce="300"
+                                                class="mb-2"
+                                            ></b-form-input>
+                                            <!--
+                                            <b-input-group-append is-text class="mb-2">
+                                                <b-icon icon="file-excel" @click="meds.search=''"></b-icon>
+                                            </b-input-group-append>
+                                            -->
+                                        </b-input-group>
+                                        <!-- @row-selected="onMedsRowSelect" 
+                                            :filter="meds.search"
+                                            :filter-function="filterMeds"
+                                            @filtered="medsFiltered"
+                                            :items="meds.list"
+                                        -->
+                                        <b-table striped 
+                                            :items="medListFiltered" :fields="meds.fields"
                                             small :busy="meds.loading"
                                             selectable
                                             hover
-                                            :select-mode="multi"
+                                            select-mode="multi"
                                             ref="medicationsTable"
-                                            :filter="meds.search"
-                                            @row-selected="onRowSelect">
+                                            @row-clicked="onMedRowClick"                                            
+                                            :sticky-header="tableHeight()">
                                             <template #table-busy>
                                                 <div class="text-center text-primary my-2">
                                                     <b-spinner class="align-middle"></b-spinner>
                                                     <strong>Loading...</strong>
                                                 </div>
-                                            </template>                                        
-                                            <template #cell(selected)="{ rowSelected }">
-                                                <b-checkbox disabled :value="rowSelected"/>
-                                                <!--
-                                                <template v-if="rowSelected">
+                                            </template>
+                                            <template #head(selected)="data">
+                                                <b-checkbox v-model="toggleAllMeds"/>
+                                            </template>
+                                            <template #cell(selected)="data">                                                
+                                                <template v-if="data.item.selected">
                                                     <span aria-hidden="true">&check;</span>
                                                     <span class="sr-only">Selected</span>
                                                 </template>
@@ -52,12 +104,13 @@
                                                     <span aria-hidden="true">&nbsp;</span>
                                                     <span class="sr-only">Not selected</span>
                                                 </template>
-                                                -->
                                             </template>
-                                            <template #cell(tags)="data">
-                                                {{data.item.pcat}}<br/>
-                                                {{data.item.routes}}<br/>
-                                                {{data.item.thera_class}}
+                                            <template #cell(tags)="data">                                                
+                                                <div v-if="data.item.pcat">{{data.item.pcat}}</div>
+                                                <div v-if="data.item.routes">{{data.item.routes}}</div>                                                
+                                                <div v-if="data.item.thera_class">{{data.item.thera_class}}</div>
+                                                <div v-if="data.item.pharma_class">{{data.item.pharma_class}}</div>
+                                                <div v-if="data.item.syndromes">{{data.item.syndromes}}</div>
                                             </template>
                                             <template #cell(total_doses)="data">
                                                 {{data.item.data.length}}
@@ -67,161 +120,207 @@
                                 </b-tab>
                                 <b-tab title="Labs">
                                     <b-card-text>
-                                        <b-form-input
-                                            id="filter-input"
-                                            v-model="labs.search"
-                                            type="search"    
-                                            placeholder="Type to Search"
-                                            size="sm"
-                                            class="mb-2"
-                                        ></b-form-input>                                        
-                                        <b-table striped :items="labs.data" :fields="labs.fields"
-                                            small :busy="labs.loading"
-                                            selectable
-                                            hover
-                                            :select-mode="multi"
-                                            ref="labsTable"
-                                            :filter="labs.search"
-                                            @row-selected="onRowSelect">
-                                            <template #table-busy>
-                                                <div class="text-center text-primary my-2">
-                                                    <b-spinner class="align-middle"></b-spinner>
-                                                    <strong>Loading...</strong>
-                                                </div>
-                                            </template>                                        
-                                            <template #cell(selected)="{ rowSelected }">
-                                                <template v-if="rowSelected">
-                                                    <span aria-hidden="true">&check;</span>
-                                                    <span class="sr-only">Selected</span>
-                                                </template>
-                                                <template v-else>
-                                                    <span aria-hidden="true">&nbsp;</span>
-                                                    <span class="sr-only">Not selected</span>
-                                                </template>
-                                            </template>
-                                        </b-table>                                        
-                                    </b-card-text>
+                                        <med-review-table ref="labsChartTable" :labs="labs" @debug="log" :launchModal="launchModal" @moveToTop="moveLabToTop" />
+                                    </b-card-text>                                        
                                 </b-tab>
                                 <b-tab title="Vitals">
-                                    <b-card-text>
-                                        <b-form-input
-                                            id="filter-input"
-                                            v-model="vitals.search"
-                                            type="search"    
-                                            placeholder="Type to Search"
-                                            size="sm"
-                                            class="mb-2"
-                                        ></b-form-input>                                        
-                                        <b-table striped :items="vitals.data" :fields="vitals.fields"
-                                            small :busy="vitals.busy"
-                                            selectable
-                                            hover
-                                            :select-mode="multi"
-                                            ref="vitalsTable"
-                                            :filter="vitals.search"
-                                            @row-selected="onRowSelect">
-                                            <template #table-busy>
-                                                <div class="text-center text-primary my-2">
-                                                    <b-spinner class="align-middle"></b-spinner>
-                                                    <strong>Loading...</strong>
-                                                </div>
-                                            </template>                                        
-                                            <template #cell(selected)="{ rowSelected }">
-                                                <template v-if="rowSelected">
-                                                    <span aria-hidden="true">&check;</span>
-                                                    <span class="sr-only">Selected</span>
-                                                </template>
-                                                <template v-else>
-                                                    <span aria-hidden="true">&nbsp;</span>
-                                                    <span class="sr-only">Not selected</span>
-                                                </template>
-                                            </template>
-                                        </b-table>                                        
+                                    <b-card-text>                                     
+                                        <med-review-table ref="vitalsChartTable" :labs="vitals" @debug="log" :launchModal="launchModal" @moveToTop="moveLabToTop" />
                                     </b-card-text>
                                 </b-tab>                            
                             </b-tabs>
                         </b-card>
+                        </div>
                     </pane>
-                    <pane size="80">
-                        <b-row>
+                    <pane size="60">
+                        <div :style="rightPaneStyle()" id="rightPaneDiv">
+                        <b-row class="mt-3 ml-1 mr-1">
                             <b-col cols="12">
-                                <b-card>
-                                    <b-card-title>Medication</b-card-title>
-                                    <b-card-text>                                        
-                                        <highchart :modules="['xrange']" :options="medChartOptions" />
+                                <b-card class="shadow-lg rounded-lg">
+                                    <b-card-title class="chart-title">
+                                        <b-row>
+                                            <b-col>Medications</b-col>
+                                            <b-col style="text-align:right" class="mr-3">
+                                                <span>Group By:</span> 
+                                                <b-select :options="['None', 'Ingredient']" 
+                                                v-model="meds.groupBy" size="sm"
+                                                @change="groupByChange"                                         
+                                                class="ml-2" style="width:50%"/>
+                                            </b-col>
+                                        </b-row>                                        
+                                    </b-card-title>
+                                    <b-card-text>                                
+                                        <b-row>
+                                            <b-col>
+                                                <highchart :modules="['xrange']" :options="medChartOptions" ref="medChart"/>
+                                            </b-col>
+                                        </b-row>
                                     </b-card-text>
                                 </b-card>                                
                             </b-col>
-                        </b-row>                        
+                        </b-row>
+                        <b-row class="mt-3 ml-1 mr-1" v-for="(labChart) in labs_visible_charts" :key="labChart.id">
+                            <b-col cols="12">
+                                <b-card class="shadow-lg rounded-lg"  :ref="labChart.id">
+                                    <b-card-title class="chart-title">{{labChart.name}}</b-card-title>
+                                    <b-card-text>
+                                        <b-row>
+                                            <b-col>
+                                                <highchart :options="labChart.chartOptions" />
+                                            </b-col>
+                                        </b-row>
+                                    </b-card-text>
+                                </b-card>                                
+                            </b-col>
+                        </b-row>                            
+                        <b-row class="mt-3 ml-1 mr-1" v-for="(vitalsChart) in vitals_visible_charts"  :key="vitalsChart.id">
+                            <b-col cols="12">
+                                <b-card class="shadow-lg rounded-lg" :ref="vitalsChart.id">
+                                    <b-card-title class="chart-title">{{vitalsChart.name}}</b-card-title>
+                                    <b-card-text>                                
+                                        <b-row>
+                                            <b-col>
+                                                <highchart :options="vitalsChart.chartOptions" />
+                                            </b-col>
+                                        </b-row>
+                                    </b-card-text>
+                                </b-card>                                
+                            </b-col>
+                        </b-row>                                                    
+                        </div>                     
                     </pane>
                 </splitpanes>
             </b-col>
         </b-row>
-        <b-modal id="launch-modal" button-size="sm" centered hide-footer title="Report Criteria">
-            <b-row>
-                <b-col cols="6">
-                    Chart Data from 
-                    <b-form-datepicker
-                        id="startDate"
-                        v-model="launchModal.start_date"                        
-                        :date-format-options="{ year: 'numeric', month: 'numeric', day: 'numeric' }"
-                        locale="en"
-                        size="sm"
-                        class="mt-3 mb-3"
-                    ></b-form-datepicker>
-                </b-col>
-                <b-col cols="6">
-                    Chart Data to
-                    <b-form-datepicker
-                        id="endDate"
-                        v-model="launchModal.end_date"                        
-                        :date-format-options="{ year: 'numeric', month: 'numeric', day: 'numeric' }"
-                        locale="en"
-                        size="sm"
-                        class="mt-3 mb-3"                        
-                    ></b-form-datepicker>
-                </b-col>
-            </b-row>
-            <b-row>
-                <b-col>
-                    <b-button variant="primary" @click="generateCharts()">Generate Charts</b-button>    
-                </b-col>
-                <b-col>
-                    <b-button variant="primary" text disabled size="sm" v-if="showStatus">
-                        <b-spinner small type="grow"></b-spinner>
-                        {{loadingMessage}}
-                    </b-button>                                    
-                </b-col>
-            </b-row>
-            <b-row>
-                <b-col>
-                    <b-textarea readonly rows="10" v-model="debugLog"></b-textarea>
-                </b-col>
-            </b-row>
-        </b-modal>  
+        
+        <b-modal id="syndrome-modal" button-size="sm" centered header-bg-variant="primary"
+            :title="syndromeModal.title" scrollable ok-only ok-title="Close">
+            <b-list-group style="height:400px">
+                <b-list-group-item v-for="item in syndromeModal.items" :key="item.name">{{item.name}}</b-list-group-item>
+            </b-list-group>
+        </b-modal>
 
+        <b-modal id="launch-modal" button-size="sm" 
+            centered hide-footer no-close-on-backdrop 
+            title="Report Criteria" title-class="mx-auto">
+            <b-row>
+                <b-col class="text-right" cols="4">
+                    <label for="startDate">Start Date</label>
+                </b-col>                
+                <b-col>
+                    <editable-date-picker v-model="launchModal.start_date" @error="(event) => {launchModal.errors.start_date = event}" />
+                </b-col>
+            </b-row>
+            <b-row class="mt-3">
+                <b-col class="text-right" cols="4">
+                    <label for="endDate">End Date</label>
+                </b-col>
+                <b-col>
+                    <editable-date-picker v-model="launchModal.end_date" @error="(event) => {launchModal.errors.end_date = event}"/>
+                </b-col>                
+            </b-row>  
+            <b-row>
+                <!--
+                <b-col cols="1" class="text-left">
+                    <b-link @click="showDebug = !showDebug" style="font-size:small;text-align:left;">Logs</b-link>  
+                </b-col>
+                -->
+                <b-col cols="10" class="text-center">                    
+                    <b-button pill variant="primary" class="ml-3 mt-3" @click="generateCharts" :disabled="!launchModal.errors.start_date || !launchModal.errors.end_date">Fetch Patient Data</b-button>  
+                </b-col>
+            </b-row> 
+            <b-row v-show="launchModal.loading">
+                <b-col cols="12"  class="text-center">
+                    <b-button variant="info" disabled size="sm" class="mt-3" style="width:100%">
+                        <b-spinner small type="grow" class="mr-2"></b-spinner>
+                        {{loadingMessage}}
+                    </b-button>
+                </b-col>
+            </b-row> 
+        </b-modal>
+        <b-modal id="medreview-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
+            body-bg-variant="dark">
+            <ul class="text-white">
+                <li>To get started, specify the start and end dates for the visualization.</li>
+
+                <li>To populate the medication chart on the right hand side, make selections from the “Medications” tab by clicking on an entry of interest. 
+                    Click a second time to clear your selection.</li>
+
+                <li>To add a synchronized graph of labs or vitals, make selections from the “Labs” or “Vitals” tabs on the left hand side.</li>
+
+                <li>To find a specific drug or lab, start typing its name into the search bar just below the tabs on the left hand side. 
+                    Click the X on the far right of the search box to clear your search and see all available options again.</li>
+
+                <li>To change the size of the left or right panels, click the white center bar and drag it to either side. 
+                    Your mouse cursor will change shape when hovering over the active hotspot for panel resizing.</li>
+
+                <li>Presets for common conditions are available in the “Syndrome” dropdown. If you would like to add your condition to the list of presets, 
+                    please <a> open a help ticket </a></li>
+
+                <li>To add medications not in the chart, use the “Outside Medications” button. Data entered into the outside medications form is not saved in Epic, only in SEAL.</li>    
+
+            </ul>
+        </b-modal>
+        <b-modal id="session-expired-modal" size="lg" centered hide-footer title="Session Expired">                
+            Your session with SEAL application has expired. Please close the current SEAL tab and reopen to establish new connection.
+        </b-modal>
+        <b-row class="mt-3 ml-2">
+            <b-col cols="11">
+                <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
+                <b-card v-show="showDebug">                    
+                    <b-card-title>Debug Info <b-btn @click="debugLog=''" size="sm" variant="primary">Reset</b-btn></b-card-title>
+                    <b-card-text>
+                        <b-textarea v-model="debugLog" rows="10" auto-grow />
+                    </b-card-text>
+                </b-card>
+            </b-col>                        
+        </b-row>        
     </b-container>
 </template>
 
 <script>
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
+import MedReviewTable from '~/components/MedReviewTable.vue'
+import Highcharts from 'highcharts' ;
+import EditableDatePicker from '~/components/EditableDatePicker.vue';
+import OutsideMeds from '~/components/OutsideMeds.vue';
 
 export default {
-    components: { Splitpanes, Pane },
+    components: { Splitpanes, Pane, MedReviewTable, EditableDatePicker, OutsideMeds },
     data() {
         return {
-            launchModal : {
-                date_label: "Review Date",
+            launchModal : {              
                 start_date: '',
-                end_date: ''
-            },
+                end_date: '',
+                rpt_start_date: '',
+                rpt_end_date: '',
+                loading: false,
+                errors : {
+                    start_date: null,
+                    end_date: null
+                }
+            },     
+            showDebug: false,       
             showStatus: false,
-            loadingMessage: "",
-
+            loadingMessage: "", 
+            toggleAllMeds: false,
+            syndromeCode: "ALL",
+            syndrome: { 
+                medications: {
+                    highrisk: []
+                }
+            },
+            syndromeModal :{
+                title: '',
+                items: []
+            },
+            syndromes: [],
             meds : {
                 search: "",
                 data: [],
+                encounters: [],
+                prevSelected: [],
                 fields: [
                     {label: ' ', key: 'selected'},
                     {label: 'Medication', key: 'name', sortable: false},
@@ -229,54 +328,362 @@ export default {
                     {label: 'Last MAR', key: 'last_used', sortable: false},
                     {label: 'Total Doses', key: 'total_doses', sortable: false}
                 ],
-                loading: false
-            },
-            
+                loading: false,
+                ingredients: [],
+                list: [],
+                groupBy: 'None'
+            },            
             labs : {
                 search: "",
-                data: [],
+                charts: [],
                 fields: [
                     {label: ' ', key: 'selected'},
                     {label: 'Lab', key: 'name', sortable: false},
-                    {label: 'Category', key: 'syndromes', sortable: false}                    
+                    {label: 'Tags', key: 'syndromes', sortable: false}
                 ],
                 loading: false
             },
-
             vitals : {
                 search: "",
-                data: [],
+                charts: [],
                 fields: [
                     {label: ' ', key: 'selected'},
                     {label: 'Lab', key: 'name', sortable: false},
-                    {label: 'Category', key: 'syndromes', sortable: false}                    
+                    {label: 'Tags', key: 'syndromes', sortable: false}                    
                 ],
                 loading: false
-            },            
-
+            },
             patient: {},
-            medChartOptions: {},
-            debugLog:""
+            debugLog:"",
+            medChartOptions: {}
         }
+    },
+    watch : {
+        toggleAllMeds: function(val) {
+            console.log("Toggle all meds watched : {}", val) ;
+            if (val) {
+                this.$refs.medicationsTable.selectAllRows() ;
+            } else {
+                this.$refs.medicationsTable.clearSelected() ;
+            }
+            this.meds.data.forEach(med => {
+                this.$set(med, "selected", val) ;
+            }) ;
+            this.redrawMedChart() ;
+        }        
     },
     async fetch() {
         console.log("In fetch method of the med review page env " + process.env.BASE_URL) ;
 
-        var _self = this ;
-
         this.$store.commit('setAppId', this.$services.medreview.APP_ID) ;
         this.$store.commit('setPageTitle', "Drug Reaction Diagnostic Assistant") ;
+        this.$store.commit('setCurrentApp', { help : "medreview-help-modal" }) ;
         this.$services.medreview.dblog("MedReviewHome", "In Med Review Home Page") ;
 
+        var syndromes = await this.$services.medreview.syndromes() ;
+        this.syndromes = syndromes.map(syndrome => {
+            return {
+                value: syndrome.code,
+                text: (syndrome.code == 'ALL' ? syndrome.name : (syndrome.code + ' ' + syndrome.name))
+            }
+        })
+
         this.patient = await this.$services.seal.patient(this.$services.medreview.APP_ID) ;
+        //this.patient = this.getLocalPatientData() ;
+
         console.log("got patient data") ;
         console.log(this.patient) ;
     },
     mounted() {
-      this.$bvModal.show("launch-modal") ;
-      //this.medChartOptions = this.getMedsChart() ;
+        console.log("mounted for medreview page") ;
+        this.launchModal.start_date = this.$moment().add(-7, 'days').format("MM/DD/YYYY") ;
+        this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;
+        console.log(this.launchModal) ;
+        this.$bvModal.show("launch-modal") ;
     },
+    computed : {
+        startDateFormatted () {            
+            return this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+        },
+        endDateFormatted() {            
+            return this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+        },
+        labs_visible_charts: function() {
+            return this.labs.charts.filter(chart => chart.visible) ;
+        },
+        vitals_visible_charts: function() {
+            return this.vitals.charts.filter(chart => chart.visible) ;
+        },
+        medListFiltered: function() {
+            var list = this.meds.list.filter((row) => {
+                var searchTerms = row.name + " " + row.last_used + " " + row.pcat + " " 
+                            + (row.routes?row.routes:"") + " " 
+                            + (row.thera_class?row.thera_class:"") + " " 
+                            + (row.pharma_class?row.pharma_class:"") + " " 
+                            + (row.syndromes?row.syndromes:"") ;
+
+                searchTerms = searchTerms.toLowerCase() ;
+                
+                var terms = this.meds.search.split(",") ;
+                for (var i=0;i<terms.length;i++) {
+                    if (searchTerms.indexOf(terms[i].trim().toLowerCase()) < 0) return false ;
+                }
+                return true ; 
+            }) ;
+            console.log("filter fired... original list size :" + this.meds.list.length + " fitlered size " + list.length) ;
+            return list ;
+        }
+    },    
     methods : {
+        groupByChange() {
+            console.log("group by change fired " + this.meds.groupBy) ;            
+            this.redrawMedChart() ;            
+        },
+        redrawMedChart() {
+            console.log("Inside redrawMedChart method") ;
+            this.log("Inside redrawMedChart method") ;
+            var medChartOptions = this.getMedsChart() ;
+
+            var filteredMeds = [] ;
+
+            if (this.meds.groupBy == "None") {
+                filteredMeds = this.meds.data.filter(med => med.selected) ;
+            } else if (this.meds.groupBy == "Ingredient") {
+                this.log("Inside group by Ingredients section") ;
+                try {
+                if (!this.meds.ingredients || this.meds.ingredients.length == 0 ) {
+                    this.log("Got inside to loop thru each med for ingradients") ;
+                    var ingredients = [] ;
+                    this.meds.data.forEach(med => {
+                        var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
+                        this.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
+                        if (ingIdx > -1) {
+                            ingredients[ingIdx] = this.$services.medreview.merge_meds(ingredients[ingIdx], med) ;
+                        } else {
+                            var ingObj = JSON.parse(JSON.stringify(med))  ;
+                            ingObj.name = (med.ingredient?med.ingredient:med.name) ;
+                            ingredients.push(ingObj) ;
+                        }                
+                    }) ;
+                    this.log("Setting ingredients first time {}" + ingredients.map(ing => ing.name)) ;
+                    this.$set(this.meds, 'ingredients', ingredients) ;
+                }
+                filteredMeds = this.meds.ingredients.filter(med => med.selected) ;
+                } catch (err) {
+                    this.log("Error in group by ingredients :" + err) ;
+                }
+            }
+            try {
+            // alpha sort on names
+            filteredMeds.sort(function (a, b) {
+                if (a.name > b.name) {
+                    return -1;
+                }
+                if (a.name < b.name) {
+                    return 1;
+                }                
+            }) ;
+
+            for (var i=0;i<filteredMeds.length;i++) {
+                filteredMeds[i].data.forEach(point => {point.y = i}) ;
+            }
+            
+            var cdata = filteredMeds.flatMap(med => med.data) ;
+            cdata  = JSON.parse(JSON.stringify(cdata)) ;  // basic simple deep clone
+
+            medChartOptions.yAxis[0].categories = filteredMeds.map(med => med.name) ;
+            medChartOptions.series[0].data = cdata ;
+
+            var chartHeight = medChartOptions.yAxis[0].categories.length * 30 ;
+            if (chartHeight < 300)
+                chartHeight = 300;
+
+            medChartOptions.chart.height = chartHeight ;
+
+            var plotBands = [] ;
+            this.meds.encounters.forEach(enc => {                
+                plotBands.push({
+                    color : "lightgrey" ,
+                    borderwidth: 5 ,
+                    borderColor: "lightgrey",
+                    from : enc.start ,
+                    to : enc.end,
+                    zIndex : 1
+                }) ;                
+            }) ;
+
+            medChartOptions.xAxis.plotBands = plotBands ;
+
+            console.log(medChartOptions) ;
+            
+            this.resizePane() ;
+            
+            this.medChartOptions = medChartOptions ;
+            
+            if (this.meds.groupBy == "None")
+                this.meds.data.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;
+            else
+                this.meds.ingredients.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;            
+
+            if (this.meds.groupBy == "None") {
+                this.meds.list = this.meds.data ;
+            } else {
+                this.meds.list = this.meds.ingredients ;
+            }
+            this.log("********Medication List***********") ;
+            this.log(JSON.stringify(this.meds.list)) ;
+            } catch (err) {
+                this.log("Error in redrawchart 2 " + err) ;
+            }
+
+        },
+        log(mesg) {
+            this.debugLog += "\n" + mesg ;
+        },
+        moveLabToTop(itemId) {
+            this.$refs[itemId][0].scrollIntoView() ;
+        },
+        popOutsideMeds(newPatient) {
+            console.log("In medreview popOutsideMeds for patient data {}" , newPatient) ;
+            newPatient.cmeds.forEach(omed => {
+                var med = {selected: false, seal_medication_id: -1} ;
+                med.name = omed.med_name ;
+                med.seal_medication_id = omed.seal_medication_id ;                
+                med.pcat = "OutsideMed" ;
+                med.syndromes = omed.syndromes ;
+                med.thera_class = omed.thera_class ;
+                med.pharma_class = omed.pharma_class ;
+                med.routes = omed.route ;
+                med.ingredient = omed.ingredients ;
+                med.id = this.meds.data.length ;
+                med.data = [] ;
+
+                var last_used_long = 0 ;
+                var last_used = "" ;
+                var inReportPeriod = false ;
+
+                for (var pIdx = 0; pIdx < omed.med_periods.length; pIdx++) {                    
+                    var prd = omed.med_periods[pIdx] ;
+                    this.log("Process outside med period " + JSON.stringify(prd)) ;
+                    var cdata = {} ;  // chart data
+                    cdata.x = this.$moment(prd.start_date, "mm/dd/yy").valueOf() ;
+                    cdata.x2 = this.$moment(prd.end_date, "mm/dd/yy").valueOf() ;
+                    if (cdata.x2 > last_used_long) {
+                        last_used_long = cdata.x2 ;
+                        last_used = prd.end_date ;
+                    }
+                    
+                    if ((cdata.x >= this.launchModal.rpt_start_date_long && cdata.x <= this.launchModal.rpt_end_date_long)  
+                        || (cdata.x2 <= this.launchModal.rpt_end_date_long && cdata.x2 >= this.launchModal.rpt_start_date_long)
+                        || (cdata.x < this.launchModal.rpt_start_date_long && cdata.x2 > this.launchModal.rpt_end_date_long)) 
+                    {
+                        inReportPeriod = true ;
+                        cdata.y = med.id ;
+                        cdata.name = med.name ;
+                        cdata.pcat = prd.ptype ;
+                        if (med.pcat.indexOf(prd.ptype) < 0) {
+                            med.pcat = med.pcat + ", " + prd.ptype ;
+                        }
+                        cdata.color= "red" ;
+                        med.data.push(cdata) ;                            
+                    }
+                } ;
+                
+                med.last_used_long = last_used_long ;
+                med.last_used = last_used ;
+                
+                this.log("Process outside med " + omed.med_name + " inReportPeriod " + inReportPeriod + " med " + JSON.stringify(med)) ;
+
+                if (inReportPeriod) {
+                    console.log("Pushing outside med {}", med) ;
+                    
+                    var mIdx = this.meds.data.findIndex(function(med) { return med.seal_medication_id && med.seal_medication_id == omed.seal_medication_id }) ;
+                    console.log("searching omed " + omed.med_name + " found index: " + mIdx) ;
+                    if (mIdx > -1)
+                        this.meds.data.splice(mIdx, 1, med) ;
+                    else
+                        this.meds.data.push(med) ;                
+                } else {
+                    console.log("Skipping outside med {} cause none of the periods falls in rprt range", {}) ;
+                }
+            }) ;
+        },
+        deletedOutsideMed(sealMedicationId) {
+            console.log("In medreivew deleteOutsideMed methid :" + sealMedicationId) ;
+            var mIdx = this.meds.data.findIndex(function(med) { return med.seal_medication_id && med.seal_medication_id == sealMedicationId }) ;
+            this.meds.data.splice(mIdx, 1) ;
+        },    
+        async syndromeChange() {
+            this.syndrome = await this.$services.medreview.syndrome(this.syndromeCode) ;             
+            this.meds.data.forEach(med => {
+                if (med.syndromes.indexOf(this.syndromeCode) > -1) {
+                    this.$set(med, "selected", true) ;
+                } else {
+                    this.$set(med, "selected", false) ;
+                }
+            }) ;
+            this.redrawMedChart() ;
+
+            this.labs.charts.forEach(lab => {
+                if (lab.syndromes.indexOf(this.syndromeCode) > -1) {
+                    this.$set(lab, "visible", false) ;
+                    this.$set(lab, "selected", false) ;
+                } else {
+                    this.$set(lab, "visible", true) ;
+                    this.$set(lab, "selected", true) ;
+                }
+                this.$refs.labsChartTable.onLabRowClick(lab) ;
+            }) ;
+            this.vitals.charts.forEach(lab => {
+                if (lab.syndromes.indexOf(this.syndromeCode) > -1) {
+                    this.$set(lab, "visible", false) ;
+                    this.$set(lab, "selected", false) ;
+                } else {
+                    this.$set(lab, "visible", true) ;
+                    this.$set(lab, "selected", true) ;
+                }
+                this.$refs.vitalsChartTable.onLabRowClick(lab) ;                
+            }) ;            
+        },
+        showSyndromeModal(type) {
+            if (type == 'meds') {
+                this.syndromeModal.title = this.syndrome.code + ' Medications' ;
+                this.syndromeModal.items = this.syndrome.medications.highrisk ;
+            } else if (type == 'labs') {
+                this.syndromeModal.title = this.syndrome.code + ' Labs' ;
+                this.syndromeModal.items = this.syndrome.labs ;                
+            } else if (type == 'vitals') {
+                this.syndromeModal.title = this.syndrome.code + ' Vitals' ;
+                this.syndromeModal.items = this.syndrome.vitals ;                
+            }
+            this.$bvModal.show('syndrome-modal') ;
+        },
+        resizePane(dims) {
+            Highcharts.charts.forEach(function(chart, idx) {  
+                    if (chart) chart.reflow() ;
+            }) ;
+        },
+        onMedsRowSelect(rows) {
+            this.meds.prevSelected = rows.map(x => x.name) ;
+            console.log("In onmedsrowseelct prevselected {}", this.meds.prevSelected) ;
+        },
+        rightPaneStyle() {
+            var styles = {} ;
+
+            var element = document.getElementById("appBlockDiv") ; // splitPaneDiv
+            if (element) {
+                styles = {
+                    "height": (window.innerHeight - element.offsetTop) + "px" ,
+                    "overflow-y": "scroll" 
+                } ;
+            }
+
+            return styles ;
+        },
+        tableHeight() {
+            //console.log(window.innerHeight + " 80% :" + (window.innerHeight * 80/100)) ;
+            return (window.innerHeight * 75/100) + "px" ;
+        },
         async generateCharts() {
 
             console.log("Generating charts for ") ;
@@ -284,23 +691,32 @@ export default {
             
             this.debugLog += "Generating charts \n" ;
 
-            this.showStatus = true ;
+            this.launchModal.loading = true ;
+                         
+            this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+            this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+
+            var rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime() ;
+            var rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime() ;
+
+            this.$set(this.launchModal, 'rpt_start_date_long', rpt_start_date_long) ;
+            this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
+
             this.loadingMessage = "Medication Data" ;
 
-            //this.$bvModal.hide("launch-modal") ;
+            var _self = this ;
 
-            var _self = this ;                                  
             var responses = [] ;
             var response = {} ;
 
-            response = await this.$services.seal.medicationData(this.launchModal.start_date, this.launchModal.end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
+            response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
+            //response = this.getLocalMedData() ;
             responses.push(response) ;
 
             while (response.nextUrl) {
-                var response = await this.$services.seal.medicationData(this.launchModal.start_date, this.launchModal.end_date, "ALL", data.nextUrl, this.$services.medreview.APP_ID) ;
+                response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.medreview.APP_ID) ;
                 responses.push(response) ;
             }
-            //var responses = this.$services.medreview.getMedResponses() ;
 
             console.log("med orders done") ;
             console.log(responses) ;
@@ -327,7 +743,9 @@ export default {
 
             this.loadingMessage = "Encounter Data" ;
 
-            var encounters = await this.$services.seal.encounters(this.start_date, this.end_date, '', this.$services.medreview.APP_ID) ;
+            var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.medreview.APP_ID) ;
+            //var encounters = this.getLocalEncData().data ;
+
             console.log("encounters....") ;
             console.log(encounters) ;
 
@@ -363,20 +781,55 @@ export default {
             console.log("Final ws call json") ;
             console.log(wsjson) ;
 
-            // remove inpatient data
-            console.log("meds") ;
-            meds.forEach(function(med) {
-                console.log(med.name) ;
-                med.data = med.data.filter(function(elem) { return elem.pcat.toLowerCase().indexOf("inpatient") < 0 ; } ) ;
-            })
-
-            var rpt_start_date_long = this.$moment(this.launchModal.start_date, "YYYY-MM-DD").toDate().getTime() ;
-            var rpt_end_date_long = this.$moment(this.launchModal.end_date, "YYYY-MM-DD").toDate().getTime() ;
-
             this.loadingMessage = "MAR Data" ;
             
             this.debugLog += "before calling MAR data \n" ;
-            
+
+            // remove inpatient data                
+            meds.forEach(function(med) {
+                med.data = med.data.filter(function(elem) { return elem.pcat.toLowerCase().indexOf("inpatient") < 0 ; } ) ;
+            }) ;
+            this.debugLog += "after removing inpatient data: " + meds.map(med=>med.name) + "\n" ;
+
+            try {
+            // remove invalid data            
+            encounters.forEach(function(enc) {
+                console.log(" enc st dt :" + enc.start + " end dt :"  + enc.end) ;
+                meds.forEach(med => {                        
+                    med.data.forEach(function(point) {
+                        // data starts inside the inpatient area
+                        if (point.x >= enc.start && point.x <= enc.end) {
+                            if (point.x2 <= enc.end) {
+                                // somehow remove this row
+                                _self.debugLog += "marked for removal : " + JSON.stringify(point) + "\n" ;
+                                point.remove = true ;                                    
+                            } else {
+                                // resetting the start to end
+                                point.x = enc.end ; // move the start of the data point to after end of 
+                            }
+                        } else if (point.x < enc.start && point.x2 >= enc.start) {
+                            // data started earlier than in patient area
+                            if (point.x2 <= enc.end) {
+                                point.x2 = enc.start ;
+                            } else {
+                                // split the data into two sections
+                                var ndata = JSON.parse(JSON.stringify(point)) ;  // clone data
+                                ndata.x = enc.end ;
+                                med.data.push(ndata) ;
+
+                                point.x2 = enc.start ;
+                            }
+                        }                                                        
+                    }) ;
+                    med.data = med.data.filter(point => { return !point.remove } ) ;                        
+                }) ;
+            }) ;
+
+            } catch (err) {
+                alert("Error in removing invalid data " + err) ;
+                _self.debugLog += "Error in removing invalid data :" + err + "\n" ;
+            }
+
             this.$services.seal.mardata(wsjson, this.$services.medreview.APP_ID).then(responses => {
                 console.log("responses length " + responses.length) ;
                 this.debugLog += "Got MAR data responses " + responses.length + "\n" ;
@@ -420,45 +873,40 @@ export default {
                         med.total_rows = med.data.length ;
                     }) ;
                 }) ;
-                
-                // remove all elements in the array
+
+                // meds only with data is used
+                meds = meds.filter(med => {return med.data.length > 0}) ;
+
                 this.meds.data = meds ;
-                //this.medications = meds ;
-
-                this.showStatus = false ;
-            
-                this.debugLog += "done processing MAR data- getting charts \n" ;
-                var medChartOptions = this.getMedsChart() ;
-                this.debugLog += "Before flatMap\n" ;
-                medChartOptions.series[0].data = meds.flatMap(med => med.data) ;
-                this.debugLog += "Before Map \n" ;
-                medChartOptions.yAxis[0].categories = meds.map(med => med.name) ;
-
-                this.medChartOptions = medChartOptions ;
+                this.popOutsideMeds(this.patient) ;
+                this.meds.encounters = encounters ;                
                 
+                this.redrawMedChart() ;
+
+                this.launchModal.loading = false ;
                 this.debugLog += "All done \n" ;
-                console.log(this.medChartOptions) ;
+                console.log(this.defaultMedChartOptions) ;
                 console.log("final result of generate report call") ;
                 console.log(this.medications) ;
 
-                //this.$bvModal.hide("launch-modal") ;
+                this.$bvModal.hide("launch-modal") ;
             }) ;
 
             this.debugLog += "Getting lab obs data \n" ;
-            this.labs.data = await this.getObsData("laboratory") ;
-            
+            this.labs.charts = await this.getObsData("laboratory") ;
+            console.log("Labs data : {}", this.labs) ;
+
             this.debugLog += "Getting vitals obs data \n" ;
-            this.vitals.data = await this.getObsData("vital-signs") ;
+            this.vitals.charts = await this.getObsData("vital-signs") ;
+            console.log("Vitals data : {}", this.labs) ;
 
         },
         async getObsData(category) {
             var responses = [] ;
-            //responses.push(initResponse) ;
-            var response = await this.$services.seal.obsData(category, this.launchModal.start_date, this.launchModal.end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
+            var response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
             responses.push(response) ;
-            //var response = initResponse ;
             while (response.nextUrl) {
-                response = await this.$services.seal.obsData(category, this.launchModal.start_date, this.launchModal.end_date, "ALL", data.nextUrl, this.$services.medreview.APP_ID) ;
+                response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", data.nextUrl, this.$services.medreview.APP_ID) ;
                 responses.push(response) ;
             }
             
@@ -469,38 +917,509 @@ export default {
                 response.data.forEach(function(lab) {
                     var labIdx = labs.findIndex(function(elem) { return elem.name == lab.name}) ;
                     if (labIdx === -1) {
+                        lab.rendered = false ;
+                        lab.visible = false ;
                         labs.push(lab) ;
                     }
-                });              
+                });
             }) ;
+
             return labs ;
         },
         getMedsChart() {
             var chartOptions = this.$services.medreview.getDefaultChartConfig({
-                start_time: this.$moment(this.launchModal.start_date, "YYYY-MM-DD").toDate().getTime(),
-                end_time: this.$moment(this.launchModal.end_date, "YYYY-MM-DD").toDate().getTime(),
+                start_time: this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime(),
+                end_time: this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime(),
                 min: 0,
                 //max: 10,
-                name: 'Medications Chart',
+                //name: 'Medications Chart',
                 type: 'xrange',
-                title: 'Medications Chart',
-                //height: 350,
-                //color: "purple"
+                title: '',
+                height: 400
             }) ;
 
             return chartOptions ;
         },
-        onRowSelect(item) {
-            console.log("row selected") ;
+        onMedRowClick(item, idx) {
+            console.log(`OnMedRowClick item idx is ${idx}`) ;
             console.log(item) ;
-            // this.$refs.selectableTable.clearSelected()
-            // this.$refs.selectableTable.selectRow(2)  // third row
+            this.$set(item, 'selected', !item.selected) ;
+            this.redrawMedChart() ;
         },
         merge(string1, string2) {
             return this.$services.medreview.unique_merge(string1, string2) ;
+        },     
+        getLocalMedData() {
+            return {
+                "start_time": 1305097200000,
+                "end_time": 1305097200000,
+                "start_time_yyyymmdd": "2011-05-11",
+                "end_time_yyyymmdd": "2011-05-11",
+                "enc_pat_id": "e7uurjqx-qWSveUWOXHBkNQ3",
+                "syndrome": "ALL",
+                "cats": [
+                    {
+                        "name": "nicotine 21 mg/24hr td pt24",
+                        "data": [
+                            {
+                                "med_order_id": "889628",
+                                "x": 1228896000000,
+                                "x2": 1462950000000,
+                                "y": 0,
+                                "name": "nicotine 21 mg/24hr td pt24",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "DRESS",
+                        "med_order_ids": [
+                            "889628"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eSXWCxLKQS56lH9uth9o5wXSxnzY.6iKGpVCa0LWWcrHOuzaQta4gaQTRpO9EnvX03",
+                        "pcat": "Community",
+                        "routes": "Transdermal",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "12/10/2008",
+                        "first_used_long": 1228896000000,
+                        "rxCodes": [
+                            "7407",
+                            "198030"
+                        ],
+                        "ingredient": "nicotine"
+                    },
+                    {
+                        "name": "nicotine 7 mg/24hr td pt24",
+                        "data": [
+                            {
+                                "med_order_id": "889630",
+                                "x": 1228896000000,
+                                "x2": 1462950000000,
+                                "y": 1,
+                                "name": "nicotine 7 mg/24hr td pt24",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "DRESS",
+                        "med_order_ids": [
+                            "889630"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/ec2EdIz35pNyygTeozpkhw4RvZ71WEfy5CXCoSalg3zdglNu2yDJTbKhCO2d1AhKm3",
+                        "pcat": "Community",
+                        "routes": "Transdermal",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "12/10/2008",
+                        "first_used_long": 1228896000000,
+                        "rxCodes": [
+                            "7407",
+                            "198031"
+                        ],
+                        "ingredient": "nicotine"
+                    },
+                    {
+                        "name": "nicotine 14 mg/24hr td pt24",
+                        "data": [
+                            {
+                                "med_order_id": "889629",
+                                "x": 1228896000000,
+                                "x2": 1462950000000,
+                                "y": 2,
+                                "name": "nicotine 14 mg/24hr td pt24",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "DRESS",
+                        "med_order_ids": [
+                            "889629"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eBQbIRqmHguWneK5v8Og9E-4xSOYwWwD2hQqK3t9pZZ.MetK8Qb.7eXm.nmi5eamV3",
+                        "pcat": "Community",
+                        "routes": "Transdermal",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "12/10/2008",
+                        "first_used_long": 1228896000000,
+                        "rxCodes": [
+                            "7407",
+                            "198029"
+                        ],
+                        "ingredient": "nicotine"
+                    },
+                    {
+                        "name": "codeine-guaifenesin 10-100 mg/5ml po syrp",
+                        "data": [
+                            {
+                                "med_order_id": "889598",
+                                "x": 1282806000000,
+                                "x2": 1462950000000,
+                                "y": 3,
+                                "name": "codeine-guaifenesin 10-100 mg/5ml po syrp",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "DRESS,HIT",
+                        "med_order_ids": [
+                            "889598"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eFaEzG1KIkTzmJpqIINo7DDm0q3GB9d93nIX0fD9OhkV03KzOhejXiQkZVvIUr.8j3",
+                        "pcat": "Community",
+                        "routes": "Oral",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "08/26/2010",
+                        "first_used_long": 1282806000000,
+                        "rxCodes": [
+                            "2670",
+                            "5032",
+                            "214442",
+                            "995868"
+                        ],
+                        "ingredient": "codeine,guaifenesin"
+                    },
+                    {
+                        "name": "famotidine 20 mg po tabs",
+                        "data": [
+                            {
+                                "med_order_id": "889599",
+                                "x": 1266048000000,
+                                "x2": 1462950000000,
+                                "y": 4,
+                                "name": "famotidine 20 mg po tabs",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "",
+                        "med_order_ids": [
+                            "889599"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/e4a358bdlVtjl8Jqsf3-8u-DpWQVe6lF9iRbDkfc3qzqImMfALFq9SgOUzo89R5L43",
+                        "pcat": "Community",
+                        "routes": "Oral",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "02/13/2010",
+                        "first_used_long": 1266048000000,
+                        "rxCodes": [
+                            "4278",
+                            "310273"
+                        ],
+                        "thera_class": "GASTROINTESTINAL",
+                        "pharma_class": "HISTAMINE H2-RECEPTOR INHIBITORS",
+                        "ingredient": "famotidine"
+                    },
+                    {
+                        "name": "acetaminophen-codeine 300-30 mg po tabs",
+                        "data": [
+                            {
+                                "med_order_id": "889616",
+                                "x": 1242802800000,
+                                "x2": 1462950000000,
+                                "y": 5,
+                                "name": "acetaminophen-codeine 300-30 mg po tabs",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "",
+                        "med_order_ids": [
+                            "889616"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/ebYiUvEmAflK.4LtZVebjlqtNv79DLP0Qug.KhlrlyOho1czxYM9UItdVVQfRlkej3",
+                        "pcat": "Community",
+                        "routes": "Oral",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "05/20/2009",
+                        "first_used_long": 1242802800000,
+                        "rxCodes": [
+                            "161",
+                            "2670",
+                            "817579",
+                            "993781"
+                        ],
+                        "thera_class": "ANALGESICS",
+                        "pharma_class": "OPIOID ANALGESIC AND NON-SALICYLATE ANALGESICS",
+                        "ingredient": "acetaminophen,codeine"
+                    },
+                    {
+                        "name": "levothyroxine sodium 100 mcg po tabs",
+                        "data": [
+                            {
+                                "med_order_id": "889600",
+                                "x": 1266048000000,
+                                "x2": 1462950000000,
+                                "y": 6,
+                                "name": "levothyroxine sodium 100 mcg po tabs",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "",
+                        "med_order_ids": [
+                            "889600"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eA9IZM.lvQVOXTDPYrt97mqyOk-nP.8P-1WyJLwV2PDApPnmXtYuOAwtCA2vBEcqM3",
+                        "pcat": "Community",
+                        "routes": "Oral",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "02/13/2010",
+                        "first_used_long": 1266048000000,
+                        "rxCodes": [
+                            "10582",
+                            "40144",
+                            "892246",
+                            "1372638"
+                        ],
+                        "ingredient": "levothyroxine"
+                    },
+                    {
+                        "name": "diltiazem hcl er coated beads 240 mg po cp24",
+                        "data": [
+                            {
+                                "med_order_id": "889601",
+                                "x": 1266048000000,
+                                "x2": 1462950000000,
+                                "y": 7,
+                                "name": "diltiazem hcl er coated beads 240 mg po cp24",
+                                "color": "lightgreen",
+                                "pcat": "Community"
+                            }
+                        ],
+                        "syndromes": "",
+                        "med_order_ids": [
+                            "889601"
+                        ],
+                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eAMyTcggmIulnQ2tTBjDzeBvrUMvvs73LjpnaBVzXDkTlUN-avGintCN5sX-Od95I3",
+                        "pcat": "Community",
+                        "routes": "Oral",
+                        "last_used": "05/11/2016",
+                        "last_used_long": 1462950000000,
+                        "first_used": "02/13/2010",
+                        "first_used_long": 1266048000000,
+                        "rxCodes": [
+                            "3443",
+                            "203211",
+                            "830837"
+                        ],
+                        "ingredient": "diltiazem"
+                    }
+                ],
+                "name": "Medications",
+                "id": "medications"
+            } ;
+        },
+        getLocalEncData() {
+            return {
+                "data": [
+                    {
+                        "start": 1384615500000,
+                        "end": 1384616400000,
+                        "pat_enc_csn_id": "11589"
+                    },
+                    {
+                        "start": 1379697900000,
+                        "end": 1379698800000,
+                        "pat_enc_csn_id": "11590"
+                    },
+                    {
+                        "start": 1309868682000,
+                        "end": 1400359878000,
+                        "pat_enc_csn_id": "11592"
+                    }
+                ]
+            }
+        },
+        getLocalLabsData() {
+            return {
+                "data": [
+                    {
+                        "id": "Lcharthematocrit",
+                        "name": "Hematocrit",
+                        "syndromes": ""
+                    },
+                    {
+                        "id": "Lcharthemoglobin",
+                        "name": "Hemoglobin",
+                        "syndromes": "ITP"
+                    }
+                ]
+            }
+        },
+        getLocalVitalsData() {
+            return {
+                "data": [
+                    {
+                        "id": "Vchartbp",
+                        "name": "BP",
+                        "syndromes": ""
+                    },
+                    {
+                        "id": "Vchartheight",
+                        "name": "Height",
+                        "syndromes": ""
+                    },
+                    {
+                        "id": "Vchartpulse",
+                        "name": "Pulse",
+                        "syndromes": ""
+                    },
+                    {
+                        "id": "Vchartresp",
+                        "name": "Resp",
+                        "syndromes": ""
+                    },
+                    {
+                        "id": "Vchartspo",
+                        "name": "SpO2",
+                        "syndromes": ""
+                    },
+                    {
+                        "id": "Vcharttemp",
+                        "name": "Temp",
+                        "syndromes": ""
+                    },
+                    {
+                        "id": "Vchartweight",
+                        "name": "Weight",
+                        "syndromes": ""
+                    }
+                ]
+            }
+        },
+        getLocalPatientData() {
+            return {
+                "firstName": "Casey C",
+                "lastName": "Willow",
+                "fullName": "Casey C Willow",
+                "gender": "Male",
+                "birthDate": "1950-10-30",
+                "street": "134 Elm Street",
+                "city": "Madison",
+                "stateCode": "WI",
+                "postalCode": "53706",
+                "countryCode": "US",
+                "epicPatientId": "Z5089",
+                "mrn": "203139",
+                "cmeds": [
+                    {
+                        "seal_medication_id": 2,
+                        "med_name": "srini: test med",
+                        "syndromes": "",
+                        "med_periods": [
+                            {
+                                "ptype": "Inpatient",
+                                "end_date": "07/06/2021",
+                                "start_date": "07/14/2021"
+                            }
+                        ],
+                        "med_note": "sajkhjkashdkaj\nlkhklhkhkhkj",
+                        "created_by_name": "User, SHC",
+                        "updated_by_name": "User, SHC",
+                        "created_dttm_str": "07/02/2021 03:46:27 PM",
+                        "updated_dttm_str": "07/02/2021 04:24:28 PM"
+                    }
+                ],
+                "seal_conditions": [
+                    {
+                        "seal_condition_id": 8,
+                        "conditions": "Essential hypertension",
+                        "condition_date_long": 1225263600000,
+                        "condition_date_str": "10/29/2008",
+                        "risk_category": "Hypertension History",
+                        "condition_source": "EPIC",
+                        "notes": "",
+                        "status_code": "A",
+                        "created_by": "SHC",
+                        "updated_by": "SHC",
+                        "created_by_name": "User, SHC",
+                        "updated_by_name": "User, SHC",
+                        "created_dttm_str": "08/11/2021 09:48:50 AM",
+                        "updated_dttm_str": "09/03/2021 03:04:00 PM"
+                    },
+                    {
+                        "seal_condition_id": 2,
+                        "conditions": "Heart Patient\nHas problems",
+                        "condition_date_long": 1628578800000,
+                        "condition_date_str": "08/10/2021",
+                        "risk_category": "Hypertension History",
+                        "condition_source": "USER",
+                        "notes": "",
+                        "status_code": "A",
+                        "created_by": "SHC",
+                        "updated_by": "SHC",
+                        "created_by_name": "User, SHC",
+                        "updated_by_name": "User, SHC",
+                        "created_dttm_str": "08/10/2021 05:55:18 PM",
+                        "updated_dttm_str": "09/03/2021 03:08:04 PM"
+                    },
+                    {
+                        "seal_condition_id": 4,
+                        "conditions": "Family History of Diabetes\nSugar Sugar and Sugar",
+                        "condition_date_long": 1623135600000,
+                        "condition_date_str": "06/08/2021",
+                        "risk_category": "Diabetes History",
+                        "condition_source": "USER",
+                        "notes": "",
+                        "status_code": "A",
+                        "created_by": "SHC",
+                        "updated_by": "SHC",
+                        "created_by_name": "User, SHC",
+                        "updated_by_name": "User, SHC",
+                        "created_dttm_str": "08/10/2021 06:51:29 PM",
+                        "updated_dttm_str": "09/03/2021 03:08:49 PM"
+                    }
+                ]
+            }
         }
-    }
+    },
+    head() {
+        return {
+            title: "Drug Reactions Diagnostic Assistant"
+        };
+    } 
 }
+
+    /**
+     * Override the reset function, we don't need to hide the tooltips and
+     * crosshairs.
+     */
+    
+    Highcharts.Pointer.prototype.reset = function () {
+        for (var i = 0; i < Highcharts.charts.length; i++) {
+            var chart = Highcharts.charts[i];
+            if (chart && chart.tooltip)
+                chart.tooltip.hide() ;
+        }                
+        return undefined;
+    };
+    
+    /**
+     * Highlight a point by showing tooltip, setting hover state and draw crosshair
+     */
+    Highcharts.Point.prototype.highlight = function (event) {
+        event = this.series.chart.pointer.normalize(event);
+        this.onMouseOver(); // Show the hover marker
+        this.series.chart.tooltip.refresh(this); // Show the tooltip
+        this.series.chart.xAxis[0].drawCrosshair(event, this); // Show the crosshair
+    };
+
+    /**
+     * Set the global timezone to PST
+     */
+    Highcharts.setOptions({
+        time: {
+            //timezone: 'America/Los_Angeles',
+            timezoneOffset: new Date().getTimezoneOffset(),
+            useUTC: false
+        }
+    });
+    
 </script>
 
 <style scoped>
@@ -513,4 +1432,11 @@ export default {
         font-size: 5em;
     }
     */
+</style>
+
+<style scoped>
+    .chart-title {
+        color: rgb(54,38, 115) ;
+        font-size: 1.1em ;
+    }
 </style>

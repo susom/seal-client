@@ -93,7 +93,4 @@ export default {
     base: '/fhir-app/seal/'
   },
 
-  // Build Configuration: https://go.nuxtjs.dev/config-build
-  build: {
-  }
 }

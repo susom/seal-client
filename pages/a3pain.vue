@@ -132,24 +132,9 @@
                 </b-card>
             </b-col>
         </b-row>
-        <!--
         <b-row class="mt-3 ml-2">
             <b-col cols="11">
-                <b-card class="shadow-lg rounded-lg">
-                    <b-card-title class="chart-title">Figure 4. Non-Opioid Distribution Aggregated at {{mmeDuration / 60}} Hours </b-card-title>
-                    <b-card-text>
-                        <highchart 
-                            :options="nonOpioidChartOptions" 
-                            @mousemove="mousemove"
-                        />
-                    </b-card-text>
-                </b-card>
-            </b-col>
-        </b-row>                
-        -->
-        <b-row class="mt-3 ml-2">
-            <b-col cols="11">
-                <b-link @click="showDebug = !showDebug" style="font-size:small">Logs</b-link>
+                <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
                 <b-card v-show="showDebug">                    
                     <b-card-title>Debug Info</b-card-title>
                     <b-card-text>
@@ -159,7 +144,9 @@
             </b-col>                        
         </b-row>
         
-        <b-modal id="launch-modal" button-size="sm" size="sm" centered hide-footer title="Inpatient Time Period" title-class="mx-auto">
+        <b-modal id="launch-modal" button-size="sm" size="sm" 
+            centered hide-footer no-close-on-backdrop 
+            title="Inpatient Time Period" title-class="mx-auto">
             <b-row>
                 <b-col class="text-right" cols="4">
                     <label for="startDate">Start Date</label>
@@ -191,16 +178,6 @@
                         </b-input-group-append>
                         <b-form-invalid-feedback :state="errors.start_date" id="input-live-feedback">Specify date in mm/dd/yyyy format.</b-form-invalid-feedback>                        
                     </b-input-group> 
-                    <!--                   
-                    <b-form-datepicker                                                
-                        id="startDate"
-                        v-model="launchModal.start_date"                        
-                        :date-format-options="{ year: 'numeric', month: 'numeric', day: 'numeric' }"
-                        locale="en"
-                        size="sm" 
-                        hide-header                                               
-                    ></b-form-datepicker>                                                
-                    -->
                 </b-col>
             </b-row>
             <b-row class="mt-3">
@@ -233,20 +210,19 @@
                         </b-input-group-append>
                         <b-form-invalid-feedback :state="errors.end_date" id="input-live-feedback">Specify date in mm/dd/yyyy format.</b-form-invalid-feedback>                        
                     </b-input-group>
-                    <!--
-                    <b-form-datepicker                                                
-                        id="endDate"
-                        v-model="launchModal.end_date"                        
-                        :date-format-options="{ year: 'numeric', month: 'numeric', day: 'numeric' }"
-                        locale="en"
-                        size="sm"                        
-                    ></b-form-datepicker>                                                
-                    -->
                 </b-col>
             </b-row>  
             <b-row>
                 <b-col cols="12"  class="text-center">
-                    <b-button pill variant="primary" class="ml-3 mt-3" @click="populateData">Run Report</b-button>  
+                    <b-button pill variant="primary" class="ml-3 mt-3" @click="populateData" :disabled="!errors.start_date || !errors.end_date">Run Report</b-button>  
+                </b-col>
+            </b-row> 
+            <b-row v-show="launchModal.loading">
+                <b-col cols="12"  class="text-center">
+                    <b-button variant="info" disabled size="sm" class="mt-3" style="width:100%">
+                        <b-spinner small type="grow" class="mr-2"></b-spinner>
+                        Generating report data...
+                    </b-button>
                 </b-col>
             </b-row> 
         </b-modal>
@@ -362,7 +338,8 @@ export default {
                 inp_start_date: '',
                 inp_end_date: '',
                 rpt_start_date: '',
-                rpt_end_date: ''
+                rpt_end_date: '',
+                loading: false
             },
             analgesicCategory: 'All',
             routeOfAdmin: 'All',
@@ -382,15 +359,7 @@ export default {
         }
     },
     async fetch() {
-        /*
-        console.log("In fetch method of the a3 pain tab page") ;
-        this.tlog("___________________________In Fetch method before getting patient data\n" ; 
-        this.patient = await this.$services.a3pain.patient() ;       
-        this.tlog("___________________________Fetch Patient data \n" + JSON.stringify(this.patient) ;
-        console.log("patient data ") ;
-        console.log(this.patient) ;
-        
-        */
+
     },
     mounted () {
         console.log("In mounted method of the a3 pain tab page") ;        
@@ -450,11 +419,14 @@ export default {
         async populateData() {
             try {
             var _self = this ;
-
-            this.$bvModal.hide("launch-modal") ;    
+            
+            this.launchModal.loading = true ;
             
             this.launchModal.rpt_start_date = this.launchModal.start_date ;
             this.launchModal.rpt_end_date = this.launchModal.end_date ;
+            
+            var rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, 'YYYY-MM-DD').valueOf() ;
+            var rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, 'YYYY-MM-DD').valueOf() ;
 
             this.tlog("___________________________Pop data: before Patient data") ;
 
@@ -466,9 +438,23 @@ export default {
             console.log("encounters....{} ", encounters) ;
             
             //var medstats = await this.$services.a3pain.medstats(this.report_date, this.number_of_weeks_ahead, this.number_of_weeks_back) ;
-            var medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
-            console.log("medstats....{}", medstats) ;
-            this.tlog("___________________________MedStats Data \n" + JSON.stringify(medstats)) ;
+            //var medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
+            //console.log("medstats....{}", medstats) ;   
+            
+            //var responses = [] ;
+            //var response = {} ;
+            var medstats = {} ;
+
+            medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
+            //response = this.getLocalMedData() ;
+            //responses.push(response) ;
+
+            while (medstats.nextUrl) {
+                var response = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date, medstats.nextUrl) ;
+                medstats.cats.contact(response.cats) ;
+                if (response.nextUrl)
+                    medstats.nextUrl = response.nextUrl ;                
+            }
 
             var wsjson = {} ;
             var csnids = [] ;
@@ -489,6 +475,7 @@ export default {
             });
 
             medstats.cats.forEach(cat => {
+                this.resultText += "\n MedStats Med Name:" + cat.name + " MedOrderIds: " + cat.med_order_ids + ": MME Info: " + JSON.stringify(cat.mme) ;
                 cat.data.forEach(med => {
                     for (var i=0; i<encounters.length; i++) {
                         if ((med.x >= encounters[i].start && med.x <= encounters[i].end) || 
@@ -500,25 +487,32 @@ export default {
                     }
                 }) ;
             }) ;
-
+        
             console.log("Final ws call json : {}", wsjson) ;
 
-            var mmedata = await this.$services.a3pain.mmedata() ;
-            console.log(mmedata) ;
+            //var mmedata = await this.$services.a3pain.mmedata() ;
+            //console.log(mmedata) ;
             //this.tlog("--------------------******mme data***************************" ;
             //this.tlog(JSON.stringify(mmedata) ;
+
             } catch (err) {
                 console.log("no idea what this error is...{} " , err) ;
                 this.resultText += "\n" + "Error in JS Call 1 :" + err ;
             }
             try {
 
+                this.resultText += "\n---- MAR Data Webservice Request JSON --------------" ;
+                this.resultText += JSON.stringify(wsjson) ;
+
                 this.$services.a3pain.mardata(wsjson).then(responses => {
 
                     console.log("responses length " + responses.length) ;
                     
                     this.tlog("------------------------------------MARDATA webservice response START " + responses.length + "\n") ;
-
+                    
+                    this.resultText += "\n---- MAR data Response JSON -------------------" ;
+                    this.resultText += JSON.stringify(responses) ;
+                    
                     var categories = [] ;
                     var cdata = [] ;
                     var catIdx = -1 ;                        
@@ -528,7 +522,7 @@ export default {
                     
                     responses.forEach(response => {
                         response.data.Orders.forEach(order => {                                                        
-                            this.resultText += "\n----------------------------------Processing Order :" + order.Name ;
+                            this.resultText += "\n----------------------------------Processing Order :" + order.Name + ": ID: " + order.OrderID.ID ;
                             try {
                             
                             var cIdx = medstats.cats.findIndex(function (cat) { return (cat.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
@@ -537,22 +531,23 @@ export default {
                             var isOral = false ;
 
                             if (cIdx >= 0) {                                
-                                if (medstats.cats[cIdx].name.toLowerCase().indexOf(" (wrapper record)") > 0)
-                                    medstats.cats[cIdx].name = medstats.cats[cIdx].name.substr(0, medstats.cats[cIdx].name.toLowerCase().indexOf(" (wrapper record)")) ;
-                                this.resultText += ": med order name :" + medstats.cats[cIdx].name + ":" ;
+                                this.resultText += ": med order name :" + medstats.cats[cIdx].name + ": MME: " ;
+                                this.resultText += JSON.stringify(medstats.cats[cIdx].mme) + ": ";
 
                                 if (medstats.cats[cIdx].pharma_class)
                                     isOpioid = (medstats.cats[cIdx].pharma_class.toLowerCase().indexOf("opioid") >= 0) ;
                                 if (medstats.cats[cIdx].routes)
                                     isOral = (medstats.cats[cIdx].routes.toLowerCase().indexOf("oral") >= 0) ;
-
-                                var mIdx = mmedata.findIndex(function (mme) { return (mme.med_name.toLowerCase() == medstats.cats[cIdx].name.toLowerCase() ) }) ;
-                                if (mIdx >= 0) {
-                                    this.resultText += " found mme data :" + mmedata[mIdx].mme_factor ;
-                                    mmeFactor = parseFloat(mmedata[mIdx].mme_factor) ;
+                                
+                                if (medstats.cats[cIdx].mme[order.OrderID.ID]) {
+                                    mmeFactor = medstats.cats[cIdx].mme[order.OrderID.ID] ;
+                                    this.resultText += " found mme data :" + mmeFactor ;
                                 } else {
                                     this.resultText += " - no matching mme data ";
                                 }
+                            } else {
+                                this.resultText += "\nThis should NOT happen.. can't find MAR Order id (" + order.OrderID.ID + ") name " + order.Name + " in cat medorderids" ; 
+                                return true ;
                             }
                             } catch (err) {
                                 this.resultText += "\n" + "Error in JS Call 2" + err ;    
@@ -561,10 +556,11 @@ export default {
                             catIdx = categories.findIndex(function(cat) { return cat.name == order.Name }) ;
                             
                             try {
-                            var medColor = "" ;                                   
+                            var medColor = "" ;  
+                            var ma = {} ;                                                             
                             for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
-                                var ma = order.MedicationAdministrations[mIdx] ;
-                                if (ma.Action != "Not Given" || ma.Action != 'Canceled Entry') {                                     
+                                ma = order.MedicationAdministrations[mIdx] ;
+                                if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {                                     
                                     if (!ma.Dose.Value) continue ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
                                     if (catIdx == -1) {
@@ -616,9 +612,9 @@ export default {
                     this.tlog("Total chart data :" + cdata.length) ;
                     
                     try {
-                    this.medCategories = categories.map(function(cat) { return { name: cat.name, isOpioid: cat.isOpioid, isOral: cat.isOral } }) ;
+                    this.medCategories = JSON.parse(JSON.stringify(categories)) ;
                     
-                    var medChartOptions = this.getMedsChart(medstats.start_time, medstats.end_time) ;
+                    var medChartOptions = this.getMedsChart(rpt_start_date_long, rpt_end_date_long) ;
 
                     // Sort the categories based on name - reverse
                     categories.sort(function(a, b) {
@@ -634,7 +630,7 @@ export default {
                         cd.y = catMap[cd.name] ;
                     }) ;
                     
-                    this.marData = cdata ;
+                    this.marData = JSON.parse(JSON.stringify(cdata)) ;
 
                     medChartOptions.series[0].data = cdata ;
                     medChartOptions.yAxis[0].categories = categories.map(function(cat) { return cat.name }) ;
@@ -655,40 +651,20 @@ export default {
                         return a.x - b.x ;
                     }) ;
 
-                    var mmeChartOptions = this.getMMEChart(medstats.start_time, medstats.end_time) ;
+                    var mmeChartOptions = this.getMMEChart(rpt_start_date_long, rpt_end_date_long) ;
                     mmeChartOptions.series[0].data = mdata ;                    
 
                     } catch (err) {
-                        this.resultText += "\nError in no idea 1 :" + err ;
-                        this.resultText += "\n" + JSON.stringify(ma) ;
+                        this.resultText += "\nError in no idea 1 :" + err ;                        
                     }
                     try {
-                    var mmeStackedChartOptions = this.getMMEStackedChart(medstats.start_time, medstats.end_time) ;
+                    var mmeStackedChartOptions = this.getMMEStackedChart(rpt_start_date_long, rpt_end_date_long) ;
                     var oCategories = categories.filter(function(c) { return c.isOpioid ; }) ;
                     mmeStackedChartOptions.series = oCategories ;
                     _self.mmeStackedChartOptions = mmeStackedChartOptions ;
 
                     this.tlog("--------------------******MME STACKED CHARTOPTIONS***************************") ;
-                    this.tlog(JSON.stringify(mmeStackedChartOptions)) ;
-
-                    /*
-                    var nonOpioidChartOptions = this.getNonOpioidChart(medstats.start_time, medstats.end_time) ;
-                    var nonOpioidCategories = categories.filter(function(c) { return !c.isOpioid ; }) ;
-                    var nonOpData = cdata.filter(function(c) { return !c.isOpioid ; }) ;
-
-                    nonOpioidCategories.forEach(function(cat, cIdx) {
-                        var newArr = nonOpData.filter(function(c) { return c.name == cat.name }) ;
-                        cat.data = newArr.map(a => Object.assign({}, a));  // cloning deep cause we are chaging the y values 
-                        cat.data.forEach(function(data) { data.y = parseInt(data.dose) } ) ;
-                    }) ;
-
-                    nonOpioidChartOptions.series = nonOpioidCategories ;
-                    _self.nonOpioidChartOptions = nonOpioidChartOptions ;
-
-                    this.tlog("--------------------******Non Opioid CHARTOPTIONS***************************" ;
-                    this.tlog(JSON.stringify(nonOpioidChartOptions) ;
-                    */
-                    
+                    this.tlog(JSON.stringify(mmeStackedChartOptions)) ;                    
                     } catch (err) {
                         this.resultText += "\nError in mme stacked and nonopioid stuff :" + err ;
                     }
@@ -706,36 +682,17 @@ export default {
                             mmeChartOptions.series[1].data = response.map(function(pn) { return { x: pn.recorded_time, y: pn.meas_value }}) ; ;
                             _self.mmeChartOptions = mmeChartOptions ;
 
-                            this.tlog("--------------------******MMECHARTOPTIONS after BQ Call only ***************************") ;
+                            this.tlog("--------------------******MMECHARTOPTIONS ***************************") ;
                             this.tlog(JSON.stringify(mmeChartOptions)) ;
                             
                             } catch (err) {
-                                this.resultText += "\nError in pain bq handler code :" + err ;                                    
+                                this.resultText += "\nError in pain handler code :" + err ;                                    
                             }
+                        }) ; 
+                    
+                    this.launchModal.loading = false ;
+                    this.$bvModal.hide("launch-modal") ;
 
-                            this.tlog(" Before Invoking pain webservice data for csnids " + csnids) ;
-
-                            this.$services.a3pain.painwsdata(csnids, _self.patient.epicPatientId).then(presponses => {
-                                try {
-                                console.log("pain ws responses length " + presponses.length) ;
-                                this.tlog("------------------------------------Pain webservice response START " + presponses.length + "\n") ;
-                                presponses.forEach(presponse => {
-                                    // this.tlog("-------------- Pain ws response " + JSON.stringify(presponse) ;
-                                    presponse.data.forEach(pn => {
-                                        var rIdx = mmeChartOptions.series[1].data.findIndex(function(row) { return row.x == pn.recorded_time }) ;
-                                        if (rIdx == -1)
-                                            mmeChartOptions.series[1].data.push({x: pn.recorded_time, y: pn.meas_value}) ;                                        
-                                    }) ;                                    
-                                }) ;
-                                
-                                _self.mmeChartOptions = mmeChartOptions ;
-                                this.tlog("--------------------******MME CHARTOPTIONS after Pain WS Call***************************") ;
-                                this.tlog(JSON.stringify(mmeChartOptions)) ;
-                                } catch (err) {
-                                    this.resultText += "\nError in pain ws handler code :" + err ;
-                                }
-                            }) ;
-                        }) ;        
                 }) ;
 
             } catch (err) {
@@ -748,28 +705,23 @@ export default {
 
                 var _self = this ;
 
-                this.resultText += "\n in refreshMarChart " ;
+                this.resultText += "\n in refreshMarChart START " ;
 
                 var categories = [] ;
                 var cdata = [] ;
 
                 if (this.analgesicCategory == 'Opioids Only') {
-                    categories = this.medCategories.filter(function (cat) { return cat.isOpioid }) ;
-                    //cdata = this.marData.filter(function (cat) { return cat.isOpioid }) ;
+                    categories = this.medCategories.filter(function (cat) { return cat.isOpioid }) ;                    
                 } else if (this.analgesicCategory == 'Non-Opioids Only') {
-                    categories = this.medCategories.filter(function (cat) { return !cat.isOpioid }) ;
-                    //cdata = this.marData.filter(function (cat) { return !cat.isOpioid }) ;            
+                    categories = this.medCategories.filter(function (cat) { return !cat.isOpioid }) ;                         
                 } else {
                     categories = this.medCategories.filter(function(med) {return true ;}) ;  // clone the array
-                    //cdata = this.marData ;
                 }
                 
                 if (this.routeOfAdmin == 'Oral') {
-                    categories = categories.filter(function (cat) { return cat.isOral }) ;
-                    //cdata = cdata.filter(function (cat) { return cat.isOral }) ;
+                    categories = categories.filter(function (cat) { return cat.isOral }) ;                    
                 } else if (this.routeOfAdmin == 'Non-Oral') {
                     categories = categories.filter(function (cat) { return !cat.isOral }) ;
-                    //cdata = cdata.filter(function (cat) { return !cat.isOral }) ; 
                 }
                 
                 // Sort the categories based on name
@@ -782,7 +734,7 @@ export default {
                     catMap[cat.name] = cIdx ;
                 }) ;
                 
-                console.log("Before Cat count :" + categories.length  + " marData count :" + this.marData.length) ;
+                this.resultText += "\nBefore Cat count :" + categories.length  + " marData count :" + this.marData.length ;
 
                 cdata = this.marData.filter(function (md) {
                     var cat = categories[catMap[md.name]] ;
@@ -790,8 +742,6 @@ export default {
                         //console.log(" Cat doesn't exist for mar data {}" , md.name) ;
                         return false;                        
                     }
-                    //console.log(" Cat :" + cat.name + " isOral: " + cat.isOral + " Opioid :" + cat.isOpioid) ;
-
                     var filtered = true ;
                     if (_self.analgesicCategory == 'All' && _self.routeOfAdmin == 'All') {
                         return true ;
@@ -811,13 +761,15 @@ export default {
                     return filtered ;
                 }) ;
 
+                cdata = JSON.parse(JSON.stringify(cdata)) ;  // basic simple deep clone
+
                 // change the y to reflect new cat idx
                 cdata.forEach(function(cd) {
                     cd.y = catMap[cd.name] ;
                 }) ;
 
                 this.resultText += "\n in refreshMarChart: filters & sorting completed " ;
-                console.log("After Cat count :" + categories.length  + " cdata count :" + cdata.length) ;
+                this.resultText += "\nAfter Cat count :" + categories.length  + " cdata count :" + cdata.length ;
 
                 var medChartOptions = this.medChartOptions ;
 
@@ -889,14 +841,6 @@ export default {
 
                 this.tlog("--------------------******MME CHARTOPTIONS data in REFRESH MME CHART***************************") ;
                 this.tlog(JSON.stringify(this.mmeChartOptions.series[0].data)) ;
-
-                //var nonOpioidCategories = categories.filter(function(c) { return !c.isOpioid ; }) ;
-                //nonOpioidChartOptions.series = nonOpioidCategories ;
-                //_self.nonOpioidChartOptions = nonOpioidChartOptions ;
-
-                //this.tlog("--------------------******Non Opioid ChartOptions REFRESH MME CHART***************************" ;
-                //this.tlog(JSON.stringify(nonOpioidChartOptions) ;
-
 
             } catch (err) {
                 this.tlog("------******Error in refreshMMEChart :" + err) ;                
@@ -1031,6 +975,15 @@ export default {
                     'font-weight': 'bold'
                 }
             } 
+            
+            chartOptions.yAxis[0].stackLabels = {
+                enabled: true,
+                formatter: function() {
+                    return this.total ;
+                    //return Highcharts.numberFormat(this.total, 1, ',', '.') ;
+                }
+            }
+            
 
             chartOptions.tooltip.formatter = function () {
                 var tip =  this.point.series.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit + " <br> MME: " + this.point.y ;                
@@ -1251,6 +1204,7 @@ export default {
             return prd ;
         },
         tlog(mesg) {
+            console.log(mesg) ;
             // this.resultText += "\n" + mesg ;
         },
         getLocalMarData() {
