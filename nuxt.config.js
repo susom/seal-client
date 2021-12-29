@@ -79,7 +79,7 @@ export default {
 
   highcharts: {
     /* module options */
-    exporting: true
+    exporting : true
   },
 
   // PWA module configuration: https://go.nuxtjs.dev/pwa

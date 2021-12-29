@@ -66,7 +66,8 @@
                     </b-card-title>
                     <b-card-text>
                         <highchart                             
-                            :options="chartOptions" 
+                            :options="chartOptions"
+                            :modules="['offline-exporting']"                            
                              />
                     </b-card-text>
                 </b-card>
@@ -88,7 +89,8 @@
 
 /* eslint-disable */
 
-import Highcharts, { chart } from 'highcharts' ;
+import offlineExporting from 'highcharts/modules/offline-exporting'
+
 import Vue from 'vue' ;
 
 export default {
@@ -126,7 +128,42 @@ export default {
             return {
                 chart: {
                     type: 'column',
-                },
+                },            
+                exporting: 
+                {         
+                    libURL: "https://www.noidea.com",           
+                    buttons: {
+                        contextButton: {
+                            menuItems: [
+                            {
+                                text: 'Print Chart',
+                                onclick: function() {
+                                    this.print();
+                                },
+                            } /*,
+                            {
+                                text: 'Download JPG',
+                                onclick: function() {
+                                    console.log("Inside download jpg dashboard") ;
+                                    console.log(this);
+                                    this.exportChartLocal({type:"image/jpeg"}) ;
+                                }
+                            },
+                            {
+                                text: 'Download PNG',
+                                onclick: function() {
+                                    this.exportChartLocal({type:"image/png"}) ;
+                                }
+                            }*/ ]
+                        }
+                    }, 
+                    error: function(opt, err) {
+                        console.log("Error in chart export " + err) ;
+                        console.log(err) ;
+                        console.log(opt) ;
+                    },
+                    fallbackToExportServer: false
+                },                
                 title: {
                     text: ''
                 },

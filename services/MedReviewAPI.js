@@ -1,6 +1,9 @@
 
 import SealAPI from "./SealAPIService" ;
 import Highcharts from "highcharts" ;
+import offlineExporting from 'highcharts/modules/offline-exporting' ;
+
+offlineExporting(Highcharts) ;
 
 export default class MedReviewAPI {
     
@@ -138,6 +141,41 @@ export default class MedReviewAPI {
                     height: chartData.height
                     //plotBackgroundColor: '#F7F7F7'
                 },
+                exporting: 
+                {         
+                    libURL: "https://www.noidea.com",           
+                    buttons: {
+                        contextButton: {
+                            menuItems: [
+                            {
+                                text: 'Print Chart',
+                                onclick: function() {
+                                    this.print();
+                                },
+                            } /*,
+                            {
+                                text: 'Download JPG',
+                                onclick: function() {
+                                  console.log("you clicked on download JPG") ;
+                                  console.log(this) ;
+                                    this.exportChartLocal({type:"image/jpeg"}) ;
+                                }
+                            },
+                            {
+                                text: 'Download PNG',
+                                onclick: function() {
+                                    this.exportChartLocal({type:"image/png"}) ;
+                                }
+                            } */]
+                        }
+                    }, 
+                    error: function(opt, err) {
+                        console.log("Error in chart export " + err) ;
+                        console.log(err) ;
+                        console.log(opt) ;
+                    },
+                    fallbackToExportServer: false
+                },                             
                 title: {
                     text: chartData.title,
                     align: 'center'

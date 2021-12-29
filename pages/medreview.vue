@@ -283,8 +283,11 @@ import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import MedReviewTable from '~/components/MedReviewTable.vue'
 import Highcharts from 'highcharts' ;
+import offlineExporting from 'highcharts/modules/offline-exporting' ;
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
 import OutsideMeds from '~/components/OutsideMeds.vue';
+
+offlineExporting(Highcharts) ;
 
 export default {
     components: { Splitpanes, Pane, MedReviewTable, EditableDatePicker, OutsideMeds },
