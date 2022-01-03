@@ -375,9 +375,6 @@ export default {
 
         this.$bvModal.show("launch-modal") ;
 
-        //var dt = new Date() ;
-        //this.report_date = (dt.getMonth() + 1) + "/" + dt.getDate() + "/" + dt.getFullYear() ;
-        
         this.medChartOptions = this.getMedsChart() ;
         this.mmeChartOptions = this.getMMEChart() ;
         this.mmeStackedChartOptions = this.getMMEStackedChart() ;
@@ -560,10 +557,59 @@ export default {
                             
                             try {
                             var medColor = "" ;  
-                            var ma = {} ;                                                             
+                            var ma = {} ; 
+                            if (medstats.cats[cIdx].routes.toLowerCase().indexOf("transdermal") >= 0) {                                
+                                var strength = medstats.cats[cIdx].strength ;
+                                var unitStr = medstats.cats[cIdx].unit ;
+                                this.resultText += "\n This is transdermal med " + medstats.cats[cIdx].name + " strength: " +  strength + " unit: " + unitStr ;                               
+                                var unit = unitStr.split("/")[0] ;
+                                
+                                if (unit.trim() == "mcg")  // mme conv factor in the excel sheet is for mg 
+                                    mmeFactor = mmeFactor / 1000 ;
+
+                                var duration = unitStr.split("/")[1] ;                                
+                                if (duration == "hour" || duration == "hr")
+                                    duration = "hours" ;
+                                if (duration == "24" || duration == "24hr")
+                                    duration = "days" ;
+                                var form = medstats.cats[cIdx].form ;
+                                this.resultText += "\n         duration " + duration + " form " + form ;
+
+                                var newMarArr = [] ;
+                                for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
+                                    var ma = order.MedicationAdministrations[mIdx] ;
+                                    if (ma.Action == "Not Given" || ma.Action == 'Canceled Entry') {
+                                        continue ;
+                                    }
+                                    var stdt = this.$moment(new Date(ma.AdministrationInstant)) ;
+                                    var enddt = this.$moment(new Date(ma.AdministrationInstant)) ;
+                                    if (form.toLowerCase().indexOf("weekly") >= 0) {
+                                        enddt.add(7, 'days') ;
+                                    } else if (form.toLowerCase().indexOf("72 hr") >= 0) {
+                                        enddt.add(3, 'days') ;
+                                    }
+                                    this.resultText += "\n       Looping for stdt " + stdt.format() + " end dt " + enddt.format() ;
+                                    var newAdminDt = stdt ;
+                                    while (true) {
+                                        if (newAdminDt.isAfter(enddt)) break ;
+                                        var maNew = {
+                                            Action: "Given", 
+                                            AdministrationInstant: newAdminDt.format(), 
+                                            Dose: { Value: strength, Unit: unit } 
+                                        } ;
+                                        newMarArr.push(maNew) ;
+                                        newAdminDt.add(1, duration) ;
+                                    }
+                                }
+                                console.log("New MAR array") ;
+                                console.log(newMarArr) ;
+                                this.resultText += "\n NEW MAR ARRAY: " + JSON.stringify(newMarArr);
+                                if (newMarArr.length > 0)
+                                    order.MedicationAdministrations = [].concat(order.MedicationAdministrations, newMarArr) ;
+                            }
                             for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
                                 ma = order.MedicationAdministrations[mIdx] ;
-                                if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {                                     
+                                if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {
                                     if (!ma.Dose.Value) continue ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
                                     if (catIdx == -1) {
