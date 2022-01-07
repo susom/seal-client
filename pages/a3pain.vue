@@ -448,12 +448,16 @@ export default {
             medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
             //response = this.getLocalMedData() ;
             //responses.push(response) ;
+            this.resultText += "\n Invoking medstats nextUrl is " + medstats.nextUrl ;
 
-            while (medstats.nextUrl) {
+            while (medstats.nextUrl && medstats.nextUrl != "") {
                 var response = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date, medstats.nextUrl) ;
-                medstats.cats.contact(response.cats) ;
+                medstats.cats = [].concat(medstats.cats, response.cats) ;
                 if (response.nextUrl)
-                    medstats.nextUrl = response.nextUrl ;                
+                    medstats.nextUrl = response.nextUrl ;
+                else
+                    medstats.nextUrl = "" ;
+                this.resultText += "\n Invoking medstats nextUrl is " + medstats.nextUrl ;
             }
 
             var wsjson = {} ;
@@ -490,11 +494,6 @@ export default {
         
             console.log("Final ws call json : {}", wsjson) ;
 
-            //var mmedata = await this.$services.a3pain.mmedata() ;
-            //console.log(mmedata) ;
-            //this.tlog("--------------------******mme data***************************" ;
-            //this.tlog(JSON.stringify(mmedata) ;
-
             } catch (err) {
                 console.log("no idea what this error is...{} " , err) ;
                 this.resultText += "\n" + "Error in JS Call 1 :" + err ;
@@ -510,8 +509,8 @@ export default {
                     
                     this.tlog("------------------------------------MARDATA webservice response START " + responses.length + "\n") ;
                     
-                    this.resultText += "\n---- MAR data Response JSON -------------------" ;
-                    this.resultText += JSON.stringify(responses) ;
+                    //this.resultText += "\n---- MAR data Response JSON -------------------" ;
+                    //this.resultText += JSON.stringify(responses) ;
                     
                     var categories = [] ;
                     var cdata = [] ;
@@ -530,7 +529,7 @@ export default {
                             var isOpioid = false ;
                             var isOral = false ;
 
-                            if (cIdx >= 0) {                                
+                            if (cIdx >= 0) {
                                 this.resultText += ": med order name :" + medstats.cats[cIdx].name + ": MME: " ;
                                 this.resultText += JSON.stringify(medstats.cats[cIdx].mme) + ": ";
 
@@ -609,6 +608,10 @@ export default {
                             }
                             for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
                                 ma = order.MedicationAdministrations[mIdx] ;
+                                if (new Date(ma.AdministrationInstant).getTime() < rpt_start_date_long || new Date(ma.AdministrationInstant).getTime() > rpt_end_date_long) {
+                                    console.log("Skipping mar " + JSON.stringify(ma) + " cause admin time is not within reporting period") ;
+                                    continue ;
+                                }
                                 if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {
                                     if (!ma.Dose.Value) continue ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
@@ -634,7 +637,7 @@ export default {
                                     if (ma.mme && ma.mme > 0) {
                                         var dt = new Date(ma.AdministrationInstant) ;
                                         var pIdx = prdList.findIndex(function(prd) { return ( (dt.getHours() * 60 + dt.getMinutes()) <= prd ) }) ;
-                                        ma.mme = (+ma.mme.toFixed(2)) ;
+                                        ma.mme = parseFloat(ma.mme.toFixed(2)) ;
                                         dt.setHours(Math.floor(prdList[pIdx] / 60), prdList[pIdx] % 60, 0, 0) ;
                                         if (mdata1[dt]) {
                                             mdata1[dt] = mdata1[dt] + ma.mme ;
@@ -1028,7 +1031,7 @@ export default {
             chartOptions.yAxis[0].stackLabels = {
                 enabled: true,
                 formatter: function() {
-                    return this.total ;
+                    return parseFloat(this.total.toFixed(2)) ;
                     //return Highcharts.numberFormat(this.total, 1, ',', '.') ;
                 }
             }

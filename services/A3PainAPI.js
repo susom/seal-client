@@ -66,16 +66,7 @@ export default class A3PainAPI {
             return response.data ;
         })        
     }
-
-    mmedata() {
-        return this.axios({
-            method: 'get',
-            url: "/fhir-app/a3pain/api/v1/mmedata?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
-        }).then((response) => {            
-            return response.data ;            
-        })        
-    }
-
+    
     heartRate() {    
         return this.axios({
             method: 'get',
