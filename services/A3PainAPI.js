@@ -45,16 +45,7 @@ export default class A3PainAPI {
         }).then((response) => {            
             return response.data ;
         }) ;
-        
-        /*
-        return this.axios({
-            method: 'get',
-            url: "/fhir-app/a3pain/api/v1/med?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID +
-                 "&start_date=" + start_date + "&end_date=" + end_date 
-        }).then((response) => {            
-            return response.data ;
-        })
-        */        
+   
     }
 
     pain(start_date, end_date, epic_patient_id) {    
@@ -65,15 +56,6 @@ export default class A3PainAPI {
         }).then((response) => {            
             return response.data ;
         })        
-    }
-    
-    heartRate() {    
-        return this.axios({
-            method: 'get',
-            url: "/fhir-app/wellscalc/api/v1/heartrate?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
-        }).then((response) => {            
-            return response.data ;
-        })          
     }
 
     mardata(wsjson) {
@@ -114,6 +96,63 @@ export default class A3PainAPI {
         }) ;
         
         return Promise.all(wscalls) ;
+    }
+
+    explodePatchMARRecords(med, order) {
+        var ma = {} ; 
+        var logMesg = "" ;
+                        
+        var strength = med.strength ;
+        var unitStr = med.unit ;
+        var form = med.form ;
+        logMesg += "\n This is transdermal med " + medstats.cats[cIdx].name + " strength: " +  strength + " unit: " + unitStr ;                               
+        var unit = unitStr.split("/")[0] ;
+        
+        if (unit.trim() == "mcg")  // mme conv factor in the excel sheet is for mg 
+            mmeFactor = mmeFactor / 1000 ;
+
+        var duration = unitStr.split("/")[1] ;                                
+        if (duration == "hour" || duration == "hr")
+            duration = "hours" ;
+        if (duration == "24" || duration == "24hr")
+            duration = "days" ;
+        
+        logMesg += "\n         duration " + duration + " form " + form ;
+
+        var newMarArr = [] ;
+        for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
+            var ma = order.MedicationAdministrations[mIdx] ;
+            if (ma.Action == "Not Given" || ma.Action == 'Canceled Entry') {
+                continue ;
+            }
+            var stdt = this.$moment(new Date(ma.AdministrationInstant)) ;
+            var enddt = this.$moment(new Date(ma.AdministrationInstant)) ;
+            if (form.toLowerCase().indexOf("weekly") >= 0) {
+                enddt.add(7, 'days') ;
+            } else if (form.toLowerCase().indexOf("72 hr") >= 0) {
+                enddt.add(3, 'days') ;
+            }
+            logMesg += "\n       Looping for stdt " + stdt.format() + " end dt " + enddt.format() ;
+            var newAdminDt = stdt ;
+            while (true) {
+                if (newAdminDt.isAfter(enddt)) break ;
+                var maNew = {
+                    Action: "Given", 
+                    AdministrationInstant: newAdminDt.format(), 
+                    Dose: { Value: strength, Unit: unit } 
+                } ;
+                newMarArr.push(maNew) ;
+                newAdminDt.add(1, duration) ;
+            }
+        }
+        console.log("New MAR array") ;
+        console.log(newMarArr) ;
+        
+        logMesg += "\n NEW MAR ARRAY: " + JSON.stringify(newMarArr);
+        
+        if (newMarArr.length > 0)
+            order.MedicationAdministrations = [].concat(order.MedicationAdministrations, newMarArr) ;
+        
     }
 
     dblog(act, msg) {

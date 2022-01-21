@@ -769,6 +769,7 @@ export default {
             });
 
             meds.forEach(med => {
+                console.log(med) ;
                 med.data.forEach(row => {
                     for (var i=0; i<encounters.length; i++) {
                         if ((row.x >= encounters[i].start && row.x <= encounters[i].end) || 
