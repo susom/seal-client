@@ -382,7 +382,8 @@ export default {
         //this.marData = this.getLocalMarData() ;
         //this.medCategories = this.getLocalMedCategories() ;
         //this.medChartOptions = this.getLocalMedChartOptions() ;
-
+        this.mmeStackedChartOptions = this.getLocalStackedChartOptions() ;
+        
         //this.nonOpioidChartOptions = this.getNonOpioidChart() ;
     },
     methods : { 
@@ -428,21 +429,10 @@ export default {
             var rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, 'YYYY-MM-DD').valueOf() ;
             var rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, 'YYYY-MM-DD').valueOf() ;
 
-            this.tlog("___________________________Pop data: before Patient data") ;
-
             this.patient = await this.$services.a3pain.patient() ;      
-            this.tlog("___________________________Pop data: Patient data \n" + JSON.stringify(this.patient)) ;
 
-            //var encounters = await this.$services.a3pain.encounters(this.report_date, this.number_of_weeks_ahead, this.number_of_weeks_back) ;            
             var encounters = await this.$services.a3pain.encounters(this.launchModal.start_date, this.launchModal.end_date) ;
-            console.log("encounters....{} ", encounters) ;
             
-            //var medstats = await this.$services.a3pain.medstats(this.report_date, this.number_of_weeks_ahead, this.number_of_weeks_back) ;
-            //var medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
-            //console.log("medstats....{}", medstats) ;   
-            
-            //var responses = [] ;
-            //var response = {} ;
             var medstats = {} ;
 
             medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
@@ -457,13 +447,10 @@ export default {
                     medstats.nextUrl = response.nextUrl ;
                 else
                     medstats.nextUrl = "" ;
-                this.resultText += "\n Invoking medstats nextUrl is " + medstats.nextUrl ;
             }
 
             var wsjson = {} ;
             var csnids = [] ;
-
-            this.tlog("___________________________Patient EPIC client id \n" + this.patient.epicPatientId) ;
 
             encounters.forEach(enc => {
                 csnids.push(enc.pat_enc_csn_id) ;
@@ -514,7 +501,7 @@ export default {
                     
                     var categories = [] ;
                     var cdata = [] ;
-                    var catIdx = -1 ;                        
+                    var catIdx = -1 ;         
                     var mdata1 = {} ;
 
                     var prdList = this.getTimeChunks(this.mmeDuration) ;
@@ -522,90 +509,50 @@ export default {
                     responses.forEach(response => {
                         response.data.Orders.forEach(order => {                                                        
                             this.resultText += "\n----------------------------------Processing Order :" + order.Name + ": ID: " + order.OrderID.ID ;
+                            //this.resultText += "\n" + JSON.stringify(order) ;
                             try {
                             
                             var cIdx = medstats.cats.findIndex(function (cat) { return (cat.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
+                            if (cIdx < 0) {
+                                this.resultText += "\nThis should NOT happen.. can't find MAR Order id (" + order.OrderID.ID + ") name " + order.Name + " in cat medorderids" ; 
+                                return true ;
+                            }                            
                             var mmeFactor = 0 ;
                             var isOpioid = false ;
                             var isOral = false ;
+                            var genericName = "" ;
 
-                            if (cIdx >= 0) {
-                                this.resultText += ": med order name :" + medstats.cats[cIdx].name + ": MME: " ;
-                                this.resultText += JSON.stringify(medstats.cats[cIdx].mme) + ": ";
+                            this.resultText += ": med order name :" + medstats.cats[cIdx].name + ": MME: " ;
+                            this.resultText += JSON.stringify(medstats.cats[cIdx].mme) + ": ";
 
-                                if (medstats.cats[cIdx].pharma_class)
-                                    isOpioid = (medstats.cats[cIdx].pharma_class.toLowerCase().indexOf("opioid") >= 0) ;
-                                if (medstats.cats[cIdx].routes)
-                                    isOral = (medstats.cats[cIdx].routes.toLowerCase().indexOf("oral") >= 0) ;
-                                
-                                if (medstats.cats[cIdx].mme[order.OrderID.ID]) {
-                                    mmeFactor = medstats.cats[cIdx].mme[order.OrderID.ID] ;
-                                    this.resultText += " found mme data :" + mmeFactor ;
-                                } else {
-                                    this.resultText += " - no matching mme data ";
-                                }
+                            if (medstats.cats[cIdx].pharma_class)
+                                isOpioid = (medstats.cats[cIdx].pharma_class.toLowerCase().indexOf("opioid") >= 0) ;
+                            if (medstats.cats[cIdx].routes)
+                                isOral = (medstats.cats[cIdx].routes.toLowerCase().indexOf("oral") >= 0) ;
+                            
+                            if (medstats.cats[cIdx].mme[order.OrderID.ID]) {
+                                mmeFactor = medstats.cats[cIdx].mme[order.OrderID.ID] ;
+                                this.resultText += " found mme data :" + mmeFactor ;
                             } else {
-                                this.resultText += "\nThis should NOT happen.. can't find MAR Order id (" + order.OrderID.ID + ") name " + order.Name + " in cat medorderids" ; 
-                                return true ;
+                                this.resultText += " - no matching mme data ";
                             }
+                            genericName = medstats.cats[cIdx].generic_name ;
+                            if (genericName == '')
+                                genericName = medstats.cats[cIdx].name ;
+
                             } catch (err) {
                                 this.resultText += "\n" + "Error in JS Call 2" + err ;    
-                            }
-                            this.tlog("Total MedAdmin Data :" + order.MedicationAdministrations.length) ;
-                            catIdx = categories.findIndex(function(cat) { return cat.name == order.Name }) ;
-                            
+                            }                            
+                            //catIdx = categories.findIndex(function(cat) { return cat.name == order.Name }) ;
+                            catIdx = categories.findIndex(function(cat) { return cat.name == genericName }) ;
+
                             try {
                             var medColor = "" ;  
-                            var ma = {} ; 
-                            if (medstats.cats[cIdx].routes.toLowerCase().indexOf("transdermal") >= 0) {                                
-                                var strength = medstats.cats[cIdx].strength ;
-                                var unitStr = medstats.cats[cIdx].unit ;
-                                this.resultText += "\n This is transdermal med " + medstats.cats[cIdx].name + " strength: " +  strength + " unit: " + unitStr ;                               
-                                var unit = unitStr.split("/")[0] ;
-                                
-                                if (unit.trim() == "mcg")  // mme conv factor in the excel sheet is for mg 
-                                    mmeFactor = mmeFactor / 1000 ;
-
-                                var duration = unitStr.split("/")[1] ;                                
-                                if (duration == "hour" || duration == "hr")
-                                    duration = "hours" ;
-                                if (duration == "24" || duration == "24hr")
-                                    duration = "days" ;
-                                var form = medstats.cats[cIdx].form ;
-                                this.resultText += "\n         duration " + duration + " form " + form ;
-
-                                var newMarArr = [] ;
-                                for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
-                                    var ma = order.MedicationAdministrations[mIdx] ;
-                                    if (ma.Action == "Not Given" || ma.Action == 'Canceled Entry') {
-                                        continue ;
-                                    }
-                                    var stdt = this.$moment(new Date(ma.AdministrationInstant)) ;
-                                    var enddt = this.$moment(new Date(ma.AdministrationInstant)) ;
-                                    if (form.toLowerCase().indexOf("weekly") >= 0) {
-                                        enddt.add(7, 'days') ;
-                                    } else if (form.toLowerCase().indexOf("72 hr") >= 0) {
-                                        enddt.add(3, 'days') ;
-                                    }
-                                    this.resultText += "\n       Looping for stdt " + stdt.format() + " end dt " + enddt.format() ;
-                                    var newAdminDt = stdt ;
-                                    while (true) {
-                                        if (newAdminDt.isAfter(enddt)) break ;
-                                        var maNew = {
-                                            Action: "Given", 
-                                            AdministrationInstant: newAdminDt.format(), 
-                                            Dose: { Value: strength, Unit: unit } 
-                                        } ;
-                                        newMarArr.push(maNew) ;
-                                        newAdminDt.add(1, duration) ;
-                                    }
-                                }
-                                console.log("New MAR array") ;
-                                console.log(newMarArr) ;
-                                this.resultText += "\n NEW MAR ARRAY: " + JSON.stringify(newMarArr);
-                                if (newMarArr.length > 0)
-                                    order.MedicationAdministrations = [].concat(order.MedicationAdministrations, newMarArr) ;
+                            if (medstats.cats[cIdx].routes.toLowerCase().indexOf("transdermal") >= 0) {
+                                var logMesg = this.$services.a3pain.explodePatchMARRecords(medstats.cats[cIdx], order) ;
+                                this.resultText += "\n " + logMesg ;
                             }
+                            var ma = {} ; 
                             for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
                                 ma = order.MedicationAdministrations[mIdx] ;
                                 if (new Date(ma.AdministrationInstant).getTime() < rpt_start_date_long || new Date(ma.AdministrationInstant).getTime() > rpt_end_date_long) {
@@ -613,31 +560,51 @@ export default {
                                     continue ;
                                 }
                                 if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {
-                                    if (!ma.Dose.Value) continue ;
+                                    if (!ma.Dose.Value || ma.Dose.Value == "null") continue ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
                                     if (catIdx == -1) {
                                         catIdx = categories.length ;
-                                        var catColorName = order.Name.split(" ")[0] ;
-                                        if (this.medColors[catColorName]) {
-                                            medColor = this.medColors[catColorName] ;
+                                        //medColor = (catIdx < sealColors.length?sealColors[catIdx]:"") ;
+                                                                                
+                                        if (this.medColors[genericName]) {
+                                            medColor = this.medColors[genericName] ;
                                         } else {
                                             var medColorIdx = Object.keys(this.medColors).length ;
                                             medColor = (medColorIdx < sealColors.length?sealColors[medColorIdx]:"") ;
-                                            this.medColors[catColorName] = medColor ;
+                                            this.medColors[genericName] = medColor ;
                                         }
-                                        categories.push({ name: order.Name, pointWidth: 30, data: [], isOpioid: isOpioid, isOral: isOral, color: medColor} ) ;
+                                        
+                                        categories.push({ name: genericName , pointWidth: 30, data: [], isOpioid: isOpioid, isOral: isOral, color: medColor} ) ;
                                     } else {
                                         medColor = categories[catIdx].color ;
                                     }
-                                    ma.mme = parseFloat(ma.Dose.Value) * mmeFactor ;
-                                    // ma.Dose.Value and ma.Dose.Unit
-                                    cdata.push({ x: new Date(ma.AdministrationInstant).getTime(), y: catIdx, 
-                                        name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, color: medColor }) ;
                                     
+                                    ma.mme = parseFloat(ma.Dose.Value) * mmeFactor ;
+                                    ma.mme = parseFloat(ma.mme.toFixed(2)) ;
+
+                                    // ma.Dose.Value and ma.Dose.Unit
+                                    var marTime = new Date(ma.AdministrationInstant).getTime() ;
+                                    // same order same time means duplicate - happens when there is hosp enc and surgery encounters - which falls in same date range
+                                    // so mar ws calls will have two set of csn ids with same order id                            
+                                    var cdataIdx = cdata.findIndex(function(point) { 
+                                            return point.x == marTime && point.meds.findIndex(function(med) { return med.order_id == order.OrderID.ID }) >= 0 
+                                        }
+                                    ) ;
+                                    if (cdataIdx >= 0) {
+                                        console.log("Skipping this MAR row cause of duplicate data") ; 
+                                        continue ;
+                                    }
+                                    cdataIdx = cdata.findIndex(function(point) { return point.x == marTime && point.y == catIdx }) ;
+                                    if (cdataIdx >= 0) {
+                                        cdata[cdataIdx].mme = cdata[cdataIdx].mme + ma.mme ;
+                                        cdata[cdataIdx].meds.push({name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID })
+                                    } else {
+                                        cdata.push({ x: marTime, y: catIdx, mme: ma.mme, color: medColor, name: genericName, 
+                                            meds: [ {name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID} ] } ) ;
+                                    }
                                     if (ma.mme && ma.mme > 0) {
                                         var dt = new Date(ma.AdministrationInstant) ;
-                                        var pIdx = prdList.findIndex(function(prd) { return ( (dt.getHours() * 60 + dt.getMinutes()) <= prd ) }) ;
-                                        ma.mme = parseFloat(ma.mme.toFixed(2)) ;
+                                        var pIdx = prdList.findIndex(function(prd) { return ( (dt.getHours() * 60 + dt.getMinutes()) <= prd ) }) ;                                        
                                         dt.setHours(Math.floor(prdList[pIdx] / 60), prdList[pIdx] % 60, 0, 0) ;
                                         if (mdata1[dt]) {
                                             mdata1[dt] = mdata1[dt] + ma.mme ;
@@ -649,7 +616,8 @@ export default {
                                         if (dtIdx > -1) {
                                             categories[catIdx].data[dtIdx].y = categories[catIdx].data[dtIdx].y + ma.mme ;
                                         } else {
-                                            categories[catIdx].data.push({ x: dtlong, y: ma.mme, name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit }) ;
+                                            //categories[catIdx].data.push({ x: dtlong, y: ma.mme, name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit }) ;
+                                            categories[catIdx].data.push({ x: dtlong, y: ma.mme, name: genericName, dose: ma.Dose.Value, unit: ma.Dose.Unit }) ;
                                         }
                                     }                    
                                 }
@@ -661,7 +629,7 @@ export default {
                         }) ; 
                     }) ;
 
-                    this.tlog("Total chart data :" + cdata.length) ;
+                    this.resultText += "\n Total chart data :" + cdata.length ;
                     
                     try {
                     this.medCategories = JSON.parse(JSON.stringify(categories)) ;
@@ -691,10 +659,11 @@ export default {
                     //this.tlog(" MED Categories " + JSON.stringify(this.medCategories)) ;
                     //this.tlog(" MEDCHARTOPTIONS " + JSON.stringify(medChartOptions)) ;
 
+                    //this.resultText += "\n MEDCHARTOPTIONS: " + JSON.stringify(medChartOptions);
                     _self.medChartOptions = medChartOptions ;
                     
                     var mdata = [] ;
-                    Object.keys(mdata1).forEach(function(dt, idx) {
+                    Object.keys(mdata1).forEach(function(dt) {
                         mdata.push({ x: new Date(dt).getTime(), y: mdata1[dt]}) ;
                     }) ;
 
@@ -713,6 +682,7 @@ export default {
                     var mmeStackedChartOptions = this.getMMEStackedChart(rpt_start_date_long, rpt_end_date_long) ;
                     var oCategories = categories.filter(function(c) { return c.isOpioid ; }) ;
                     mmeStackedChartOptions.series = oCategories ;
+                    this.resultText += "\n STACKEDCHARTOPTIONS: " + JSON.stringify(mmeStackedChartOptions);                    
                     _self.mmeStackedChartOptions = mmeStackedChartOptions ;
 
                     this.tlog("--------------------******MME STACKED CHARTOPTIONS***************************") ;
@@ -730,8 +700,13 @@ export default {
                             console.log(response) ;
                             
                             //this.tlog(" Result from Pain BQ Call " + JSON.stringify(response) ;        
+                            var cdata = response.map(function(pn) { return { x: pn.recorded_time, y: pn.meas_value }}) ;
+                            // sort mdata
+                            cdata.sort(function (a, b) {
+                                return a.x - b.x ;
+                            }) ;
 
-                            mmeChartOptions.series[1].data = response.map(function(pn) { return { x: pn.recorded_time, y: pn.meas_value }}) ; ;
+                            mmeChartOptions.series[1].data = cdata ;
                             _self.mmeChartOptions = mmeChartOptions ;
 
                             this.tlog("--------------------******MMECHARTOPTIONS ***************************") ;
@@ -851,14 +826,18 @@ export default {
                 var mdata1 = {} ;
                 var catIdx = -1 ;
                 //var categories = this.medChartOptions.yAxis[0].categories.map(function(cat) { return {name: cat, data: []}} ) ;
-                var categories = this.medCategories.map(function(cat) { return {name: cat.name, data: []}} ) ;
+                // {value: 1440, text: '24 Hours'}, {value: 240, text: '4 Hours'}, {value: 120, text: '2 Hours'}, {value: 60, text:'1 Hour'}            
+
+                var categories = this.medCategories.map(function(cat) { 
+                    return {name: cat.name, data: [], isOpioid: cat.isOpioid, color: cat.medColor, pointWidth: 30 }} 
+                ) ;
                 
-                this.tlog(" In refreshMMEChart: Categories.... " + JSON.stringify(categories)) ;
+                this.resultText += "\n In refreshMMEChart: Categories.... " + JSON.stringify(categories) ;
 
                 this.marData.forEach(function (med) {
                     catIdx = categories.findIndex(function(cat) { return cat.name == med.name }) ;
                     if (med.mme && med.mme > 0) {
-                        var dt = new Date(med.x) ;
+                        var dt = new Date(med.x) ;  
                         var pIdx = prdList.findIndex(function(prd) { return ( (dt.getHours() * 60 + dt.getMinutes()) <= prd ) }) ;
                         //ma.mme = (+ma.mme.toFixed(2)) ;
                         dt.setHours(Math.floor(prdList[pIdx] / 60), prdList[pIdx] % 60, 0, 0) ;
@@ -877,8 +856,8 @@ export default {
                     }                
                 }) ;
                 var mdata = [] ;
-                Object.keys(mdata1).forEach(function(dt, idx) {
-                    mdata.push({ x: new Date(dt).getTime(), y: mdata1[dt]}) ;
+                Object.keys(mdata1).forEach(function(dt) {
+                    mdata.push({ x: new Date(dt).getTime(), y: mdata1[dt], meds: mdata1}) ;
                 }) ;
 
                 // sort mdata
@@ -891,8 +870,8 @@ export default {
                 var oCategories = categories.filter(function(c) { return c.isOpioid ; }) ;
                 _self.mmeStackedChartOptions.series = oCategories ;
 
-                this.tlog("--------------------******MME CHARTOPTIONS data in REFRESH MME CHART***************************") ;
-                this.tlog(JSON.stringify(this.mmeChartOptions.series[0].data)) ;
+                this.resultText += "\n --------------------******MME CHARTOPTIONS data in REFRESH MME CHART***************************" ;
+                this.resultText += "\n " + JSON.stringify(_self.mmeStackedChartOptions) ;
 
             } catch (err) {
                 this.tlog("------******Error in refreshMMEChart :" + err) ;                
@@ -1038,7 +1017,8 @@ export default {
             
 
             chartOptions.tooltip.formatter = function () {
-                var tip =  this.point.series.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit + " <br> MME: " + this.point.y ;                
+                //var tip =  this.point.series.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit + " <br> MME: " + this.point.y ;                
+                var tip =  this.point.series.name + " <br> MME: " + this.point.y ;                
                 return tip ;
             }
             return chartOptions ;
@@ -1097,16 +1077,22 @@ export default {
                 start_time: start_time_long,
                 end_time: end_time_long,
                 min: 0,
-                type: 'scatter',   //xrange 
+                type: 'scatter', 
                 height: 400
             }) ;
 
-            chartOptions.tooltip.formatter = function () {
-                var tip =  this.point.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit ; " <br> MME: " + this.point.mme ;
+            chartOptions.tooltip.useHTML = true ;
+            chartOptions.tooltip.formatter = function () {             
+                var tip =  this.point.name ;
                 if (this.point.mme && this.point.mme > 0)
-                    tip += " <br>MME: " + this.point.mme ;
+                    tip += " <br>Total MME: " + this.point.mme ;
                 tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
-
+                tip += "<br><br><table cellspacing=2 cellpadding=2>" ;
+                tip += "<tr><th>Medication</th><th>Dose</th><th>MME</th></tr>"; 
+                this.point.meds.forEach(function(med) {                 
+                    tip += "<tr><td>" + med.name + "</td><td style='text-align:center'>" + med.dose + " " + med.unit + "</td><td style='text-align:center'>" + med.mme + "</td></tr>"; 
+                }) ; 
+                tip += "</table>" ;
                 return tip ;
             }
 
@@ -1129,7 +1115,8 @@ export default {
                         
             chartOptions.yAxis[0].labels = {
                 formatter () {
-                    return "<span style='color: " + _self.medColors[this.value.split(" ")[0]] + "'>" + this.value + "</span>" ;
+                    //return "<span style='color: " + _self.medColors[this.value.split(" ")[0]] + "'>" + this.value + "</span>" ;
+                    return "<span style='color: " + _self.medColors[this.value] + "'>" + this.value + "</span>" ;
                 }
             } ;          
             
@@ -1175,7 +1162,7 @@ export default {
                                 },
                                 {
                                     text: 'Download PNG',
-                                    onclick: function() {
+                                    onclick: function()     {
                                         this.exportChartLocal({type:"image/png"}) ;
                                     }
                                 } */]
@@ -1299,10 +1286,37 @@ export default {
             return [{"name":"fentaNYL 50 mcg/mL injection","isOpioid":true,"isOral":false},{"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","isOpioid":true,"isOral":true},{"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","isOpioid":true,"isOral":true},{"name":"acetaminophen (Tylenol) tablet 500 mg","isOpioid":false,"isOral":true},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","isOpioid":true,"isOral":true},{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","isOpioid":true,"isOral":false},{"name":"oxyCODONE (Roxicodone) tablet 5 mg","isOpioid":true,"isOral":true},{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","isOpioid":true,"isOral":true},{"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","isOpioid":true,"isOral":false}]
         },
         getLocalMedChartOptions() {
+            var co =  {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":400},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1629097200000,"max":1629702000000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},"yAxis":[{"title":{"text":"Administrered Analgesics","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,"labels":{},"categories":["oxycodone hcl","hydromorphone hcl/pf","hydromorphone hcl"]}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10}},"series":[{"type":"scatter","fillOpacity":0.3,"xDateormat":"%m/%d/%Y","tooltip":{"shared":true},"showInLegend":false,"data":[{"x":1629254880000,"y":0,"mme":30,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629243480000,"y":1,"mme":16,"color":"#00548f","name":"hydromorphone hcl/pf","meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":8},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":8}]},{"x":1629241320000,"y":1,"mme":16,"color":"#00548f","name":"hydromorphone hcl/pf","meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":8},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":8}]},{"x":1629299700000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629275520000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629259320000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629220260000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629205080000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629187620000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629169740000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629696660000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629678120000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629666780000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629647880000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629631980000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629619920000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629608160000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629597660000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629586200000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629571560000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629548640000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629537720000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629525600000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629507000000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629488400000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629473580000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629458220000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629446760000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629436020000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629425700000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629412440000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629396660000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629385620000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629374460000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629361080000,"y":0,"mme":7.5,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg","mme":7.5}]},{"x":1629339060000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629326880000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629315000000,"y":0,"mme":15,"color":"#820000","name":"oxycodone hcl","meds":[{"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15}]},{"x":1629610380000,"y":2,"mme":4,"color":"#006F54","name":"hydromorphone hcl","meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":4}]}]}]} ;
+            co.tooltip.useHTML = true ;
+            co.tooltip.formatter = function () {
+                try {
+                var tip =  this.point.name ;
+                if (this.point.mme && this.point.mme > 0)
+                    tip += " <br>Total MME: " + this.point.mme ;
+                tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
+                tip += "<br><table cellspacing=2 cellpadding=2>" ;
+                tip += "<tr><th>Medication</th><th>Dose</th><th>MME</th><th>OID</th></tr>"; 
+                this.point.meds.forEach(function(med) {
+                    //tip += "<br>" + med.name + " Dosage: " + med.dose + " " + med.unit + " MME: " + med.mme ; 
+                    tip += "<tr><td>" + med.name + "</td><td style='text-align:center'>" + med.dose + " " + med.unit + "</td><td style='text-align:center'>" + med.mme + "</td><td>" + med.orderid + "</td></tr>"; 
+                }) ; 
+                tip += "</table>" ;
+                } catch (err) {
+                    console.log("Error in tooltip - " + err) ;
+                }
+                return tip ;
+            }
+            return co ;            
+        },
+        getLocalMedChartOptions1() {
             return {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":350},"title":{"align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},
             "xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1620457200000,"max":1621666800000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},
             "yAxis":[{"title":{"text":"Administrered Analgesics","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,
             "categories":["oxyCODONE (Roxicodone) tablet 5-10 mg","oxyCODONE (Roxicodone) tablet 5 mg","oxyCODONE (Roxicodone) tablet 2.5-5 mg","oxyCODONE (Roxicodone) tablet 10 mg","oxyCODONE (Roxicodone) oral solution 5-10 mg","HYDROmorphone (Dilaudid) syringe 0.4 mg","HYDROmorphone (Dilaudid) syringe 0.2 mg","fentaNYL 50 mcg/mL injection","acetaminophen (Tylenol) tablet 500 mg"]}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10}},"series":[{"type":"scatter","color":"purple","fillOpacity":0.3,"xDateormat":"%m/%d/%Y","tooltip":{"shared":true},"showInLegend":false,"data":[{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620488340000,"x2":1620488340000,"y":4,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620737940000,"x2":1620737940000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620716280000,"x2":1620716280000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620696780000,"x2":1620696780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620675000000,"x2":1620675000000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620654300000,"x2":1620654300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620631980000,"x2":1620631980000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620610380000,"x2":1620610380000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620575640000,"x2":1620575640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620549480000,"x2":1620549480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620531780000,"x2":1620531780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620510420000,"x2":1620510420000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620517560000,"x2":1620517560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621254120000,"x2":1621254120000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621238100000,"x2":1621238100000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621211880000,"x2":1621211880000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621168140000,"x2":1621168140000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621149780000,"x2":1621149780000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621127940000,"x2":1621127940000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621102380000,"x2":1621102380000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621080900000,"x2":1621080900000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621058640000,"x2":1621058640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621044840000,"x2":1621044840000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621021560000,"x2":1621021560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620997860000,"x2":1620997860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620955440000,"x2":1620955440000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620886860000,"x2":1620886860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620867660000,"x2":1620867660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621210440000,"x2":1621210440000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621179960000,"x2":1621179960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621164540000,"x2":1621164540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621149840000,"x2":1621149840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621134300000,"x2":1621134300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621119780000,"x2":1621119780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621104600000,"x2":1621104600000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621089360000,"x2":1621089360000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621074540000,"x2":1621074540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621057680000,"x2":1621057680000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621035840000,"x2":1621035840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621021740000,"x2":1621021740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621005720000,"x2":1621005720000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620990660000,"x2":1620990660000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620961560000,"x2":1620961560000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620929820000,"x2":1620929820000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620915960000,"x2":1620915960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620900780000,"x2":1620900780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620886200000,"x2":1620886200000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620871320000,"x2":1620871320000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620856620000,"x2":1620856620000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620841860000,"x2":1620841860000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620826740000,"x2":1620826740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620812460000,"x2":1620812460000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620796800000,"x2":1620796800000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620949560000,"x2":1620949560000,"y":3,"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621141620000,"x2":1621141620000,"y":6,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621141560000,"x2":1621141560000,"y":1,"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621204440000,"x2":1621204440000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621204140000,"x2":1621204140000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621203240000,"x2":1621203240000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621201920000,"x2":1621201920000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"100","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621254180000,"x2":1621254180000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621239000000,"x2":1621239000000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621225500000,"x2":1621225500000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621213680000,"x2":1621213680000,"y":5,"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621623180000,"x2":1621623180000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621602300000,"x2":1621602300000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621579860000,"x2":1621579860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621559340000,"x2":1621559340000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621539960000,"x2":1621539960000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621515660000,"x2":1621515660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621472460000,"x2":1621472460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621450680000,"x2":1621450680000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621431540000,"x2":1621431540000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621404240000,"x2":1621404240000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621385520000,"x2":1621385520000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621340640000,"x2":1621340640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621323720000,"x2":1621323720000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621298460000,"x2":1621298460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621278060000,"x2":1621278060000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true}]}]}
+        },        
+        getLocalStackedChartOptions() {
+           // return {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":400,"type":"column"},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1629097200000,"max":1629702000000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalent (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"stackLabels":{"enabled":true}}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"oxycodone hcl","pointWidth":30,"data":[{"x":1629270000000,"y":82.5,"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg"},{"x":1629356400000,"y":75,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629183600000,"y":7.5,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg"},{"x":1629702000000,"y":75,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629615600000,"y":60,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629529200000,"y":75,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629442800000,"y":90,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"}],"isOpioid":true,"isOral":true,"color":"#820000"},{"name":"hydromorphone hcl/pf","pointWidth":30,"data":[{"x":1629270000000,"y":32,"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg"}],"isOpioid":true,"isOral":false,"color":"#00548f"},{"name":"hydromorphone hcl","pointWidth":30,"data":[{"x":1629615600000,"y":4,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg"}],"isOpioid":true,"isOral":false,"color":"#006F54"}]} ;
+           return {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":400,"type":"column"},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1629010800000,"max":1630306800000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalent (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"stackLabels":{"enabled":true}}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"oxycodone hcl", "pointWidth": 15, "data":[{"x":1629255600000,"y":15,"name":"oxycodone hcl"},{"x":1629154800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629140400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629126000000,"y":7.5,"name":"oxycodone hcl"},{"x":1629097200000,"y":7.5,"name":"oxycodone hcl"},{"x":1629068400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629313200000,"y":15,"name":"oxycodone hcl"},{"x":1629284400000,"y":15,"name":"oxycodone hcl"},{"x":1629270000000,"y":15,"name":"oxycodone hcl"},{"x":1629226800000,"y":15,"name":"oxycodone hcl"},{"x":1629212400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629198000000,"y":15,"name":"oxycodone hcl"},{"x":1629183600000,"y":7.5,"name":"oxycodone hcl"},{"x":1629759600000,"y":7.5,"name":"oxycodone hcl"},{"x":1629745200000,"y":7.5,"name":"oxycodone hcl"},{"x":1629730800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629716400000,"y":15,"name":"oxycodone hcl"},{"x":1629702000000,"y":15,"name":"oxycodone hcl"},{"x":1629687600000,"y":7.5,"name":"oxycodone hcl"},{"x":1629673200000,"y":15,"name":"oxycodone hcl"},{"x":1629658800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629644400000,"y":15,"name":"oxycodone hcl"},{"x":1629630000000,"y":15,"name":"oxycodone hcl"},{"x":1629615600000,"y":15,"name":"oxycodone hcl"},{"x":1629601200000,"y":7.5,"name":"oxycodone hcl"},{"x":1629586800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629572400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629558000000,"y":7.5,"name":"oxycodone hcl"},{"x":1629543600000,"y":15,"name":"oxycodone hcl"},{"x":1629529200000,"y":15,"name":"oxycodone hcl"},{"x":1629514800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629500400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629486000000,"y":15,"name":"oxycodone hcl"},{"x":1629471600000,"y":15,"name":"oxycodone hcl"},{"x":1629457200000,"y":15,"name":"oxycodone hcl"},{"x":1629442800000,"y":15,"name":"oxycodone hcl"},{"x":1629428400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629414000000,"y":15,"name":"oxycodone hcl"},{"x":1629399600000,"y":30,"name":"oxycodone hcl"},{"x":1629385200000,"y":15,"name":"oxycodone hcl"},{"x":1629370800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629342000000,"y":15,"name":"oxycodone hcl"},{"x":1629327600000,"y":30,"name":"oxycodone hcl"}],"isOpioid":true},{"name":"hydromorphone hcl/pf","pointWidth": 15, "data":[{"x":1629255600000,"y":16,"name":"hydromorphone hcl/pf"}],"isOpioid":true},{"name":"hydromorphone hcl", "pointWidth": 15, "data":[{"x":1629126000000,"y":4,"name":"hydromorphone hcl"},{"x":1629615600000,"y":12,"name":"hydromorphone hcl"},{"x":1629356400000,"y":8,"name":"hydromorphone hcl"},{"x":1629313200000,"y":8,"name":"hydromorphone hcl"},{"x":1629298800000,"y":8,"name":"hydromorphone hcl"},{"x":1629241200000,"y":8,"name":"hydromorphone hcl"},{"x":1629082800000,"y":8,"name":"hydromorphone hcl"},{"x":1629068400000,"y":8,"name":"hydromorphone hcl"},{"x":1629054000000,"y":10,"name":"hydromorphone hcl"}],"isOpioid":true}]}
         }        
     },
     head() {
@@ -1314,13 +1328,13 @@ export default {
 </script>
 
 <style scoped>
-    .used_in_calc {
-        color: blue;
-        font-style: italic;
-        font-weight: bold;
-    }
     .chart-title {
         color: rgb(54,38, 115) ;
         font-size: 1.1em ;
+    }
+    .sealtooltip {
+        padding-right: 5px;
+        padding-left: 5px;
+        color: red ;
     }
 </style>
