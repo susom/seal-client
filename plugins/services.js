@@ -5,6 +5,7 @@ import WellsCalcAPI from "~/services/WellsCalcAPI"
 import MedReviewAPI from "~/services/MedReviewAPI"
 import DashboardAPI from "~/services/DashboardAPI";
 import TrueImageAPI from "~/services/TrueImageAPI";
+import StandingOrdersAPI from "~/services/StandingOrdersAPI";
 
 export default (ctx, inject) => {
 
@@ -18,7 +19,8 @@ export default (ctx, inject) => {
       a3pain: new A3PainAPI(ctx.$axios, ctx.store),
       medreview: new MedReviewAPI(ctx.$axios, ctx.store),
       dashboard: new DashboardAPI(ctx.$axios, ctx.store),
-      trueimage: new TrueImageAPI(ctx.$axios, ctx.store)
+      trueimage: new TrueImageAPI(ctx.$axios, ctx.store),
+      standingorders: new StandingOrdersAPI(ctx.$axios, ctx.store)
     }
   
     inject('services', services)
