@@ -159,6 +159,22 @@
                                 </b-card>                                
                             </b-col>
                         </b-row>
+                        <!--                        
+                        <b-row class="mt-3 ml-1 mr-1">
+                            <b-col cols="12">
+                                <b-card class="shadow-lg rounded-lg">
+                                    <b-card-title class="chart-title">Combined Lab Chart</b-card-title>
+                                    <b-card-text>
+                                        <b-row>
+                                            <b-col>
+                                                <highchart :options="combinedLabChartOptions" />
+                                            </b-col>
+                                        </b-row>
+                                    </b-card-text>
+                                </b-card>                                
+                            </b-col>
+                        </b-row>
+                        -->
                         <b-row class="mt-3 ml-1 mr-1" v-for="(labChart) in labs_visible_charts" :key="labChart.id">
                             <b-col cols="12">
                                 <b-card class="shadow-lg rounded-lg"  :ref="labChart.id">
@@ -358,7 +374,8 @@ export default {
             },
             patient: {},
             debugLog:"",
-            medChartOptions: {}
+            medChartOptions: {},
+            combinedLabChartOptions: {}
         }
     },
     watch : {
@@ -396,6 +413,7 @@ export default {
 
         console.log("got patient data") ;
         console.log(this.patient) ;
+
     },
     mounted() {
         console.log("mounted for medreview page") ;
@@ -438,6 +456,19 @@ export default {
         }
     },    
     methods : {
+        labChartSelected(chartOptions) {
+            console.log("Lab Chart Selected : {}" + chartOptions) ;
+            var co = JSON.parse(chartOptions) ;
+            console.log("Lab Chart Selected Series[0]: {}" + co.series[0]) ;
+            
+            console.log(this.combinedLabChartOptions) ;
+
+            if (!this.combinedLabChartOptions.series)
+                this.combinedLabChartOptions.series = [] ;
+            
+            this.combinedLabChartOptions.series.push(co.series[0]) ;
+            console.log(this.combinedLabChartOptions) ;
+        },
         groupByChange() {
             console.log("group by change fired " + this.meds.groupBy) ;            
             this.redrawMedChart() ;            
@@ -534,7 +565,7 @@ export default {
                 this.meds.list = this.meds.ingredients ;
             }
             this.log("********Medication List***********") ;
-            this.log(JSON.stringify(this.meds.list)) ;
+            this.log(JSON.stringify(this.meds.list.map(med => med.name))) ;
             } catch (err) {
                 this.log("Error in redrawchart 2 " + err) ;
             }
@@ -548,6 +579,7 @@ export default {
         },
         popOutsideMeds(newPatient) {
             console.log("In medreview popOutsideMeds for patient data {}" , newPatient) ;
+            if (!newPatient.cmeds) return ;
             newPatient.cmeds.forEach(omed => {
                 var med = {selected: false, seal_medication_id: -1} ;
                 med.name = omed.med_name ;
@@ -705,6 +737,13 @@ export default {
             this.$set(this.launchModal, 'rpt_start_date_long', rpt_start_date_long) ;
             this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
 
+            this.combinedLabChartOptions = this.$services.medreview.getDefaultChartConfig({ 
+                height: 500, title: 'Sometbhibg', 
+                start_time: rpt_start_date_long, 
+                end_time: rpt_end_date_long,
+                type: 'line',
+                name: 'No idea' }) ;
+
             this.loadingMessage = "Medication Data" ;
 
             var _self = this ;
@@ -724,11 +763,13 @@ export default {
             console.log("med orders done") ;
             console.log(responses) ;
             this.debugLog += "Got med order responses\n" ;
-
+            
             var medNames = [] ;
             var meds = [] ;  
-            responses.forEach(function(response) {
-                response.cats.forEach(function(med) {
+            try {
+            responses.forEach((response) => {
+                response.cats.forEach((med) => {
+                    try {
                     var medIdx = medNames.indexOf(med.name) ;
                     if (medIdx === -1) {
                         medNames.push(med.name) ;
@@ -737,11 +778,17 @@ export default {
                         meds[medIdx].data = [].concat(meds[medIdx].data, med.data) ;
                         meds[medIdx].routes = this.merge(meds[medIdx].routes, med.routes) ;
                         meds[medIdx].pcat = this.merge(meds[medIdx].pcat, med.pcat) ;
-                        meds[medIdx].med_order_ids = [].contact(meds[medIdx].med_order_ids, med.med_order_ids) ;
+                        meds[medIdx].med_order_ids = [].concat(meds[medIdx].med_order_ids, med.med_order_ids) ;
+                    }
+                    } catch (err) {
+                        this.debugLog += "Error in merging medstat response for " + JSON.stringify(med) + "\n" ;
+                        this.debugLog += err + "\n" ;
                     }
                 });              
             }) ;
-
+            } catch (err) {
+                this.debugLog += "Error in merging medstat responses " + err + "\n" ;
+            }
             //this.medications = meds ;
 
             this.loadingMessage = "Encounter Data" ;
@@ -898,11 +945,14 @@ export default {
 
             this.debugLog += "Getting lab obs data \n" ;
             this.labs.charts = await this.getObsData("laboratory") ;
+            this.log(this.labs.charts.map(lab => lab.name)) ;            
+            //this.labs.charts = this.getLocalLabsData().data ;
             console.log("Labs data : {}", this.labs) ;
 
             this.debugLog += "Getting vitals obs data \n" ;
             this.vitals.charts = await this.getObsData("vital-signs") ;
-            console.log("Vitals data : {}", this.labs) ;
+            console.log("Vitals data : {}", this.vitals) ;
+            this.log(this.vitals.charts.map(lab => lab.name)) ;
 
         },
         async getObsData(category) {
