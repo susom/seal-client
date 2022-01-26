@@ -48,7 +48,7 @@
 export default {
     props : { 
         labs : {},
-        launchModal: {}
+        launchModal: {}        
     }, 
     data () {
         return {
@@ -87,6 +87,9 @@ export default {
     },
     methods : {
         async onLabRowClick(item) {
+            console.log("Row is cliked on") ;
+            console.log(item) ;
+
             this.$set(item, 'selected', !item.selected) ;
             item.visible  = !item.visible ;            
             if (item.visible && !item.rendered) {
@@ -101,8 +104,34 @@ export default {
                 chartOptions.xAxis.max = this.rpt_end_date_long ;
                 chartOptions.series[0].type = "line" ;
                 chartOptions.chart.height = 300 ;
+                console.log("chartoptions before setting the plotlines,.....") ;
+                console.log(JSON.stringify(chartOptions)) ;
 
+                if (item.low) {
+                    chartOptions.yAxis[0].plotLines = [{
+                                    value: item.low,
+                                    color: 'green',
+                                    dashStyle: 'shortdash',
+                                    width: 2,
+                                    label: {
+                                        text: 'low'
+                                    }
+                                }, {
+                                    value: item.high,
+                                    color: 'red',
+                                    dashStyle: 'shortdash',
+                                    width: 2,
+                                    label: {
+                                        text: 'high'
+                                    }
+                                }] ;
+                }
+                if (item.min) {
+                    chartOptions.yAxis[0].min = item.min ;
+                    chartOptions.yAxis[0].max = item.max ;
+                }
                 chartOptions.series[0].data = chartdata.data[0].dataset;
+                
                 // https://api.highcharts.com/highcharts/plotOptions.series.turboThreshold
                 chartOptions.series[0].turboThrehold = 0 ; // disable the threshold test
                 if (chartdata.data[0].dataset2) {
