@@ -31,7 +31,8 @@
 <script>
 export default {
     props : { 
-        value : ''
+        value : '',
+        required: false
     }, 
     data () {
         return {
@@ -61,7 +62,7 @@ export default {
         startDateChange() {
             console.log("In startdatechange " + this.inp_start_date) ;
             if (this.inp_start_date == '') {
-                this.error = true ;
+                this.error = !this.required ; //true ;
                 this.$emit('input', this.inp_start_date) ;
                 this.$emit('error', this.error) ;                
                 return ;
@@ -71,6 +72,8 @@ export default {
 
             if (noidea.isValid()) {
                 this.start_date = noidea.format("YYYY-MM-DD") ;
+                if (this.inp_start_date != this.$moment(this.start_date, "YYYY-MM-DD").format("MM/DD/YYYY")) 
+                    this.inp_start_date = this.$moment(this.start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
                 this.error = true ;
                 this.$emit('input', this.inp_start_date) ;
             } else {

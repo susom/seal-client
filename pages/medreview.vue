@@ -724,7 +724,8 @@ export default {
             console.log("Generating charts for ") ;
             console.log(this.launchModal) ;
             
-            this.debugLog += "Generating charts \n" ;
+            // starting fresh log
+            this.debugLog = "Generating charts \n" ;
 
             this.launchModal.loading = true ;
                          

@@ -93,4 +93,9 @@ export default {
     base: '/fhir-app/seal/'
   },
 
+  build: {
+    babel: {
+      compact: true
+    }
+  }
 }

@@ -147,6 +147,7 @@ export default {
                 this.$set(item, "chartOptions", chartOptions) ;
                 item.rendered = true ;
                 console.log("Chart Options for lab {}", chartOptions) ;
+                chartOptions.id = item.id ;
                 this.$emit('debug', JSON.stringify(chartOptions)) ;
             }
             if (item.visible) {

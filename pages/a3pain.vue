@@ -14,8 +14,10 @@
                     opioid and non-opioid analgesics with the patient’s pain score during post-surgical inpatient care. 
                     The app auto-calculates the morphine milliequivalent (MME). This is a tool physicians may use for inpatient opioid management. 
 
-                    <br/><br/><b>Warning: </b>The MME values seen here may not exactly reflect similar calculations seen within the patient’s primary documentation. 
-                    Please exercise clinical judgment and discretion.
+                    <br/><br/><b style="color:red">Disclaimer: </b>Please exercise clinical judgment and discretion.  There are certain pain medicines including  
+                    patient-controlled analgesics (PCAs), patient-controlled epidural  analgesics (PCEAs), and relatively rarely used pain medications  
+                    that the SEAL team is working to include in future versions of the application. Morphine milliequivalent (MME) conversion factors 
+                    were  provided  from Epic, with some additional information derived from expert consultation from the Stanford Department of Anesthesiology.
                 </p>
             </b-col>
         </b-row> 
@@ -84,15 +86,22 @@
                     <b-card-title class="chart-title text-center">Select Time Interval</b-card-title>                    
                     <b-card-text>
                         <b-row>
-                            <b-col class="text-center" offset="1" cols="10">
-                                *This interval refers to the time interval periods for cumulative opioid and non-opioid data points. By selecting a specific interval, this will 
-                                dictate the X-axis for the following three figures below: the Cumulative Opioid MME, Opioid MME Distribution, and Non-Opioid Distribution.
+                            <b-col class="text-center pr-4 pl-4">
+                                <p>
+                                    This interval refers to the duration of the aggregate MME of opioids administered in the selected time interval. By selecting a specific interval, 
+                                    this will dictate the X-axis for Figure 2 and Figure 3. Users may hover an MME data point in Figure 2 to view the MME opioid numerical distribution
+                                    or refer to Figure 3 for an MME opioid visual distribution.
+                                </p> 
+                                <p>
+                                    For example, when the “Aggregated MME by Time Interval” is set to "24 Hours", this means that MME data point reflected the total MME that 
+                                    was administered to the patient in a 24-hour time period (12:00am –11:59pm).
+                                </p>
                             </b-col>
                         </b-row>
                         <b-row class="mt-4">
                             <b-col class="text-center">
-                                <span class="font-weight-bold">Aggregated MME by Time Interval:</span> 
-                                <b-select :options="[{value: 1440, text: '24 Hours'}, {value: 240, text: '4 Hours'}, {value: 120, text: '2 Hours'}, {value: 60, text:'1 Hour'}]" 
+                                <span class="font-weight-bold">Aggregated MME by Time Interval:</span>                             
+                                <b-select :options="[{value: 1440, text: '24 Hours'}, {value: 720, text: '12 Hours'}, {value: 480, text: '8 Hours'}, {value: 240, text: '4 Hours'}, {value: 60, text:'1 Hour'}]" 
                                     v-model="mmeDuration" 
                                     @change="refreshMMEChart"
                                     class="ml-2" style="width:20%"/>
@@ -146,7 +155,7 @@
             </b-col>                        
         </b-row>
         
-        <b-modal id="launch-modal" button-size="sm" size="sm" 
+        <b-modal id="launch-modal" button-size="sm" size="md" 
             centered hide-footer no-close-on-backdrop 
             title="Inpatient Time Period" title-class="mx-auto">
             <b-row>
@@ -154,32 +163,7 @@
                     <label for="startDate">Start Date</label>
                 </b-col>                
                 <b-col>
-                    <b-input-group>
-                        <b-form-input
-                            id="start_date"
-                            v-model="launchModal.inp_start_date"
-                            :state="errors.start_date"
-                            type="text"
-                            placeholder="MM/DD/YYYY"
-                            autocomplete="off"
-                            @change="startDateChange"                        
-                        ></b-form-input>
-                        <b-input-group-append>
-                            <b-form-datepicker
-                                v-model="launchModal.start_date"
-                                button-only                            
-                                :date-format-options="{ month: 'numeric', day: 'numeric', year: 'numeric' }"
-                                locale="en-US"                        
-                                size="sm"
-                                aria-controls="start_date"                                
-                                hide-header
-                                close-button
-                                no-flip                                
-                                @context="startDatePickerChange"                         
-                            ></b-form-datepicker>
-                        </b-input-group-append>
-                        <b-form-invalid-feedback :state="errors.start_date" id="input-live-feedback">Specify date in mm/dd/yyyy format.</b-form-invalid-feedback>                        
-                    </b-input-group> 
+                    <editable-date-picker v-model="launchModal.start_date" @error="(event) => {launchModal.errors.start_date = event}" :required="true" />
                 </b-col>
             </b-row>
             <b-row class="mt-3">
@@ -187,36 +171,12 @@
                     <label for="endDate">End Date</label>
                 </b-col>
                 <b-col>
-                    <b-input-group>
-                        <b-form-input
-                            id="end_date"
-                            v-model="launchModal.inp_end_date"
-                            type="text"
-                            placeholder="MM/DD/YYYY"
-                            autocomplete="off"
-                            @change="endDateChange"                        
-                        ></b-form-input>
-                        <b-input-group-append>
-                            <b-form-datepicker
-                                v-model="launchModal.end_date"
-                                button-only                            
-                                :date-format-options="{ month: 'numeric', day: 'numeric', year: 'numeric' }"
-                                locale="en-US"                        
-                                size="sm"
-                                aria-controls="end_date"
-                                hide-header
-                                close-button
-                                no-flips
-                                @context="endDatePickerChange"                         
-                            ></b-form-datepicker>
-                        </b-input-group-append>
-                        <b-form-invalid-feedback :state="errors.end_date" id="input-live-feedback">Specify date in mm/dd/yyyy format.</b-form-invalid-feedback>                        
-                    </b-input-group>
+                    <editable-date-picker v-model="launchModal.end_date" @error="(event) => {launchModal.errors.end_date = event}" :required="true"/>
                 </b-col>
             </b-row>  
             <b-row>
-                <b-col cols="12"  class="text-center">
-                    <b-button pill variant="primary" class="ml-3 mt-3" @click="populateData" :disabled="!errors.start_date || !errors.end_date">Run Report</b-button>  
+                <b-col cols="12"  class="text-center">                                                                                            
+                    <b-button pill variant="primary" class="ml-3 mt-3" @click="populateData" :disabled="!launchModal.errors.start_date || !launchModal.errors.end_date">Run Report</b-button>  
                 </b-col>
             </b-row> 
             <b-row v-show="launchModal.loading">
@@ -228,6 +188,34 @@
                 </b-col>
             </b-row> 
         </b-modal>
+        <b-modal id="a3pain-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
+            body-bg-variant="dark">
+            <ul class="text-white"> 
+                <li><b>Inpatient Time Period:</b> Users are highly recommended to select a minimum of 3 days to prevent confusion for visualization of aggregate data.
+                <li>
+                    <b>Figure 1:</b> Users can view the administered analgesics based on MAR data for pain medication. Users may sort Administered Analgesics 
+                    by Analgesic Category or Route of Administration. The most common pain medications are included. Please read the disclaimer for exclusions.
+                </li>
+                <li>
+                    <b>Figure 2:</b> Users can view the auto-converted Opioid MME total overlayed with the patient’s pain score. Users may customize time intervals for 
+                    Opioid MME graphs by selecting 24-hour, 12-hour, 8-hour, 4-hour or 1-hour intervals. By selecting a specific interval, this will dictate the X-axis 
+                    for Figure 2 and Figure 3. Users may hover an MME data point in Figure 2 to view the MME opioid numerical distribution or refer to Figure 3 
+                    for an MME opioid visual distribution.
+                </li>
+                <li><b>Figure 3:</b> Users can view  the MME  opioid  visual distribution.</li>
+                <li>
+                    <b>Zoom Function:</b> Users may zoom in for each data visualization figure by selecting a start point, left-click your mouse, drag over the 
+                    desired zoom area, and release - which will result in a zoomed in view of that area. To reset, select the button labelled “Reset zoom” which appears 
+                    only w hen you are zoomed in.
+                </li>
+                <li>
+                    <b>Disclaimer:</b> Please exercise clinical judgment and discretion. There are certain pain medicines including patient-controlled analgesics (PCAs), 
+                    patient-controlled epidural analgesics (PCEAs), and relatively rarely used pain medications that the SEAL team is working to include in 
+                    future versions of the application. Morphine  milliequivalent  (MME)  conversion factors were provided from Epic, with some 
+                    additional information derived from expert consultation from the Stanford Department of Anesthesiology.
+                </li>
+            </ul>
+        </b-modal>
     </b-container>
 </template>
 
@@ -235,8 +223,9 @@
 
 /* eslint-disable */
 
-import Highcharts, { chart } from 'highcharts' ;
+import Highcharts from 'highcharts' ;
 import offlineExporting from 'highcharts/modules/offline-exporting'
+import EditableDatePicker from '~/components/EditableDatePicker.vue';
 
 offlineExporting(Highcharts) ;
 
@@ -325,13 +314,13 @@ offlineExporting(Highcharts) ;
     ] ;
 
 export default {
+    components: { EditableDatePicker },
     data () {
         return {
             resultText: "",
             medChartOptions: {},
             mmeChartOptions: {},
             mmeStackedChartOptions: {},
-            nonOpioidChartOptions: {},
             medCategories: [],
             marData: [],
             painData: [],
@@ -341,24 +330,24 @@ export default {
             launchModal : {              
                 start_date: '',
                 end_date: '',
-                inp_start_date: '',
-                inp_end_date: '',
+                errors : {
+                    start_date: null,
+                    end_date: null
+                },                                
                 rpt_start_date: '',
                 rpt_end_date: '',
+                rpt_start_date_long: 0,
+                rpt_end_date_long: 0,                
                 loading: false
             },
             analgesicCategory: 'All',
             routeOfAdmin: 'All',
-            showDebug: false,
-            errors : {
-                start_date: null,
-                end_date: null
-            }            
+            showDebug: false
         }
     },
     computed : {
         startDateFormatted () {
-            return this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+            return this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;            
         },
         endDateFormatted() {
             return this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
@@ -368,13 +357,15 @@ export default {
 
     },
     mounted () {
-        console.log("In mounted method of the a3 pain tab page") ;        
-        this.$store.commit('setAppId', this.$services.a3pain.APP_ID) ;
-        this.$services.a3pain.dblog("A3PainHome", "In A3 Pain Tab Home Page") ;
-        this.$store.commit('setPageTitle', "Opioid MME and Pain Score Visualization") ;
+        console.log("In mounted method of the a3 pain tab page") ;    
 
-        this.launchModal.start_date = this.$moment(new Date()).format("YYYY-MM-DD") ;
-        this.launchModal.end_date = this.$moment(new Date()).format("YYYY-MM-DD") ;
+        this.$store.commit('setAppId', this.$services.a3pain.APP_ID) ;
+        this.$store.commit('setPageTitle', "Opioid MME and Pain Score Visualization") ;
+        this.$store.commit('setCurrentApp', { help : "a3pain-help-modal" }) ;
+        this.$services.a3pain.dblog("A3PainHome", "In A3 Pain Tab Home Page") ;
+
+        this.launchModal.start_date = this.$moment().add(-3, 'days').format("MM/DD/YYYY") ;
+        this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;
 
         this.$bvModal.show("launch-modal") ;
 
@@ -386,76 +377,42 @@ export default {
         //this.medCategories = this.getLocalMedCategories() ;
         //this.medChartOptions = this.getLocalMedChartOptions() ;
         //this.mmeStackedChartOptions = this.getLocalStackedChartOptions() ;
-        
-        //this.nonOpioidChartOptions = this.getNonOpioidChart() ;
+
     },
     methods : { 
-        startDateChange() {
-            var noidea = this.$moment(this.launchModal.inp_start_date, "MM/DD/YYYY") ;
-            if (noidea.isValid()) {
-                this.launchModal.start_date = noidea.format("YYYY-MM-DD") ;
-                this.errors.start_date = true ;
-            } else {
-                this.errors.start_date = false ;
-                console.log("Invalid start date") ;
-            }
-            console.log(this.$refs) ;
-            //console.log(this.$refs.medChart.chart) ;
-            //console.log("tickInterval: " + this.$refs.medChart.chart.xAxis[0].tickInterval) ;
-            //console.log("min: " + this.$refs.medChart.chart.xAxis[0].min) ;
-            //console.log("tickInterval1: " + this.$refs.stackedChart.chart.xAxis[0].tickInterval) ;
-            //console.log("min1: " + this.$refs.stackedChart.chart.xAxis[0].min) ;            
-            console.log("done changing intervals") ;
-        },
-        startDatePickerChange() {
-            console.log("start date picked changed") ;
-            this.launchModal.inp_start_date = this.$moment(this.launchModal.start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
-            this.errors.start_date = true ;
-        },
-        endDateChange() {
-            var noidea = this.$moment(this.launchModal.inp_end_date, "MM/DD/YYYY") ;
-            if (noidea.isValid()) {
-                this.launchModal.end_date = noidea.format("YYYY-MM-DD") ;
-                this.errors.end_date = true ;
-            } else {
-                console.log("Invalid end date") ;
-                this.errors.end_date = false ;
-            }
-        },
-        endDatePickerChange() {
-            console.log("end date picked changed") ;
-            this.launchModal.inp_end_date = this.$moment(this.launchModal.end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
-            this.errors.end_date = true ;
-        },        
+
         async populateData() {
             try {
             var _self = this ;
-            
+
+            this.resultText = "" ;  // reset the log
+
             this.launchModal.loading = true ;
             
-            this.launchModal.rpt_start_date = this.launchModal.start_date ;
-            this.launchModal.rpt_end_date = this.launchModal.end_date ;
-            
-            var rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, 'YYYY-MM-DD').valueOf() ;
-            var rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, 'YYYY-MM-DD').valueOf() ;
+            console.log("In populate data launchModal : {}", this.launchModal) ;
 
-            //this.medChartOptions = this.getMedsChart(rpt_start_date_long, rpt_end_date_long) ;
-            //this.mmeChartOptions = this.getMMEChart(rpt_start_date_long, rpt_end_date_long) ;
-            //this.mmeStackedChartOptions = this.getMMEStackedChart(rpt_start_date_long, rpt_end_date_long) ;
+            this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+            this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+
+            this.launchModal.rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime() ;
+            this.launchModal.rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime() ;
+
+            var rpt_start_date_long = this.launchModal.rpt_start_date_long ;
+            var rpt_end_date_long = this.launchModal.rpt_end_date_long ;
 
             this.patient = await this.$services.a3pain.patient() ;      
 
-            var encounters = await this.$services.a3pain.encounters(this.launchModal.start_date, this.launchModal.end_date) ;
+            var encounters = await this.$services.a3pain.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
             
             var medstats = {} ;
 
-            medstats = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date) ;
+            medstats = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
             //response = this.getLocalMedData() ;
             //responses.push(response) ;
             //this.resultText += "\n Invoking medstats nextUrl is " + medstats.nextUrl ;
 
             while (medstats.nextUrl && medstats.nextUrl != "") {
-                var response = await this.$services.a3pain.medstats(this.launchModal.start_date, this.launchModal.end_date, medstats.nextUrl) ;
+                var response = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, medstats.nextUrl) ;
                 medstats.cats = [].concat(medstats.cats, response.cats) ;
                 if (response.nextUrl)
                     medstats.nextUrl = response.nextUrl ;
@@ -516,9 +473,6 @@ export default {
                     var categories = [] ;
                     var cdata = [] ;
                     var catIdx = -1 ;         
-                    var mdata1 = {} ;
-
-                    var prdList = this.getTimeChunks(this.mmeDuration) ;
                     
                     responses.forEach(response => {
                         response.data.Orders.forEach(order => {                                                        
@@ -530,7 +484,8 @@ export default {
                             if (cIdx < 0) {
                                 this.resultText += "\nThis should NOT happen.. can't find MAR Order id (" + order.OrderID.ID + ") name " + order.Name + " in cat medorderids" ; 
                                 return true ;
-                            }                            
+                            }                  
+                            var mmeJSON = {} ;          
                             var mmeFactor = 0 ;
                             var isOpioid = false ;
                             var isOral = false ;
@@ -545,8 +500,9 @@ export default {
                                 isOral = (medstats.cats[cIdx].routes.toLowerCase().indexOf("oral") >= 0) ;
                             
                             if (medstats.cats[cIdx].mme[order.OrderID.ID]) {
-                                mmeFactor = medstats.cats[cIdx].mme[order.OrderID.ID] ;
-                                this.resultText += " found mme data :" + mmeFactor ;
+                                mmeJSON = medstats.cats[cIdx].mme[order.OrderID.ID] ;
+                                mmeFactor = mmeJSON.conv_factor ;
+                                this.resultText += " found mme data :" + mmeFactor + " json: " + JSON.stringify(mmeJSON) ;
                             } else {
                                 this.resultText += " - no matching mme data ";
                             }
@@ -575,6 +531,8 @@ export default {
                                 }
                                 if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {
                                     if (!ma.Dose.Value || ma.Dose.Value == "null") continue ;
+                                    if (!ma.Dose.Unit) ma.Dose.Unit = "" ;
+                                    ma.Dose.Unit = ma.Dose.Unit.toLowerCase() ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
                                     if (catIdx == -1) {
                                         catIdx = categories.length ;
@@ -593,8 +551,19 @@ export default {
                                         medColor = categories[catIdx].color ;
                                     }
                                     
+                                    mmeFactor = mmeJSON.conv_factor ;
+                                    if (ma.Dose.Unit != mmeJSON.conv_unit) {
+                                        if (ma.Dose.Unit == "mcg" && mmeJSON.conv_unit == "mg")
+                                            mmeFactor = mmeFactor / 1000 ;
+                                        else if (ma.Dose.Unit == "mg" && mmeJSON.conv_unit == "mcg")
+                                            mmeFactor = mmeFactor * 1000 ;
+                                        else if (ma.Dose.Unit == "ml" && mmeJSON.conv_unit == "mcg")
+                                            mmeFactor = mmeFactor * 1000 ;
+                                    } 
+
                                     ma.mme = parseFloat(ma.Dose.Value) * mmeFactor ;
-                                    ma.mme = parseFloat(ma.mme.toFixed(2)) ;
+                                    if (ma.mme)
+                                        ma.mme = parseFloat(ma.mme.toFixed(2)) ;
 
                                     // ma.Dose.Value and ma.Dose.Unit
                                     var marTime = new Date(ma.AdministrationInstant).getTime() ;
@@ -616,32 +585,6 @@ export default {
                                         cdata.push({ x: marTime, y: catIdx, mme: ma.mme, color: medColor, name: genericName, 
                                             meds: [ {name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID} ] } ) ;
                                     }
-                                    /*
-                                    if (ma.mme && ma.mme > 0) {
-                                        var dt = new Date(ma.AdministrationInstant) ;
-                                        var pIdx = prdList.findIndex(function(prd) { return ( (dt.getHours() * 60 + dt.getMinutes()) <= prd ) }) ;                                        
-                                        dt.setHours(Math.floor(prdList[pIdx] / 60), prdList[pIdx] % 60, 0, 0) ;
-                                        if (mdata1[dt]) {
-                                            mdata1[dt].mme = mdata1[dt].mme + ma.mme ;
-                                            var idx = mdata1[dt].meds.findIndex(function(point) { return point.name == genericName }) ;
-                                            if (idx >= 0) {
-                                                mdata1[dt].meds[idx].mme = mdata1[dt].meds[idx].mme + ma.mme ;
-                                            } else {
-                                                mdata1[dt].meds.push({name: genericName, mme: ma.mme}) ;
-                                            }
-                                        } else {
-                                            mdata1[dt] = { mme: ma.mme, meds: [{name: genericName, mme: ma.mme}] }  ;
-                                        }
-                                        var dtlong = new Date(dt).getTime() ;
-                                        var dtIdx = categories[catIdx].data.findIndex(function(row) { return (row.x == dtlong) }) ;
-                                        if (dtIdx > -1) {
-                                            categories[catIdx].data[dtIdx].y = categories[catIdx].data[dtIdx].y + ma.mme ;
-                                        } else {
-                                            //categories[catIdx].data.push({ x: dtlong, y: ma.mme, name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit }) ;
-                                            categories[catIdx].data.push({ x: dtlong, y: ma.mme, name: genericName }) ;
-                                        }
-                                    }
-                                    */                   
                                 }
                             }
                             } catch (err) {
@@ -656,8 +599,6 @@ export default {
                     try {
                     this.medCategories = JSON.parse(JSON.stringify(categories)) ;
                     
-                    //var medChartOptions = this.getMedsChart(rpt_start_date_long, rpt_end_date_long) ;
-
                     // Sort the categories based on name - reverse
                     categories.sort(function(a, b) {
                         return b.name.localeCompare(a.name) ;
@@ -673,35 +614,11 @@ export default {
                     }) ;
                     
                     this.marData = JSON.parse(JSON.stringify(cdata)) ;
-                   
-                    /*
-                    medChartOptions.series[0].data = cdata ;
-                    medChartOptions.yAxis[0].categories = categories.map(function(cat) { return cat.name }) ;
 
-                    //this.tlog(" MAR DATA " + JSON.stringify(this.marData)) ;
-                    //this.tlog(" MED Categories " + JSON.stringify(this.medCategories)) ;
-                    //this.tlog(" MEDCHARTOPTIONS " + JSON.stringify(medChartOptions)) ;
-
-                    //this.resultText += "\n MEDCHARTOPTIONS: " + JSON.stringify(medChartOptions);
-                    _self.medChartOptions = medChartOptions ;
-                    
-                    var mdata = [] ;
-                    Object.keys(mdata1).forEach(function(dt) {
-                        mdata.push({ x: new Date(dt).getTime(), y: mdata1[dt].mme, meds: mdata1[dt].meds}) ;
-                    }) ;
-
-                    // sort mdata
-                    mdata.sort(function (a, b) {
-                        return a.x - b.x ;
-                    }) ;
-
-                    var mmeChartOptions = this.getMMEChart(rpt_start_date_long, rpt_end_date_long) ;
-                    mmeChartOptions.series[0].data = mdata ;                    
-                    */
                     this.resultText += "\nBefore calling refreshMarChart method...." ;
-                    this.refreshMarChart(rpt_start_date_long, rpt_end_date_long, true) ;
+                    this.refreshMarChart() ;
                     this.resultText += "\nBefore calling refreshMMEChart method...." ;
-                    this.refreshMMEChart(rpt_start_date_long, rpt_end_date_long, true) ;
+                    this.refreshMMEChart() ;
                     
                     this.resultText += "\n Done...calling pain services now" ;
 
@@ -709,24 +626,9 @@ export default {
                         this.resultText += "\nError in no idea 1 :" + err ;                        
                     }
 
-                    /*
-                    try {
-                    var mmeStackedChartOptions = this.getMMEStackedChart(rpt_start_date_long, rpt_end_date_long) ;
-                    var oCategories = categories.filter(function(c) { return c.isOpioid ; }) ;
-                    mmeStackedChartOptions.series = oCategories ;
-                    this.resultText += "\n STACKEDCHARTOPTIONS: " + JSON.stringify(mmeStackedChartOptions);                    
-                    _self.mmeStackedChartOptions = mmeStackedChartOptions ;
-
-                    this.tlog("--------------------******MME STACKED CHARTOPTIONS***************************") ;
-                    this.tlog(JSON.stringify(mmeStackedChartOptions)) ;                    
-                    } catch (err) {
-                        this.resultText += "\nError in mme stacked and nonopioid stuff :" + err ;
-                    }
-                    */
-
                     this.tlog(" Before Invoking pain data in BQ") ;
                     // getting pain data
-                    this.$services.a3pain.pain(_self.launchModal.start_date, _self.launchModal.end_date, _self.patient.epicPatientId)
+                    this.$services.a3pain.pain(_self.launchModal.rpt_start_date, _self.launchModal.rpt_end_date, _self.patient.epicPatientId)
                         .then(response => {
                             try {
                             console.log("response from pain call") ;
@@ -743,10 +645,6 @@ export default {
                             
                             this.resultText += "\n Before settinng the paindata for mmechartoptions" ;
                             this.mmeChartOptions.series[1].data = cdata ;
-                            //_self.mmeChartOptions = mmeChartOptions ;
-
-                            //this.tlog("--------------------******MMECHARTOPTIONS ***************************") ;
-                            //this.tlog(JSON.stringify(_self.mmeChartOptions)) ;
                             
                             } catch (err) {
                                 this.resultText += "\nError in pain handler code :" + err ;                                    
@@ -763,8 +661,10 @@ export default {
             }
 
         },
-        refreshMarChart(rpt_start_date_long, rpt_end_date_long, initFlag) {
+        refreshMarChart() {
             try {
+                var rpt_start_date_long = this.launchModal.rpt_start_date_long ;
+                var rpt_end_date_long = this.launchModal.rpt_end_date_long ;
 
                 var _self = this ;
 
@@ -838,10 +738,7 @@ export default {
                 // No idea why - but if we use the this.medChartOptions, the chart does not render
                 var medChartOptions = {} ;
                 
-                if (initFlag)
-                    medChartOptions = this.getMedsChart(rpt_start_date_long, rpt_end_date_long) ;
-                else 
-                    medChartOptions = this.medChartOptions ;                    
+                medChartOptions = this.getMedsChart(rpt_start_date_long, rpt_end_date_long) ;
 
                 medChartOptions.yAxis[0].categories = categories.map(function(cat) { return cat.name }) ;
                 medChartOptions.series[0].data = cdata ;
@@ -859,9 +756,11 @@ export default {
 
 
         },
-        refreshMMEChart(rpt_start_date_long, rpt_end_date_long, initFlag) {
+        refreshMMEChart() {
 
             var _self = this ;
+            var rpt_start_date_long = this.launchModal.rpt_start_date_long ;
+            var rpt_end_date_long = this.launchModal.rpt_end_date_long ;
 
             this.resultText += "\n in refreshMMEChart START " ;
             
@@ -913,12 +812,9 @@ export default {
                     return a.x - b.x ;
                 }) ;
                 
-                var mmeChartOptions = {} ;
-                if (initFlag)
-                    mmeChartOptions = this.getMMEChart(rpt_start_date_long, rpt_end_date_long) ;
-                else
-                    mmeChartOptions = this.mmeChartOptions ;
-
+                //var mmeChartOptions = {} ;
+                var mmeChartOptions = this.getMMEChart(rpt_start_date_long, rpt_end_date_long) ;
+                
                 ///var mmeChartOptions = _self.mmeChartOptions ;                
                 mmeChartOptions.series[0].data = mdata ;
                 
@@ -931,15 +827,25 @@ export default {
 
                 //var mmeStackedChartOptions = this.getMMEStackedChart(rpt_start_date_long, rpt_end_date_long)
                 var oCategories = categories.filter(function(c) { return c.isOpioid ; }) ;
-                var mmeStackedChartOptions = {} ;
-                if (initFlag)
-                    mmeStackedChartOptions = this.getMMEStackedChart(rpt_start_date_long, rpt_end_date_long) ;
-                else
-                    mmeStackedChartOptions = this.mmeStackedChartOptions ;
+                oCategories.forEach(cat => {
+                    cat.data.sort(function(a, b) { return b.x - a.x }) ;
+                }) ;
+
+                var mmeStackedChartOptions = this.getMMEStackedChart(rpt_start_date_long, rpt_end_date_long) ;
+                
+                mmeStackedChartOptions.xAxis.tickInterval = (this.mmeDuration * 60 * 1000) ;
                 
                 mmeStackedChartOptions.series = oCategories ;
                 
                 this.mmeStackedChartOptions = mmeStackedChartOptions ;
+                               
+                window.setTimeout(function() {
+                    _self.resultText += "\n" + "** In the timeout method to refresh the chart options" ;
+                    try {
+                    _self.$refs.stackedChart.chart.xAxis[0].setExtremes(rpt_start_date_long - 1000, rpt_end_date_long - 1000) ;
+                    _self.$refs.stackedChart.chart.xAxis[0].setExtremes(rpt_start_date_long, rpt_end_date_long)
+                    } catch (err) { _self.resultText += "\n Error in timeout stuff :" +  err ; } 
+                }, 3000 ) ;
 
                 this.resultText += "\n --------------------******MME CHARTOPTIONS data in REFRESH MME CHART***************************" ;
                 this.resultText += "\n " + JSON.stringify(_self.mmeStackedChartOptions) ;
@@ -1033,14 +939,6 @@ export default {
                 }
             } ;
 
-            /*
-            chartOptions.tooltip.formatter = function () {
-                var tip =  this.point.series.name + ": " + this.point.y  ;
-                tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
-                return tip ;
-            }
-            */
-
             chartOptions.tooltip.useHTML = true ;
             chartOptions.tooltip.formatter = function () {                
                 var tip =  this.point.series.name + ": " + this.point.y  ;
@@ -1102,7 +1000,10 @@ export default {
             chartOptions.yAxis[0].stackLabels = {
                 enabled: true,
                 formatter: function() {
-                    return parseFloat(this.total.toFixed(2)) ;
+                    if (this.total)
+                        return parseFloat(this.total.toFixed(2)) ;
+                    else
+                        return 0 ;
                     //return Highcharts.numberFormat(this.total, 1, ',', '.') ;
                 }
             }
@@ -1111,51 +1012,6 @@ export default {
             chartOptions.tooltip.formatter = function () {
                 //var tip =  this.point.series.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit + " <br> MME: " + this.point.y ;                
                 var tip =  this.point.series.name + " <br> MME: " + this.point.y ;                
-                return tip ;
-            }
-            return chartOptions ;
-
-        },        
-        getNonOpioidChart(start_time_long, end_time_long) {
-
-            var chartOptions = this.getDefaultChartConfig({
-                start_time: start_time_long,
-                end_time: end_time_long,
-                name: 'Non-Opioid',
-                type: 'column',
-                title: '',
-                height: 350,
-                color: "green"
-            }) ;
-
-            chartOptions.chart.type = 'column' ;
-            chartOptions.plotOptions = {
-                column: {
-                    dataLabels: {
-                        enabled: true
-                    }                    
-                }
-            } ;
-
-            chartOptions.xAxis.title = {
-                "text": "Inpatient Time Period",
-                margin: 15,
-                style: {
-                    'font-size': '1.2em',
-                    'font-weight': 'bold'
-                }
-            }
-            chartOptions.yAxis[0].title = {
-                "text": "Non-Opioid Dosage Distribution",
-                margin: 15,
-                style: {
-                    'font-size': '1.2em',
-                    'font-weight': 'bold'
-                }
-            } 
-
-            chartOptions.tooltip.formatter = function () {
-                var tip =  this.point.series.name + "<br>Dosage: " + this.point.dose + " " + this.point.unit + " <br> MME: " + this.point.y ;                
                 return tip ;
             }
             return chartOptions ;
@@ -1207,7 +1063,6 @@ export default {
                         
             chartOptions.yAxis[0].labels = {
                 formatter () {
-                    //return "<span style='color: " + _self.medColors[this.value.split(" ")[0]] + "'>" + this.value + "</span>" ;
                     return "<span style='color: " + _self.medColors[this.value] + "'>" + this.value + "</span>" ;
                 }
             } ;          
@@ -1388,7 +1243,146 @@ export default {
         },        
         getLocalStackedChartOptions() {
            // return {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":400,"type":"column"},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1629097200000,"max":1629702000000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalent (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"stackLabels":{"enabled":true}}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"oxycodone hcl","pointWidth":30,"data":[{"x":1629270000000,"y":82.5,"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg"},{"x":1629356400000,"y":75,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629183600000,"y":7.5,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"5","unit":"mg"},{"x":1629702000000,"y":75,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629615600000,"y":60,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629529200000,"y":75,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"},{"x":1629442800000,"y":90,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg"}],"isOpioid":true,"isOral":true,"color":"#820000"},{"name":"hydromorphone hcl/pf","pointWidth":30,"data":[{"x":1629270000000,"y":32,"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg"}],"isOpioid":true,"isOral":false,"color":"#00548f"},{"name":"hydromorphone hcl","pointWidth":30,"data":[{"x":1629615600000,"y":4,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg"}],"isOpioid":true,"isOral":false,"color":"#006F54"}]} ;
-           return {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":400,"type":"column"},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1629010800000,"max":1630306800000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalent (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"stackLabels":{"enabled":true}}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"oxycodone hcl", "pointWidth": null, "data":[{"x":1629255600000,"y":15,"name":"oxycodone hcl"},{"x":1629154800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629140400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629126000000,"y":7.5,"name":"oxycodone hcl"},{"x":1629097200000,"y":7.5,"name":"oxycodone hcl"},{"x":1629068400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629313200000,"y":15,"name":"oxycodone hcl"},{"x":1629284400000,"y":15,"name":"oxycodone hcl"},{"x":1629270000000,"y":15,"name":"oxycodone hcl"},{"x":1629226800000,"y":15,"name":"oxycodone hcl"},{"x":1629212400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629198000000,"y":15,"name":"oxycodone hcl"},{"x":1629183600000,"y":7.5,"name":"oxycodone hcl"},{"x":1629759600000,"y":7.5,"name":"oxycodone hcl"},{"x":1629745200000,"y":7.5,"name":"oxycodone hcl"},{"x":1629730800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629716400000,"y":15,"name":"oxycodone hcl"},{"x":1629702000000,"y":15,"name":"oxycodone hcl"},{"x":1629687600000,"y":7.5,"name":"oxycodone hcl"},{"x":1629673200000,"y":15,"name":"oxycodone hcl"},{"x":1629658800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629644400000,"y":15,"name":"oxycodone hcl"},{"x":1629630000000,"y":15,"name":"oxycodone hcl"},{"x":1629615600000,"y":15,"name":"oxycodone hcl"},{"x":1629601200000,"y":7.5,"name":"oxycodone hcl"},{"x":1629586800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629572400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629558000000,"y":7.5,"name":"oxycodone hcl"},{"x":1629543600000,"y":15,"name":"oxycodone hcl"},{"x":1629529200000,"y":15,"name":"oxycodone hcl"},{"x":1629514800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629500400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629486000000,"y":15,"name":"oxycodone hcl"},{"x":1629471600000,"y":15,"name":"oxycodone hcl"},{"x":1629457200000,"y":15,"name":"oxycodone hcl"},{"x":1629442800000,"y":15,"name":"oxycodone hcl"},{"x":1629428400000,"y":7.5,"name":"oxycodone hcl"},{"x":1629414000000,"y":15,"name":"oxycodone hcl"},{"x":1629399600000,"y":30,"name":"oxycodone hcl"},{"x":1629385200000,"y":15,"name":"oxycodone hcl"},{"x":1629370800000,"y":7.5,"name":"oxycodone hcl"},{"x":1629342000000,"y":15,"name":"oxycodone hcl"},{"x":1629327600000,"y":30,"name":"oxycodone hcl"}],"isOpioid":true},{"name":"hydromorphone hcl/pf","pointWidth": null, "data":[{"x":1629255600000,"y":16,"name":"hydromorphone hcl/pf"}],"isOpioid":true},{"name":"hydromorphone hcl", "pointWidth": null, "data":[{"x":1629126000000,"y":4,"name":"hydromorphone hcl"},{"x":1629615600000,"y":12,"name":"hydromorphone hcl"},{"x":1629356400000,"y":8,"name":"hydromorphone hcl"},{"x":1629313200000,"y":8,"name":"hydromorphone hcl"},{"x":1629298800000,"y":8,"name":"hydromorphone hcl"},{"x":1629241200000,"y":8,"name":"hydromorphone hcl"},{"x":1629082800000,"y":8,"name":"hydromorphone hcl"},{"x":1629068400000,"y":8,"name":"hydromorphone hcl"},{"x":1629054000000,"y":10,"name":"hydromorphone hcl"}],"isOpioid":true}]}
+           //return {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":400,"type":"column"},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","tickInterval": (24 * 60 * 60 * 1000), "endOnTick": true, "startOnTick": true, "min":1629010800000,"max":1629874800000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}}},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalent (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"stackLabels":{"enabled":true}}],"tooltip":{"shadow":false,"valueDecimals":2},"plotOptions":{"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"fentanyl citrate/pf","data":[{"x":1629270000000,"y":105,"name":"fentanyl citrate/pf"},{"x":1629097200000,"y":15,"name":"fentanyl citrate/pf"}],"isOpioid":true,"pointWidth":30},{"name":"oxycodone hcl","data":[{"x":1629270000000,"y":67.5,"name":"oxycodone hcl"},{"x":1629183600000,"y":30,"name":"oxycodone hcl"},{"x":1629097200000,"y":15,"name":"oxycodone hcl"},{"x":1629356400000,"y":75,"name":"oxycodone hcl"},{"x":1629788400000,"y":37.5,"name":"oxycodone hcl"},{"x":1629702000000,"y":75,"name":"oxycodone hcl"},{"x":1629615600000,"y":60,"name":"oxycodone hcl"},{"x":1629529200000,"y":75,"name":"oxycodone hcl"},{"x":1629442800000,"y":90,"name":"oxycodone hcl"}],"isOpioid":true,"pointWidth":30},{"name":"hydromorphone hcl/pf","data":[{"x":1629270000000,"y":16,"name":"hydromorphone hcl/pf"}],"isOpioid":true,"pointWidth":30},{"name":"hydromorphone hcl","data":[{"x":1629183600000,"y":4,"name":"hydromorphone hcl"},{"x":1629615600000,"y":12,"name":"hydromorphone hcl"},{"x":1629356400000,"y":24,"name":"hydromorphone hcl"},{"x":1629270000000,"y":8,"name":"hydromorphone hcl"},{"x":1629097200000,"y":26,"name":"hydromorphone hcl"}],"isOpioid":true,"pointWidth":30}]} ;
+           var co = 
+                {
+                    "chart": {
+                        "spacingTop": 20,
+                        "zoomType": "x",
+                        "displayErrors": true,
+                        "height": 400,
+                        "type": "column"
+                    },
+                    "title": {
+                        "text": "",
+                        "align": "center"
+                    },
+                    "credits": {
+                        "enabled": false
+                    },
+                    "legend": {
+                        "enabled": true
+                    },
+                    "xAxis": {
+                        "crosshair": true,
+                        "events": {},
+                        "type": "datetime",
+                        "tickInterval": (24 * 60 * 60 * 1000),
+                        //"endOnTick": true,
+                        //"startOnTick": true,
+                        "min": 1629010800000,
+                        "max": 1629874800000,
+                        "title": {
+                            "text": "Inpatient Time Period",
+                            "margin": 15,
+                            "style": {
+                                "font-size": "1.2em",
+                                "font-weight": "bold"
+                            }
+                        }
+                    },
+                    "yAxis": [
+                        {
+                            "title": {
+                                "text": "Opioid Morphine Milliequivalent (MME)",
+                                "margin": 15,
+                                "style": {
+                                    "font-size": "1.2em",
+                                    "font-weight": "bold"
+                                }
+                            },
+                            "stackLabels": {
+                                "enabled": true
+                            }
+                        }
+                    ],
+                    "tooltip": {
+                        "shadow": false,
+                        "valueDecimals": 2
+                    },
+                    "plotOptions": {
+                        "column": {
+                            "stacking": "normal",                            
+                            "dataLabels": {
+                                "enabled": true
+                            }
+                        }
+                    },
+                    "series": [         
+                        {
+                            "name": "oxycodone hcl",
+                            "data": [ 
+                                {
+                                    "x": 1629788400000,
+                                    "y": 37.5,
+                                    "name": "oxycodone hcl"
+                                },       
+                                {
+                                    "x": 1629702000000, 
+                                    "y": 25,
+                                    "name": "oxycodone hcl"
+                                },                                
+                                {
+                                    "x": 1629615600000, 
+                                    "y": 60,
+                                    "name": "oxycodone hcl"
+                                },                                                                
+                                {
+                                    "x": 1629529200000, 
+                                    "y": 75,
+                                    "name": "oxycodone hcl"
+                                },
+                                {
+                                    "x": 1629442800000,
+                                    "y": 90,
+                                    "name": "oxycodone hcl"
+                                },                                
+                                {
+                                    "x": 1629356400000,
+                                    "y": 75,
+                                    "name": "oxycodone hcl"
+                                },                                                                                              
+                                {
+                                    "x": 1629270000000, 
+                                    "y": 67.5,
+                                    "name": "oxycodone hcl"
+                                },                                
+                                {
+                                    "x": 1629183600000,
+                                    "y": 30,
+                                    "name": "oxycodone hcl"
+                                },                                
+                                {
+                                    "x": 1629097200000, 
+                                    "y": 15,
+                                    "name": "oxycodone hcl"
+                                }
+
+                            ],
+                            "isOpioid": true,
+                            "pointWidth": 30
+                        } ,
+                        {
+                            "name": "fentanyl citrate/pf",
+                            "data": [
+                                {
+                                    "x": 1629270000000,
+                                    "y": 105,
+                                    "name": "fentanyl citrate/pf",                                    
+                                },
+                                {
+                                    "x": 1629097200000,
+                                    "y": 15,
+                                    "name": "fentanyl citrate/pf"                                 
+                                }
+                            ],
+                            "isOpioid": true,
+                            "pointWidth": 30
+                        }
+
+                    ]
+                }           
+           return co ;
         }        
     },
     head() {
