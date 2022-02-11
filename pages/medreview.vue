@@ -159,7 +159,7 @@
                                 </b-card>                                
                             </b-col>
                         </b-row>
-                        <!--                        
+                        <!--
                         <b-row class="mt-3 ml-1 mr-1">
                             <b-col cols="12">
                                 <b-card class="shadow-lg rounded-lg">
@@ -174,7 +174,7 @@
                                 </b-card>                                
                             </b-col>
                         </b-row>
-                        -->
+                        -->                        
                         <b-row class="mt-3 ml-1 mr-1" v-for="(labChart) in labs_visible_charts" :key="labChart.id">
                             <b-col cols="12">
                                 <b-card class="shadow-lg rounded-lg"  :ref="labChart.id">
@@ -457,17 +457,32 @@ export default {
     },    
     methods : {
         labChartSelected(chartOptions) {
-            console.log("Lab Chart Selected : {}" + chartOptions) ;
+            console.log("Lab Chart Selected : " + chartOptions) ;
             var co = JSON.parse(chartOptions) ;
-            console.log("Lab Chart Selected Series[0]: {}" + co.series[0]) ;
+            console.log("Lab Chart Selected Series[0]: {}", co.series[0]) ;
             
             console.log(this.combinedLabChartOptions) ;
 
             if (!this.combinedLabChartOptions.series)
                 this.combinedLabChartOptions.series = [] ;
             
-            this.combinedLabChartOptions.series.push(co.series[0]) ;
-            console.log(this.combinedLabChartOptions) ;
+            var cIdx = this.labs.charts.findIndex(chart => chart.id == co.id ) ;
+            console.log("Found chart id " + co.id + " at index " + cIdx) ;
+            console.log(this.labs.charts[cIdx]) ;
+
+            if (this.labs.charts[cIdx].high) {
+                var avg = (this.labs.charts[cIdx].high + this.labs.charts[cIdx].low) / 2 ;
+                console.log("Average :" + avg) ;
+                co.series[0].data.forEach(point => {
+                    point.y = (point.y - avg) / avg ;
+                    point.y = parseFloat(point.y.toFixed(2)) ;
+                }) ;
+                co.series[0].name = this.labs.charts[cIdx].name ;
+                this.combinedLabChartOptions.series.push(co.series[0]) ;
+                console.log(this.combinedLabChartOptions) ;
+            } else {
+                console.log("This chart doesn't have high low values :" + this.labs.charts[cIdx].name) ;
+            }                         
         },
         groupByChange() {
             console.log("group by change fired " + this.meds.groupBy) ;            
@@ -724,7 +739,6 @@ export default {
             console.log("Generating charts for ") ;
             console.log(this.launchModal) ;
             
-            // starting fresh log
             this.debugLog = "Generating charts \n" ;
 
             this.launchModal.loading = true ;
@@ -739,11 +753,28 @@ export default {
             this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
 
             this.combinedLabChartOptions = this.$services.medreview.getDefaultChartConfig({ 
-                height: 500, title: 'Sometbhibg', 
+                height: 500, title: 'Lab Results', 
                 start_time: rpt_start_date_long, 
                 end_time: rpt_end_date_long,
                 type: 'line',
-                name: 'No idea' }) ;
+                name: 'Lab Results' }) ;
+            
+            this.combinedLabChartOptions.legend.enabled = true ;
+            this.combinedLabChartOptions.series = [] ;
+            this.combinedLabChartOptions.plotOptions = {                            
+                            series: {
+                                dataLabels: {
+                                enabled: false,
+                                crop: false,
+                                overflow: 'none',
+                                align: 'left',
+                                verticalAlign: 'middle',
+                                formatter: function() {
+                                    return '<span style="color:'+this.series.color+'">'+this.series.name+'</span>';
+                                }
+                            }
+                        } 
+            } ;
 
             this.loadingMessage = "Medication Data" ;
 
@@ -957,11 +988,12 @@ export default {
 
         },
         async getObsData(category) {
+            try {
             var responses = [] ;
             var response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
             responses.push(response) ;
             while (response.nextUrl) {
-                response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", data.nextUrl, this.$services.medreview.APP_ID) ;
+                response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.medreview.APP_ID) ;
                 responses.push(response) ;
             }
             
@@ -978,7 +1010,9 @@ export default {
                     }
                 });
             }) ;
-
+            } catch (err) {
+                this.log("Error in getObsData for " + category + ": " + err) ;
+            }
             return labs ;
         },
         getMedsChart() {
