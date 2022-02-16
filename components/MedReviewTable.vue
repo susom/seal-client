@@ -87,8 +87,7 @@ export default {
     },
     methods : {
         async onLabRowClick(item) {
-            console.log("Row is cliked on") ;
-            console.log(item) ;
+            console.log("Row is cliked on {}", item) ;
 
             this.$set(item, 'selected', !item.selected) ;
             item.visible  = !item.visible ;            
@@ -104,8 +103,8 @@ export default {
                 chartOptions.xAxis.max = this.rpt_end_date_long ;
                 chartOptions.series[0].type = "line" ;
                 chartOptions.chart.height = 300 ;
-                console.log("chartoptions before setting the plotlines,.....") ;
-                console.log(JSON.stringify(chartOptions)) ;
+                //console.log("chartoptions before setting the plotlines,.....") ;
+                //console.log(JSON.stringify(chartOptions)) ;
 
                 if (item.low) {
                     chartOptions.yAxis[0].plotLines = [{
@@ -141,18 +140,18 @@ export default {
                     chartOptions.series[1].name = "Diastolic blood pressure" ;
                     chartOptions.series[1].data = chartdata.data[0].dataset2 ;
                     chartOptions.series[1].turboThreshold = 0 ; // disable the threshold test
-                    chartOptions.series[1].type = "line" ;
-                    //this.$emit('debug', chartOptions) ;
+                    chartOptions.series[1].type = "line" ;                    
                 }
                 this.$set(item, "chartOptions", chartOptions) ;
                 item.rendered = true ;
-                console.log("Chart Options for lab {}", chartOptions) ;
+                //console.log("Chart Options for lab {}", chartOptions) ;
                 chartOptions.id = item.id ;
                 this.$emit('debug', JSON.stringify(chartOptions)) ;
             }
             if (item.visible) {
                 this.$emit('moveToTop', item.id) ;
             }
+            this.$emit('clicked', item, item.chartOptions) ;
         }
     }
 }

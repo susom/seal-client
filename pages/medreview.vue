@@ -120,7 +120,7 @@
                                 </b-tab>
                                 <b-tab title="Labs">
                                     <b-card-text>
-                                        <med-review-table ref="labsChartTable" :labs="labs" @debug="log" :launchModal="launchModal" @moveToTop="moveLabToTop" />
+                                        <med-review-table ref="labsChartTable" :labs="labs" @debug="log" @clicked="labChartSelected" :launchModal="launchModal" @moveToTop="moveLabToTop" />
                                     </b-card-text>                                        
                                 </b-tab>
                                 <b-tab title="Vitals">
@@ -158,14 +158,21 @@
                                     </b-card-text>
                                 </b-card>                                
                             </b-col>
-                        </b-row>
-                        <!--
+                        </b-row>                        
                         <b-row class="mt-3 ml-1 mr-1">
                             <b-col cols="12">
                                 <b-card class="shadow-lg rounded-lg">
-                                    <b-card-title class="chart-title">Combined Lab Chart</b-card-title>
-                                    <b-card-text>
+                                    <b-card-title class="chart-title">
                                         <b-row>
+                                            <b-col>Combined Lab Chart</b-col>
+                                            <b-col style="text-align:right" class="mr-3">
+                                                <b-icon :icon="combinedLabChartOpen?'arrow-up-circle-fill':'arrow-down-circle-fill'" @click="toggleChart()" 
+                                                    variant="info" font-scale="1.5"/>
+                                            </b-col>
+                                        </b-row>
+                                    </b-card-title>
+                                    <b-card-text>
+                                        <b-row v-show="combinedLabChartOpen">
                                             <b-col>
                                                 <highchart :options="combinedLabChartOptions" />
                                             </b-col>
@@ -173,8 +180,7 @@
                                     </b-card-text>
                                 </b-card>                                
                             </b-col>
-                        </b-row>
-                        -->                        
+                        </b-row>                                           
                         <b-row class="mt-3 ml-1 mr-1" v-for="(labChart) in labs_visible_charts" :key="labChart.id">
                             <b-col cols="12">
                                 <b-card class="shadow-lg rounded-lg"  :ref="labChart.id">
@@ -375,7 +381,8 @@ export default {
             patient: {},
             debugLog:"",
             medChartOptions: {},
-            combinedLabChartOptions: {}
+            combinedLabChartOpen: true,
+            combinedLabChartOptions: { }
         }
     },
     watch : {
@@ -420,7 +427,8 @@ export default {
         this.launchModal.start_date = this.$moment().add(-7, 'days').format("MM/DD/YYYY") ;
         this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;
         console.log(this.launchModal) ;
-        this.$bvModal.show("launch-modal") ;
+        this.$bvModal.show("launch-modal") ;        
+        //this.combinedLabChartOptions = this.getLocalCombinedData() ;
     },
     computed : {
         startDateFormatted () {            
@@ -456,33 +464,51 @@ export default {
         }
     },    
     methods : {
-        labChartSelected(chartOptions) {
-            console.log("Lab Chart Selected : " + chartOptions) ;
-            var co = JSON.parse(chartOptions) ;
+        toggleChart() {
+            this.combinedLabChartOpen = !this.combinedLabChartOpen ;
+        },
+        labChartSelected(labItem, chartOptions) {
+            try {
+            console.log("Lab Chart Selected : {}", chartOptions) ;
+            console.log("Lab Chart Selected row : {}", labItem) ;
+            //var co = JSON.parse(chartOptions) ;
+            var co = JSON.parse(JSON.stringify(chartOptions)) ;
+
             console.log("Lab Chart Selected Series[0]: {}", co.series[0]) ;
             
-            console.log(this.combinedLabChartOptions) ;
+            if (labItem.selected) {
+                if (!this.combinedLabChartOptions.series)
+                    this.combinedLabChartOptions.series = [] ;
+                
+                var cIdx = this.labs.charts.findIndex(chart => chart.id == co.id ) ;
+                console.log("Found chart id " + co.id + " at index " + cIdx) ;
+                console.log(this.labs.charts[cIdx]) ;
+                
+                this.log("In LabChartSelected: chart " + this.labs.charts[cIdx].name + " min quantile :" + this.labs.charts[cIdx].min_quantile +  " max quantile :" + this.labs.charts[cIdx].max_quantile + " data size :" + co.series[0].data.length) ;
 
-            if (!this.combinedLabChartOptions.series)
-                this.combinedLabChartOptions.series = [] ;
-            
-            var cIdx = this.labs.charts.findIndex(chart => chart.id == co.id ) ;
-            console.log("Found chart id " + co.id + " at index " + cIdx) ;
-            console.log(this.labs.charts[cIdx]) ;
-
-            if (this.labs.charts[cIdx].high) {
-                var avg = (this.labs.charts[cIdx].high + this.labs.charts[cIdx].low) / 2 ;
-                console.log("Average :" + avg) ;
-                co.series[0].data.forEach(point => {
-                    point.y = (point.y - avg) / avg ;
-                    point.y = parseFloat(point.y.toFixed(2)) ;
-                }) ;
-                co.series[0].name = this.labs.charts[cIdx].name ;
-                this.combinedLabChartOptions.series.push(co.series[0]) ;
-                console.log(this.combinedLabChartOptions) ;
+                if (this.labs.charts[cIdx].max_quantile > 0) {
+                    co.series[0].data.forEach(point => {
+                        point.orig_y = point.y ;
+                        point.y = 5 + 90 * (point.y - this.labs.charts[cIdx].min_quantile ) / ( this.labs.charts[cIdx].max_quantile - this.labs.charts[cIdx].min_quantile ) ;
+                        if (point.y > 100) point.y = 100 ;
+                        if (point.y < 0) point.y = 0 ;
+                        point.y = parseFloat(point.y.toFixed(2)) ;                        
+                    }) ;
+                    co.series[0].name = this.labs.charts[cIdx].name ;
+                    this.combinedLabChartOptions.series.push(co.series[0]) ;
+                    console.log("combined chart options>" + JSON.stringify(this.combinedLabChartOptions)) ;
+                } else {
+                    this.log("This chart doesn't have high low values :" + this.labs.charts[cIdx].name) ;
+                }                
             } else {
-                console.log("This chart doesn't have high low values :" + this.labs.charts[cIdx].name) ;
-            }                         
+                var cIdx = this.combinedLabChartOptions.series.findIndex(series => series.name == labItem.name) ;
+                console.log("Found index to remove :" + cIdx) ;
+                this.combinedLabChartOptions.series.splice(cIdx, 1) ;  // delete the row
+            }
+            } catch (err) {
+                this.log("Error in combined chart :" + err) ;
+            }
+            this.log("In LabChartSelected: finished doing the calc stuff ") ;
         },
         groupByChange() {
             console.log("group by change fired " + this.meds.groupBy) ;            
@@ -753,9 +779,10 @@ export default {
             this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
 
             this.combinedLabChartOptions = this.$services.medreview.getDefaultChartConfig({ 
-                height: 500, title: 'Lab Results', 
+                height: 500, title: '', 
                 start_time: rpt_start_date_long, 
                 end_time: rpt_end_date_long,
+                min:0, max: 100,
                 type: 'line',
                 name: 'Lab Results' }) ;
             
@@ -775,7 +802,12 @@ export default {
                             }
                         } 
             } ;
-
+            this.combinedLabChartOptions.tooltip.formatter = function() {
+                var tip =  this.point.series.name ;
+                tip += "<br>Value: " + this.point.orig_y + " " + this.point.unit ;
+                tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
+                return tip ;
+            }
             this.loadingMessage = "Medication Data" ;
 
             var _self = this ;
@@ -1380,6 +1412,88 @@ export default {
                     }
                 ]
             }
+        },
+        getLocalCombinedData() {
+            var co =    {
+                    "chart": {
+                        "marginLeft": 100,
+                        "zoomType": "x",
+                        "displayErrors": true,
+                        "height": 500
+                    },
+                    "exporting": {
+                        "libURL": "https://www.noidea.com",
+                        "buttons": {
+                            "contextButton": {
+                                "menuItems": [
+                                    {
+                                        "text": "Print Chart"
+                                    }
+                                ]
+                            }
+                        },
+                        "fallbackToExportServer": false
+                    },
+                    "title": {
+                        "text": "Lab Results",
+                        "align": "center"
+                    },
+                    "credits": {
+                        "enabled": false
+                    },
+                    "legend": {
+                        "enabled": true
+                    },
+                    "xAxis": {
+                        "crosshair": true,
+                        "events": {},
+                        "type": "datetime",
+                        "min": 1202457600000,
+                        "max": 1644912000000
+                    },
+                    "yAxis": [
+                        {
+                            "title": {
+                                "text": null
+                            }
+                        }
+                    ],
+                    "tooltip": {
+                        "shadow": false,
+                        "valueDecimals": 2
+                    },
+                    "plotOptions": {
+                        "series": {
+                            "dataLabels": {
+                                "enabled": false,
+                                "crop": false,
+                                "overflow": "none",
+                                "align": "left",
+                                "verticalAlign": "middle"
+                            }
+                        }
+                    },
+                    "series": [
+                        {
+                            "type": "line",
+                            "fillOpacity": 0.3,
+                            "xDateFormat": "%m/%d/%Y",
+                            "tooltip": {
+                                "shared": true
+                            },
+                            "data": [
+                                {
+                                    "x": 1309869900000,
+                                    "y": 30.77,
+                                    "unit": "fL"
+                                }
+                            ],
+                            "turboThrehold": 0,
+                            "name": "MCV"
+                        }
+                    ]
+                } ;
+            return co ;
         },
         getLocalPatientData() {
             return {
