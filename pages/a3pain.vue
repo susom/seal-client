@@ -458,8 +458,13 @@ export default {
             }
             try {
 
-                this.resultText += "\n---- MAR Data Webservice Request JSON --------------" ;
-                this.resultText += JSON.stringify(wsjson) ;
+                //MAR data for Patient Controlled Analgesics
+                this.resultText += "\n---- PCA MAR Data Request --------------" ;
+                var pca_mars = await this.$services.a3pain.pca_mars(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;                
+                this.resultText += JSON.stringify(pca_mars) ;
+
+                this.resultText += "\n---- MAR Data Webservice Request--------------" ;
+                //this.resultText += JSON.stringify(wsjson) ;
 
                 this.$services.a3pain.mardata(wsjson).then(responses => {
 
@@ -530,7 +535,7 @@ export default {
                                     continue ;
                                 }
                                 if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {
-                                    if (!ma.Dose.Value || ma.Dose.Value == "null") continue ;
+                                    if (!ma.Dose["Value"] || ma.Dose.Value == "null") continue ;
                                     if (!ma.Dose.Unit) ma.Dose.Unit = "" ;
                                     ma.Dose.Unit = ma.Dose.Unit.toLowerCase() ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
@@ -593,6 +598,51 @@ export default {
                             }                            
                         }) ; 
                     }) ;
+                    
+                    pca_mars.forEach(med => {
+                        try {
+                        var genericName = med.generic_name ;
+                        var medColor = "" ;
+                        this.resultText += "\n Processing PCA :" + med.name + "  Generic Name: " + genericName ;
+
+                        var catIdx = categories.findIndex(function(cat) { return cat.name == genericName }) ;
+                        if (catIdx == -1) {
+                            catIdx = categories.length ;
+
+                            if (this.medColors[genericName]) {
+                                medColor = this.medColors[genericName] ;
+                            } else {
+                                var medColorIdx = Object.keys(this.medColors).length ;
+                                medColor = (medColorIdx < sealColors.length?sealColors[medColorIdx]:"") ;
+                                this.medColors[genericName] = medColor ;
+                            }
+                            
+                            categories.push({ name: genericName , pointWidth: 30, data: [], isOpioid: true, isOral: false, color: medColor} ) ;
+                        } else {
+                            medColor = categories[catIdx].color ;
+                        }
+                        } catch (err) {
+                            this.resultText += "\n Error in PCA Mar outer loop " + err ;
+                        }
+                        med.data.forEach(point => {
+                            try {                            
+                            var marTime = point.recorded_time ;
+                            point.mme = point.dosage * med.conv_factor ;
+                            point.mme = parseFloat(point.mme.toFixed(2)) ;
+
+                            var cdataIdx = cdata.findIndex(function(point1) { return point1.x == marTime && point1.y == catIdx }) ;                            
+                            if (cdataIdx >= 0) {
+                                cdata[cdataIdx].mme = cdata[cdataIdx].mme + point.mme ;
+                                cdata[cdataIdx].meds.push({name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme })
+                            } else {
+                                cdata.push({ x: marTime, y: catIdx, mme: point.mme, color: medColor, name: genericName, 
+                                    meds: [ {name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme } ] } ) ;
+                            }    
+                            } catch (err) {
+                                this.resultText += " Error in PCA Mar inside point loop " + err ;
+                            }                        
+                        }); 
+                    }) ;
 
                     this.resultText += "\n Total chart data :" + cdata.length ;
                     
@@ -609,10 +659,11 @@ export default {
                         catMap[cat.name] = cIdx ;
                     }) ;
                     // change the y to reflect new cat idx
-                    cdata.forEach(function(cd) {
+                    cdata.forEach(function(cd) {                    
                         cd.y = catMap[cd.name] ;
                     }) ;
-                    
+                                        
+
                     this.marData = JSON.parse(JSON.stringify(cdata)) ;
 
                     this.resultText += "\nBefore calling refreshMarChart method...." ;

@@ -83,9 +83,10 @@
                                         <span v-html="data.value"></span>
                                     </template>
                                     <template #cell(show_details)="row">
+                                        <!-- @click="row.toggleDetails" -->
                                         <b-icon 
-                                            :icon="row.detailsShowing ? 'arrow-up' : 'arrow-down'" 
-                                            @click="row.toggleDetails"
+                                            :icon="row.detailsShowing ? 'chevron-right' : 'chevron-down'"                                             
+                                            font-scale="1.3"
                                             v-if="row.item.components.length > 1" />
                                     </template>
                                     <template #cell(graph)="row">
@@ -142,15 +143,16 @@ export default {
                 {label: '', key: 'show_details'},
                 {label: 'Order/Test (OrderId)', key:'display_name', sortable: false},
                 {label: 'Frequency', key:'frequency', sortable: false},
-                {label: '# of Blood draws', key: 'specimen_count', sortable: false, tdClass:'text-center'},
+                {label: '# of Blood draws', key: 'specimen_count', sortable: false, tdClass:'text-center', thClass:'text-center'},
                 {label: 'Graph', key: 'graph'},
                 {label: 'Recent Values', key: 'recent_values'} ,
-                {label: 'Predicted Utility', key: 'reevaluate'} ,
+                {label: 'Predicted Utility %', key: 'prediction_perc', tdClass:'text-center'}
             ],
             compFields: [
                 {label: 'Name', key: 'name'},
                 {label: 'Graph', key: 'graph'},
-                {label: 'Recent Values', key: 'recent_values'}
+                {label: 'Recent Values', key: 'recent_values'},
+                {label: 'Predicted Utility %', key: 'prediction_perc', tdClass:'text-center', thClass:'text-center'}
             ],
             loading: true
         }
@@ -165,6 +167,10 @@ export default {
         this.patient.hospitalized =  true ;
         try {
         this.patient = await this.$services.seal.patient(this.$services.standingorders.APP_ID) ;
+        
+        var predictions = await this.$services.standingorders.predictions() ;
+        console.log("predictions data") ;
+        console.log(predictions) ;
 
         var response = await this.$services.standingorders.orders(this.patient.epicPatientId) ;
     
@@ -184,24 +190,57 @@ export default {
         console.log("looping thru standing orders") ;
         this.standingOrders.forEach(so => {
             try {
-                console.log("process standiong order {}" , so) ;
+            //console.log("process standiong order {}" , so) ;
             totalSpecimenCount += so.specimen_count ;
             so.components.forEach(comp => {
+                console.log("Processing component {}", comp) ;
                 var recentValues = [] ;
-                var cnt = 0 ;                
+                var cnt = 0 ;                                
+                var resultDays = comp.data[comp.data.length - 1].result_days ;
+                var prevConseqPositives = 0 ;
+                var negativeFound = false ; 
                 for (var i=comp.data.length - 1; i >=0; i--) {
-                    if (cnt >= recentCountMax) break ;
-                    //recentValues.push(comp.data[i].y);
-                    recentValues.push("<span style='color:" + comp.data[i].color + "'>" + comp.data[i].y + "</span>");
+                    if (cnt < recentCountMax) {
+                        recentValues.push("<span style='color:" + comp.data[i].color + "'>" + comp.data[i].y + "</span>");
+                    }
+                    if ( i == comp.data.length || !negativeFound)
+                        negativeFound = (comp.data[i].result.trim().length > 0) ;
+                    
+                    if (!negativeFound) {
+                        prevConseqPositives++ ;
+                    }                    
                     cnt++ ;
+                }    
+                
+                if (prevConseqPositives > 5) prevConseqPositives = 5 ;
+
+                var compNameLower = comp.name.toLowerCase() ;
+                console.log("component :" + comp.name.toLowerCase() + ": result days :" + resultDays + " prevConseqPos :" + prevConseqPositives) ;
+                if (predictions[compNameLower]) {
+                    for (var j=0;j<predictions[compNameLower].length;j++) {
+                        if (predictions[compNameLower][j].window_size >= resultDays) {
+                            var leastWindowSize = predictions[compNameLower][j].window_size ;
+                            console.log("window size :" + leastWindowSize) ;
+                            var wsizes = predictions[compNameLower].filter(ws => ws.window_size == leastWindowSize) ;
+                            var predIdx = wsizes.findIndex(sz => sz.prev_consecutive_normal == prevConseqPositives) ;
+                            if (predIdx > -1) {                            
+                                comp.prediction_perc = wsizes[predIdx].prediction_rate ;
+                                console.log("Pred Perc :" + comp.prediction_perc) ;
+                            }
+                            break ;
+                        } 
+                    }
+                } else {
+                    console.log("Predictions Do not exist for :" + compNameLower + ":") ;
                 }
                 comp.recent_values = recentValues.reverse().join(", ") ;
             }) ;
             if (so.components.length == 1) {
                 so.data = so.components[0].data ;
-                so.recent_values = so.components[0].recent_values ;                
+                so.recent_values = so.components[0].recent_values ; 
+                so.prediction_perc = so.components[0].prediction_perc ;
             }
-            console.log(so) ;
+            //console.log(so) ;
             } catch (err) {
                 console.log("error :" + err) ;
             }
@@ -209,6 +248,7 @@ export default {
 
         this.patient.total_specimen_count = totalSpecimenCount ;
         this.loading = false ;
+
 
     },
     methods: {     

@@ -58,6 +58,16 @@ export default class A3PainAPI {
         })        
     }
 
+    pca_mars(start_date, end_date) {
+        return this.axios({
+            method: 'get',
+            url: "/fhir-app/a3pain/api/v1/pcas?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID +
+                "&start_date=" + start_date + "&end_date=" + end_date 
+        }).then((response) => {            
+            return response.data ;
+        })        
+    }
+
     mardata(wsjson) {
         var wscalls = [] ;
 

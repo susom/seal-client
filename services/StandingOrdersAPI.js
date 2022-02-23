@@ -18,6 +18,15 @@ export default class StandingOrdersAPI {
         })                  
     }
 
+    predictions() {
+        return this.axios({
+            method: 'get',
+            url: "/fhir-app/standingorders/api/v1/predictions?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+        }).then((response) => {            
+            return response.data.data ;
+        })                  
+    }
+
     dblog(act, msg) {
         this.seal.dblog(act, msg, this.APP_ID) ;
     }
