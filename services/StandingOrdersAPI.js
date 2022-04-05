@@ -18,6 +18,23 @@ export default class StandingOrdersAPI {
         })                  
     }
 
+    labdata(epicPatientId, loincCodes, minOrderDate, nextUrl) {
+        
+        var body = { "loinc-codes": loincCodes } ;
+
+        var url = "/fhir-app/standingorders/api/v1/labdata?min_order_time=" + minOrderDate + "&epicPatientId=" + epicPatientId + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID ;
+        
+        if (nextUrl && nextUrl !== '') {
+            url = url + "&next=" + encodeURIComponent(nextUrl) ;            
+        }
+
+        return this.axios
+            .post(url, body)
+            .then( (response) => { 
+                return response.data ;
+            }) ;
+    }
+    
     predictions() {
         return this.axios({
             method: 'get',

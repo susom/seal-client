@@ -27,12 +27,14 @@
                 <b-card class="shadow-lg rounded-lg"  bg-variant="secondary">
                     <b-card-text>
                         <b-row>
-                            <b-col cols="2" class="pl-5">
+                            <b-col cols="3" class="pl-5">
                                 Admitted: <b class="pl-2">{{patient.hospital_admission_time}}</b>
                             </b-col>
+                            <!--
                             <b-col cols="4" class="pl-5">
                                 Lab Result Dates: <b class="pl-2">{{patient.lab_result_min_date}} - {{patient.lab_result_max_date}}</b>
                             </b-col>
+                            -->
                             <b-col cols="3">
                                 Length of stay: <b class="pl-2">{{patient.length_of_stay}} days</b>
                             </b-col>
@@ -58,7 +60,7 @@
                         <b-row v-else>                            
                             <b-col>
                                 <b-table striped 
-                                    :items="standingOrders" :fields="orderFields"
+                                    :items="standingOrdersWithComponents" :fields="orderFields"
                                     small :busy="loading"
                                     selectable
                                     @row-clicked="onRowClick"
@@ -85,7 +87,7 @@
                                     <template #cell(show_details)="row">
                                         <!-- @click="row.toggleDetails" -->
                                         <b-icon 
-                                            :icon="row.detailsShowing ? 'chevron-right' : 'chevron-down'"                                             
+                                            :icon="row.detailsShowing ? 'chevron-down' : 'chevron-up'"                                             
                                             font-scale="1.3"
                                             v-if="row.item.components.length > 1" />
                                     </template>
@@ -118,6 +120,17 @@
                 </b-card>
             </b-col>
         </b-row>
+        <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
+            <b-col cols="11">
+                <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
+                <b-card v-show="showDebug">                    
+                    <b-card-title>Debug Info</b-card-title>
+                    <b-card-text>
+                        <b-textarea v-model="resultText" rows="10" auto-grow />
+                    </b-card-text>
+                </b-card>
+            </b-col>                        
+        </b-row>
         <b-modal id="standingorders-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
             body-bg-variant="dark">
             <ul class="text-white">
@@ -130,11 +143,9 @@
 </template>
 
 <script>
-import CalcResultDisplay from '~/components/CalcResultDisplay.vue' ;
 import Highcharts from 'highcharts' ;
 
-export default {
-  components: { CalcResultDisplay },
+export default {  
     data() {
         return {
             patient: { length_of_stay: 0 },            
@@ -146,56 +157,118 @@ export default {
                 {label: '# of Blood draws', key: 'specimen_count', sortable: false, tdClass:'text-center', thClass:'text-center'},
                 {label: 'Graph', key: 'graph'},
                 {label: 'Recent Values', key: 'recent_values'} ,
-                {label: 'Predicted Utility %', key: 'prediction_perc', tdClass:'text-center'}
+                {label: 'Predicted Normal', key: 'prediction_perc', tdClass:'text-center'}
             ],
             compFields: [
                 {label: 'Name', key: 'name'},
                 {label: 'Graph', key: 'graph'},
                 {label: 'Recent Values', key: 'recent_values'},
-                {label: 'Predicted Utility %', key: 'prediction_perc', tdClass:'text-center', thClass:'text-center'}
+                {label: 'Predicted Normal', key: 'prediction_perc', tdClass:'text-center', thClass:'text-center'}
             ],
-            loading: true
+            loading: true,
+            predictions: {},
+            showDebug: false,
+            resultText: ""
         }
-    },
+    },    
     async fetch() {
         console.log("In fetch method of the standing order page") ;
+        
+        var _self = this ;
 
         this.$store.commit('setAppId', this.$services.standingorders.APP_ID) ;
         this.$store.commit('setPageTitle', "Inpatient Standing Orders Utility Assessment") ;
         this.$store.commit('setCurrentApp', { help : "standingorders-help-modal" }) ;
-        this.$services.standingorders.dblog("StaindOrdersHome", "In Standing Orders Home Page") ;
+        this.$services.standingorders.dblog("StandingOrdersHome", "In Standing Orders Home Page") ;
         this.patient.hospitalized =  true ;
-        try {
+
         this.patient = await this.$services.seal.patient(this.$services.standingorders.APP_ID) ;
         
-        var predictions = await this.$services.standingorders.predictions() ;
+        this.predictions = await this.$services.standingorders.predictions() ;
         console.log("predictions data") ;
-        console.log(predictions) ;
-
+        console.log(this.predictions) ;
+        
+        this.resultText = "" ;
+        this.log("Invoking standing orders") ;
         var response = await this.$services.standingorders.orders(this.patient.epicPatientId) ;
-    
-        this.patient.hospital_admission_time = response.hospital_admission_time ;
-        this.patient.length_of_stay = response.length_of_stay ;
-        this.patient.lab_result_min_date = response.min_result_date ;
-        this.patient.lab_result_max_date = response.max_result_date ;
+        this.log("Got standing orders...") ;
 
-        this.patient.hospitalized = response.hospital_admission_time.length > 0 ;
+        if (response.hospital_admission_time) {
+            this.patient.hospital_admission_time = response.hospital_admission_time ;
+            this.patient.length_of_stay = response.length_of_stay ;
+            this.patient.min_order_date = response.min_order_date ;
+            //this.patient.lab_result_min_date = response.min_result_date ;
+            //this.patient.lab_result_max_date = response.max_result_date ;
 
-        this.standingOrders = response.standing_orders ;
-        } catch (err) {
-            console.log("error before loop..." + err) ;
+            this.patient.hospitalized = response.hospital_admission_time.length > 0 ;
         }
-        var totalSpecimenCount = 0 ;
-        var recentCountMax = 3 ;
-        console.log("looping thru standing orders") ;
-        this.standingOrders.forEach(so => {
-            try {
-            //console.log("process standiong order {}" , so) ;
-            totalSpecimenCount += so.specimen_count ;
+        this.standingOrders = response.standing_orders ;
+
+        var totalSpecimenCount = 0 ;        
+
+        console.log("Before going into for loop for standing orders...") ;
+        //var loincCodes = this.standingOrders.map(so => so.components.map(c => c.loinc_code).join(",")).join(",")
+        for (var sIdx=0; sIdx<this.standingOrders.length - 1; sIdx++) {
+            var so = this.standingOrders[sIdx] ;
+            
+            so.display = true ;
+            totalSpecimenCount += so.specimen_count ;            
+            var loincCodes = so.components.map(c => c.loinc_code).join(",") ;            
+            
+            this.log("Lab data for Standing order " + so.display_name + "(" + so.standing_order_id + " min:" + so.order_time + ") loinc: " + loincCodes ) ;
+
+            this.processLabData(loincCodes, so) ;
+        }
+
+        console.log("After going into for loop for standing orders...") ;
+        this.patient.total_specimen_count = totalSpecimenCount ;
+        console.log("Set loadidng to false") ;
+        this.loading = false ;
+    },
+    computed: {
+        standingOrdersWithComponents () {
+            return this.standingOrders.filter(ord => ord.display ) ;
+        }
+    },
+    methods: {    
+        log(mesg) {
+            this.resultText += "\n" + this.$moment().format("LTS") + ": " + mesg ;
+        },
+        onRowClick(item) {
+            console.log("row clicked") ;
+            if (item.components.length > 1)
+                this.$set(item, "_showDetails", !item._showDetails) ;
+        },
+        async processLabData(loincCodes, standingOrder, nextUrl) {
+            var _self = this ;
+            this.$services.standingorders.labdata(this.patient.epicPatientId, loincCodes, standingOrder.order_time, nextUrl).then (function (response) {
+                var labdata = response.labdata ;
+                _self.log("Got response to standing order :" + standingOrder.standing_order_id + " len: " + labdata.length) ;
+                labdata.forEach(res => {
+                    var idx = standingOrder.components.findIndex(comp => comp.loinc_code == res.loinc_code) ;
+                    if (idx < 0) 
+                        _self.log("This shouldn't happen - can't find loinc code :" + res.loinc_code + ": in standing order :" + standingOrder.display_name) ;
+                    else {
+                        res.color = (res.result == "")?"green":"red" ;
+                        res.result_days = _self.$moment().diff(_self.$moment(new Date(res.result_time)), "days") ;
+                        standingOrder.components[idx].data.push(res) ;
+                    }
+                }) ;
+                _self.log("Next URL :" + response.nextUrl) ;
+                if (response.nextUrl) {
+                    _self.processLabData(loincCodes, standingOrder, response.nextUrl) ;
+                } else {  // done fetching all labs data - now process the standing order
+                    _self.processComponents(standingOrder) ;
+                }
+            }) ;
+        },
+        processComponents(so) {
+            var recentCountMax = 3 ;            
             so.components.forEach(comp => {
-                console.log("Processing component {}", comp) ;
+                this.log("Processing component " + comp.name + " for standing order " + so.standing_order_id) ;
                 var recentValues = [] ;
-                var cnt = 0 ;                                
+                var cnt = 0 ; 
+                if (comp.data.length == 0) return ;                    
                 var resultDays = comp.data[comp.data.length - 1].result_days ;
                 var prevConseqPositives = 0 ;
                 var negativeFound = false ; 
@@ -215,53 +288,41 @@ export default {
                 if (prevConseqPositives > 5) prevConseqPositives = 5 ;
 
                 var compNameLower = comp.name.toLowerCase() ;
-                console.log("component :" + comp.name.toLowerCase() + ": result days :" + resultDays + " prevConseqPos :" + prevConseqPositives) ;
-                if (predictions[compNameLower]) {
-                    for (var j=0;j<predictions[compNameLower].length;j++) {
-                        if (predictions[compNameLower][j].window_size >= resultDays) {
-                            var leastWindowSize = predictions[compNameLower][j].window_size ;
-                            console.log("window size :" + leastWindowSize) ;
-                            var wsizes = predictions[compNameLower].filter(ws => ws.window_size == leastWindowSize) ;
+                //console.log("component :" + comp.name.toLowerCase() + ": result days :" + resultDays + " prevConseqPos :" + prevConseqPositives) ;
+                if (this.predictions[compNameLower]) {
+                    for (var j=0;j<this.predictions[compNameLower].length;j++) {
+                        if (this.predictions[compNameLower][j].window_size >= resultDays) {
+                            var leastWindowSize = this.predictions[compNameLower][j].window_size ;
+                            //console.log("window size :" + leastWindowSize) ;
+                            var wsizes = this.predictions[compNameLower].filter(ws => ws.window_size == leastWindowSize) ;
                             var predIdx = wsizes.findIndex(sz => sz.prev_consecutive_normal == prevConseqPositives) ;
                             if (predIdx > -1) {                            
-                                comp.prediction_perc = wsizes[predIdx].prediction_rate ;
-                                console.log("Pred Perc :" + comp.prediction_perc) ;
+                                comp.prediction_perc = Math.round(wsizes[predIdx].prediction_rate) + ' %' ;
+                                //console.log("Pred Perc :" + comp.prediction_perc) ;
                             }
                             break ;
                         } 
                     }
                 } else {
-                    console.log("Predictions Do not exist for :" + compNameLower + ":") ;
+                    this.log("Predictions Do not exist for :" + compNameLower + ":") ;
                 }
                 comp.recent_values = recentValues.reverse().join(", ") ;
             }) ;
+
+            this.log("Processing components for predictions - end") ;
+            
             if (so.components.length == 1) {
                 so.data = so.components[0].data ;
                 so.recent_values = so.components[0].recent_values ; 
                 so.prediction_perc = so.components[0].prediction_perc ;
-            }
-            //console.log(so) ;
-            } catch (err) {
-                console.log("error :" + err) ;
-            }
-        }) ;
-
-        this.patient.total_specimen_count = totalSpecimenCount ;
-        this.loading = false ;
-
-
-    },
-    methods: {     
-        onRowClick(item) {
-            console.log("row clicked") ;
-            if (item.components.length > 1)
-                this.$set(item, "_showDetails", !item._showDetails) ;
-        },
-        reEvaluate(component) {
-            return true ;
+            }                    
+            this.$set(so, "_showDetails", false) ; // triggers the chart display
+                
+            so.components = so.components.filter(comp => comp.data.length > 0) ;
+            so.display = so.components.length > 0 ;            
         },
         sparklineChart(component) {
-            console.log("Sparklone Chart invoked for {}", component) ;
+            //console.log("Sparklone Chart invoked for {}", component) ;
             var chartOptions = {
                 chart: {
                     backgroundColor: null,
@@ -462,6 +523,18 @@ export default {
         }
     }
 }
+
+/**
+ * Set the global timezone to PST
+ */
+Highcharts.setOptions({
+    time: {
+        //timezone: 'America/Los_Angeles',
+        timezoneOffset: new Date().getTimezoneOffset(),
+        useUTC: false
+    }
+});
+
 </script>
 
 

@@ -12,12 +12,14 @@
                 <p>
                     The app uses data from the patient medical record at Stanford Health Care to visualize the administered 
                     opioid and non-opioid analgesics with the patient’s pain score during post-surgical inpatient care. 
-                    The app auto-calculates the morphine milliequivalent (MME). This is a tool physicians may use for inpatient opioid management. 
-
-                    <br/><br/><b style="color:red">Disclaimer: </b>Please exercise clinical judgment and discretion.  There are certain pain medicines including  
-                    patient-controlled analgesics (PCAs), patient-controlled epidural  analgesics (PCEAs), and relatively rarely used pain medications  
-                    that the SEAL team is working to include in future versions of the application. Morphine milliequivalent (MME) conversion factors 
-                    were  provided  from Epic, with some additional information derived from expert consultation from the Stanford Department of Anesthesiology.
+                    The app auto-calculates the morphine milliequivalent (MME). This is a tool physicians may use for inpatient opioid management.                     
+                    
+                    <br/><br/><b style="color:red">Disclaimer: </b>Please exercise clinical judgment and discretion. The SEAL team is working to include 
+                    additional pain medications in future versions of this application. If a drug that has been prescribed for the patient and is missing 
+                    from the data visualization, please inform the SEAL team by submitting feedback using the ellipses icon (top right corner). 
+                    Morphine milliequivalent (MME) conversion factors were provided from Epic, with additional information derived from expert 
+                    consultation from the Stanford Department of Anesthesiology. 
+                    Click here more info about <b-link style="color:blue" @click='$bvModal.show("common-opioids-modal")'>common opioid MME conversion factors.</b-link>                                        
                 </p>
             </b-col>
         </b-row> 
@@ -38,7 +40,7 @@
                                 End Date: {{endDateFormatted}}
                             </b-col>        
                             <b-col cols="3" style="text-align:right">
-                                <b-button variant="primary" pill @click="$bvModal.show('launch-modal')">Modify Report</b-button>
+                                <b-btn variant="primary" pill @click="$bvModal.show('launch-modal')">Modify Report</b-btn>
                             </b-col>                    
                         </b-row>
                     </b-card-text>
@@ -143,7 +145,7 @@
                 </b-card>
             </b-col>
         </b-row>
-        <b-row class="mt-3 ml-2">
+        <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
             <b-col cols="11">
                 <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
                 <b-card v-show="showDebug">                    
@@ -188,6 +190,38 @@
                 </b-col>
             </b-row> 
         </b-modal>
+
+        <b-modal id="common-opioids-modal" size="lg" centered scrollable hide-footer title="Common Opioid MME Conversion Factors">
+            <b-row style="font-size:smaller">
+                <b-col>
+                    References:
+                    <ol>
+                        <li><a href="https://www.cdc.gov/opioids/providers/prescribing/guideline.html">https://www.cdc.gov/opioids/providers/prescribing/guideline.html</a></li>
+                        <li><a href="https://medicaid.utah.gov/Documents/files/Opioid-Morphine-EQ-Conversion-Factors.pdf">https://medicaid.utah.gov/Documents/files/Opioid-Morphine-EQ-Conversion-Factors.pdf</a></li>
+                        <li><a href="https://www.unmc.edu/NebraskaGWEP/wp-content/uploads/2020/01/052718_COM-IntMEd_Opioid-Pocket-Card_4x6.pdf">https://www.unmc.edu/NebraskaGWEP/wp-content/uploads/2020/01/052718_COM-IntMEd_Opioid-Pocket-Card_4x6.pdf</a></li>
+                    </ol>
+                </b-col>
+            </b-row>                
+            <b-row style="font-size:smaller">
+                <b-col>
+                    <b-table :items="commonOpioids" :fields="opioidFields" small class="mb-0">
+                        <template #cell(routes)="data">
+                            <b-table :items="data.item.mmes" :fields="[{label: '', key: 'route'}]" thead-class="d-none" small class="mb-0">
+                            </b-table>
+                        </template>
+                        <template #cell(factors)="data">
+                            <b-table :items="data.item.mmes" :fields="[{label: '', key: 'mme'}]" thead-class="d-none" small class="mb-0">
+                            </b-table>
+                        </template>                        
+                    </b-table>
+                    <span style="font-style:italic;font-size:small">*The unit metric for Fentanyl is micrograms (mcg) as opposed to milligrams (mg).</span>
+                </b-col>
+            </b-row>
+            <b-row>
+                
+            </b-row>
+        </b-modal>
+
         <b-modal id="a3pain-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
             body-bg-variant="dark">
             <ul class="text-white"> 
@@ -342,7 +376,24 @@ export default {
             },
             analgesicCategory: 'All',
             routeOfAdmin: 'All',
-            showDebug: false
+            showDebug: false,
+            commonOpioids: [
+                { name: 'Fentanyl', mmes: [{route: 'Injection (mcg*)', mme: 0.3}, { route: 'Sublingual (mcg*)', mme: 0.16 }, { route: 'Transdermal (mcg*)', mme: 100 }], _rowVariant: 'secondary'},
+                { name: 'Codeine', mmes: [{route: 'Oral (mg)', mme: 0.15}, { route: 'Injection (mg)', mme: 0.15 }]},
+                { name: 'Hydrocodone', mmes: [{route: 'Oral (mg)', mme: 1}], _rowVariant: 'secondary'},  
+                { name: 'Hydromorphone', mmes: [{route: 'Oral (mg)', mme: 4}, {route: 'Rectal (mg)', mme: 4}, 
+                                    {route: 'Injection (mg)', mme: 20 }, {route: 'Epidural (mg)', mme: 100}, {route: 'Intrathecal (mg)', mme: 500 }]},
+                { name: 'Meperidine', mmes: [{route: 'Oral (mg)', mme: 0.1}, { route: 'Injection (mg)', mme: 0.3 }], _rowVariant: 'secondary'},
+                { name: 'Morphine', mmes: [{route: 'Oral (mg)', mme: 1}, { route: 'Intramuscular (mg)', mme: 3 }, { route: 'Injection (mg)', mme: 3 }]},
+                { name: 'Oxycodone', mmes: [{route: 'Oral (mg)', mme: 1.5}], _rowVariant: 'secondary'}, 
+                { name: 'Oxycodone Myristate', mmes: [{route: 'Oral (mg)', mme: 1.66}]}, 
+                { name: 'Tramadol', mmes: [{route: 'Oral (mg)', mme: 0.1}], _rowVariant: 'secondary'}
+            ],
+            opioidFields: [
+                {label: 'OPIOID', key: 'name'},
+                {label: 'Route of Administration', key: 'routes'},
+                {label: 'Conversion Factor', key: 'factors'}
+            ]            
         }
     },
     computed : {
@@ -358,7 +409,7 @@ export default {
     },
     mounted () {
         console.log("In mounted method of the a3 pain tab page") ;    
-
+        
         this.$store.commit('setAppId', this.$services.a3pain.APP_ID) ;
         this.$store.commit('setPageTitle', "Opioid MME and Pain Score Visualization") ;
         this.$store.commit('setCurrentApp', { help : "a3pain-help-modal" }) ;
@@ -394,16 +445,20 @@ export default {
             this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
             this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
 
-            this.launchModal.rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime() ;
-            this.launchModal.rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime() ;
+            this.launchModal.rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date + "T00:00:00").toDate().getTime() ; //"YYYY-MM-DDT00:00:01"
+            this.launchModal.rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date + "T00:00:00").add(1, 'days').toDate().getTime() ;
 
             var rpt_start_date_long = this.launchModal.rpt_start_date_long ;
             var rpt_end_date_long = this.launchModal.rpt_end_date_long ;
+            console.log("in populatedata report end date long :" + rpt_end_date_long) ;
+
+            //this.medChartOptions = this.getMedsChart(rpt_start_date_long, rpt_end_date_long) ;
 
             this.patient = await this.$services.a3pain.patient() ;      
 
             var encounters = await this.$services.a3pain.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
             
+            /*
             var medstats = {} ;
 
             medstats = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
@@ -418,6 +473,55 @@ export default {
                     medstats.nextUrl = response.nextUrl ;
                 else
                     medstats.nextUrl = "" ;
+            }
+
+            this.resultText += "\n Response from MedStat Call " + JSON.stringify(medstats.cats) ;
+            */
+
+            var responses = [] ;
+            var response = {} ;
+            var medstats = {} ;
+
+            response = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
+            //response = this.getLocalMedData() ;
+            responses.push(response) ;
+
+            this.resultText += "\n MedStat Call1 nexturl :" + (response.nextUrl?response.nextUrl:"Doesn't exist") ;
+
+            while (response.nextUrl) {
+                response = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, response.nextUrl) ;
+                this.resultText += "\n MedStat Call nexturl :" + (response.nextUrl?response.nextUrl:"Doesn't exist") ;
+                responses.push(response) ;
+            }
+            
+
+            medstats.cats = [] ;
+
+            try {
+            responses.forEach((response) => {
+                response.cats.forEach((med) => {                    
+                    
+                    this.resultText += "\n MedStat Processing Med :" + med.name + " oids :" + med.med_order_ids ;
+
+                    try {
+                    var medIdx = medstats.cats.findIndex(cat => cat.name == med.name) ;
+                    if (medIdx === -1) {
+                        medstats.cats.push(med) ;
+                    } else {
+                        medstats.cats[medIdx].data = [].concat(medstats.cats[medIdx].data, med.data) ;
+                        medstats.cats[medIdx].mme = Object.assign({}, medstats.cats[medIdx].mme, med.mme) ;                        
+                        medstats.cats[medIdx].routes = this.merge(medstats.cats[medIdx].routes, med.routes) ;
+                        //medstats.cats[medIdx].pcat = this.merge(medstats.cats[medIdx].pcat, med.pcat) ;
+                        medstats.cats[medIdx].med_order_ids = [].concat(medstats.cats[medIdx].med_order_ids, med.med_order_ids) ;
+                    }
+                    } catch (err) {
+                        this.resultText += "Error in merging medstat response for " + JSON.stringify(med) + "\n" ;
+                        this.resultText += err + "\n" ;
+                    }
+                });              
+            }) ;
+            } catch (err) {
+                this.resultText += "Error in merging medstat responses " + err + "\n" ;
             }
 
             var wsjson = {} ;
@@ -470,7 +574,7 @@ export default {
 
                     console.log("responses length " + responses.length) ;
                     
-                    this.tlog("------------------------------------MARDATA webservice response START " + responses.length + "\n") ;
+                    this.resultText += "\n----MARDATA webservice response START " + responses.length ;
                     
                     //this.resultText += "\n---- MAR data Response JSON -------------------" ;
                     //this.resultText += JSON.stringify(responses) ;
@@ -599,50 +703,52 @@ export default {
                         }) ; 
                     }) ;
                     
-                    pca_mars.forEach(med => {
-                        try {
-                        var genericName = med.generic_name ;
-                        var medColor = "" ;
-                        this.resultText += "\n Processing PCA :" + med.name + "  Generic Name: " + genericName ;
+                    if (pca_mars) {
+                        pca_mars.forEach(med => {
+                            try {
+                            var genericName = med.generic_name ;
+                            var medColor = "" ;
+                            this.resultText += "\n Processing PCA :" + med.name + "  Generic Name: " + genericName ;
 
-                        var catIdx = categories.findIndex(function(cat) { return cat.name == genericName }) ;
-                        if (catIdx == -1) {
-                            catIdx = categories.length ;
+                            var catIdx = categories.findIndex(function(cat) { return cat.name == genericName }) ;
+                            if (catIdx == -1) {
+                                catIdx = categories.length ;
 
-                            if (this.medColors[genericName]) {
-                                medColor = this.medColors[genericName] ;
+                                if (this.medColors[genericName]) {
+                                    medColor = this.medColors[genericName] ;
+                                } else {
+                                    var medColorIdx = Object.keys(this.medColors).length ;
+                                    medColor = (medColorIdx < sealColors.length?sealColors[medColorIdx]:"") ;
+                                    this.medColors[genericName] = medColor ;
+                                }
+                                
+                                categories.push({ name: genericName , pointWidth: 30, data: [], isOpioid: true, isOral: false, color: medColor} ) ;
                             } else {
-                                var medColorIdx = Object.keys(this.medColors).length ;
-                                medColor = (medColorIdx < sealColors.length?sealColors[medColorIdx]:"") ;
-                                this.medColors[genericName] = medColor ;
+                                medColor = categories[catIdx].color ;
                             }
-                            
-                            categories.push({ name: genericName , pointWidth: 30, data: [], isOpioid: true, isOral: false, color: medColor} ) ;
-                        } else {
-                            medColor = categories[catIdx].color ;
-                        }
-                        } catch (err) {
-                            this.resultText += "\n Error in PCA Mar outer loop " + err ;
-                        }
-                        med.data.forEach(point => {
-                            try {                            
-                            var marTime = point.recorded_time ;
-                            point.mme = point.dosage * med.conv_factor ;
-                            point.mme = parseFloat(point.mme.toFixed(2)) ;
-
-                            var cdataIdx = cdata.findIndex(function(point1) { return point1.x == marTime && point1.y == catIdx }) ;                            
-                            if (cdataIdx >= 0) {
-                                cdata[cdataIdx].mme = cdata[cdataIdx].mme + point.mme ;
-                                cdata[cdataIdx].meds.push({name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme })
-                            } else {
-                                cdata.push({ x: marTime, y: catIdx, mme: point.mme, color: medColor, name: genericName, 
-                                    meds: [ {name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme } ] } ) ;
-                            }    
                             } catch (err) {
-                                this.resultText += " Error in PCA Mar inside point loop " + err ;
-                            }                        
-                        }); 
-                    }) ;
+                                this.resultText += "\n Error in PCA Mar outer loop " + err ;
+                            }
+                            med.data.forEach(point => {
+                                try {                            
+                                var marTime = point.recorded_time ;
+                                point.mme = point.dosage * med.conv_factor ;
+                                point.mme = parseFloat(point.mme.toFixed(2)) ;
+
+                                var cdataIdx = cdata.findIndex(function(point1) { return point1.x == marTime && point1.y == catIdx }) ;                            
+                                if (cdataIdx >= 0) {
+                                    cdata[cdataIdx].mme = cdata[cdataIdx].mme + point.mme ;
+                                    cdata[cdataIdx].meds.push({name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme })
+                                } else {
+                                    cdata.push({ x: marTime, y: catIdx, mme: point.mme, color: medColor, name: genericName, 
+                                        meds: [ {name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme } ] } ) ;
+                                }    
+                                } catch (err) {
+                                    this.resultText += " Error in PCA Mar inside point loop " + err ;
+                                }                        
+                            }); 
+                        }) ;
+                    } ;
 
                     this.resultText += "\n Total chart data :" + cdata.length ;
                     
@@ -716,6 +822,7 @@ export default {
             try {
                 var rpt_start_date_long = this.launchModal.rpt_start_date_long ;
                 var rpt_end_date_long = this.launchModal.rpt_end_date_long ;
+                console.log("in refreshmarchart report end date long :" + rpt_end_date_long) ;
 
                 var _self = this ;
 
@@ -906,6 +1013,9 @@ export default {
                 //this.tlog("------******Error in refreshMMEChart :" + err) ;                
             }
         },
+        merge(string1, string2) {
+            return this.$services.medreview.unique_merge(string1, string2) ;
+        },        
         mousemove(e) {
             var chart,
                 point,
@@ -1209,12 +1319,12 @@ export default {
                                 //console.log("diff in years :" + diffInYears + " for " + this.point.name)  ;
                                 if (diffInYears == 5) {
                                     return Highcharts.dateFormat('%d %b', this.point.x) + "-(none) " +
-                                        "<br>" + this.point.name.toLowerCase() +
-                                        "<br>" + this.point.pcat.toLowerCase() ;
+                                        "<br>" + this.point.name.toLowerCase() ;
+                                        //"<br>" + this.point.pcat.toLowerCase() ;
                                 } else {
                                     return Highcharts.dateFormat('%d %b', this.point.x) + "-" + Highcharts.dateFormat('%d %b', this.point.x2) +
-                                        "<br>" + this.point.name.toLowerCase() +
-                                        "<br>" + this.point.pcat.toLowerCase() ;
+                                        "<br>" + this.point.name.toLowerCase() ;
+                                        //"<br>" + this.point.pcat.toLowerCase() ;
                                 }
                             } else if (this.point.name) {
                                 return this.point.name ;

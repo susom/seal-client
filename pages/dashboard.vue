@@ -77,7 +77,7 @@
             <b-col cols="5" offset="1">                
                 <b-card title="Top 10 Users for last 30 days">
                     <b-card-text>
-                         <b-table striped :fields="top10Fields" :items="top10" />
+                         <b-table striped :fields="top10Fields" :items="top10" small />
                     </b-card-text>
                 </b-card>
             </b-col>
@@ -88,10 +88,6 @@
 <script>
 
 /* eslint-disable */
-
-import offlineExporting from 'highcharts/modules/offline-exporting'
-
-import Vue from 'vue' ;
 
 export default {
     data () {
@@ -193,7 +189,7 @@ export default {
                 tooltip: {
                     headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
                     pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
-                        '<td style="padding:0"><b>{point.y:.1f} mm</b></td></tr>',
+                        '<td style="padding:0"><b>{point.y}</b></td></tr>',
                     footerFormat: '</table>',
                     shared: true,
                     useHTML: true
@@ -224,11 +220,11 @@ export default {
                     _self.chartseries.push({ name: stat.app, data: [0,0,0,0,0,0,0,0,0,0,0,0] }) ;                
                 }
                 if (_self.statsViewBy == 'Total Views')                    
-                    Vue.set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.total_visit)) ;                    
+                    _self.$set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.total_visit)) ;                    
                 else if (_self.statsViewBy == 'Unique Users')
-                    Vue.set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.unique_users)) ;
+                    _self.$set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.unique_users)) ;
                 else if (_self.statsViewBy == 'Unique Patients')
-                    Vue.set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.unique_patients)) ;
+                    _self.$set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.unique_patients)) ;
             });            
         }
     }

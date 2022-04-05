@@ -1,5 +1,5 @@
 <template>
-    <b-container>
+    <b-container class="nomargin">
         <b-input-group>
             <b-form-input
                 v-model="inp_start_date"                            
@@ -95,3 +95,12 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+    .nomargin {
+        margin-left: 0px;
+        margin-right: 0px;
+        padding-left: 0px;
+        padding-right: 0px;
+    }
+</style>

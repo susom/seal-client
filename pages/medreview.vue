@@ -286,7 +286,7 @@
         <b-modal id="session-expired-modal" size="lg" centered hide-footer title="Session Expired">                
             Your session with SEAL application has expired. Please close the current SEAL tab and reopen to establish new connection.
         </b-modal>
-        <b-row class="mt-3 ml-2">
+        <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
             <b-col cols="11">
                 <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
                 <b-card v-show="showDebug">                    

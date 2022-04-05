@@ -27,7 +27,9 @@ export const mutations = {
 }
 
 export const getters = {
-
+    sealTeam(state) {
+        return (state.user.user_id == "S0311772" || state.user.user_id == "SHC")
+    }
 }
 
 /* eslint-enable */

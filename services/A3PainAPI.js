@@ -36,7 +36,8 @@ export default class A3PainAPI {
             "&end_date=" + end_date + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID ;
         
         if (nextUrl && nextUrl !== '') {
-            url = "/fhir-app/a3pain/api/v1/med?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID + "&next=" + encodeURIComponent(nextUrl) ;
+            url = "/fhir-app/a3pain/api/v1/med?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID + "&start_date=" + start_date +
+                    "&end_date=" + end_date + "&next=" + encodeURIComponent(nextUrl) ;
         }
 
         return this.axios({
@@ -55,6 +56,9 @@ export default class A3PainAPI {
                 "&start_date=" + start_date + "&end_date=" + end_date + "&epicPatientId=" + epic_patient_id
         }).then((response) => {            
             return response.data ;
+        }).catch((error) => {
+            console.log("Error in PCA Ajax Call :" + error) ;
+            return [] ;
         })        
     }
 
@@ -65,6 +69,9 @@ export default class A3PainAPI {
                 "&start_date=" + start_date + "&end_date=" + end_date 
         }).then((response) => {            
             return response.data ;
+        }).catch((error) => {
+            console.log("Error in PCA Ajax Call :" + error) ;
+            return [] ;
         })        
     }
 

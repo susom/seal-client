@@ -15,7 +15,6 @@
               <b-button variant="link" size="sm" class="mr-1"
                 v-b-tooltip.hover title="Home" @click="sendToHome()">  
                 <b-img src="home_white.png" style="height:26px;width:26px;"></b-img>
-                <!--<b-icon icon="house-door-fill" variant="light" font-scale="2"></b-icon>-->
               </b-button>              
               <b-button v-b-modal.feedback-modal variant="link" size="sm" class="mr-1"
                 v-b-tooltip.hover title="Feedback">

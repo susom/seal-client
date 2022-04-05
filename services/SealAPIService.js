@@ -122,7 +122,9 @@ export default class SealAPI {
             "&end_date=" + end_date + "&syndrome=" + syndrome + "&pid=" + this.store.state.patientId + "&aid=" + appId ;
         
         if (nextUrl && nextUrl !== '') {
-            url = "/fhir-app/medreview/api/v2/med?pid=" + this.store.state.patientId + "&aid=" + appId + "&next=" + encodeURIComponent(nextUrl) ;
+            url = "/fhir-app/medreview/api/v2/med?pid=" + this.store.state.patientId + "&aid=" + appId + 
+                "&start_date=" + start_date + "&end_date=" + end_date + + "&syndrome=" + syndrome + 
+                "&next=" + encodeURIComponent(nextUrl) ;
         }
 
         return this.axios({
@@ -146,7 +148,8 @@ export default class SealAPI {
             "&start_date=" + start_date + "&end_date=" + end_date ;
 
         if (nextUrl && nextUrl !== '') {
-            url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId + "&next=" + encodeURIComponent(nextUrl) ;
+            url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId + 
+                    "&start_date=" + start_date + "&end_date=" + end_date + "&next=" + encodeURIComponent(nextUrl) ;
         }
 
         return this.axios({
@@ -183,7 +186,9 @@ export default class SealAPI {
             "&end_date=" + end_date + "&syndrome=" + syndrome + "&pid=" + this.store.state.patientId + "&aid=" + appId ;
         
         if (nextUrl && nextUrl !== '') {
-            url = "/fhir-app/medreview/api/v2/obs?pid=" + this.store.state.patientId + "&aid=" + appId + "&next=" + encodeURIComponent(nextUrl) ;
+            url = "/fhir-app/medreview/api/v2/obs?pid=" + this.store.state.patientId + "&aid=" + appId + 
+                "&start_date=" + start_date + "&end_date=" + end_date + "&syndrome=" + syndrome +
+                "&next=" + encodeURIComponent(nextUrl) ;
         }
 
         return this.axios({
