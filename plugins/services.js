@@ -6,6 +6,7 @@ import MedReviewAPI from "~/services/MedReviewAPI"
 import DashboardAPI from "~/services/DashboardAPI";
 import TrueImageAPI from "~/services/TrueImageAPI";
 import StandingOrdersAPI from "~/services/StandingOrdersAPI";
+import AredsCalcAPI from "~/services/AredsCalcAPI";
 
 export default (ctx, inject) => {
 
@@ -20,7 +21,8 @@ export default (ctx, inject) => {
       medreview: new MedReviewAPI(ctx.$axios, ctx.store),
       dashboard: new DashboardAPI(ctx.$axios, ctx.store),
       trueimage: new TrueImageAPI(ctx.$axios, ctx.store),
-      standingorders: new StandingOrdersAPI(ctx.$axios, ctx.store)
+      standingorders: new StandingOrdersAPI(ctx.$axios, ctx.store),
+      aredscalc: new AredsCalcAPI(ctx.$axios, ctx.store)
     }
   
     inject('services', services)

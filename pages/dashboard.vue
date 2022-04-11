@@ -41,7 +41,7 @@
                                 <b-col>Last Month</b-col>
                                 <b-col>Current Month</b-col>
                             </b-row>                            
-                            <b-row class="counts">
+                            <b-row class="counts" style="color:white">
                                 <b-col>{{counts[0].new_users}}</b-col>
                                 <b-col>{{counts[0].new_users}}</b-col>
                             </b-row>                            
@@ -77,6 +77,7 @@
             <b-col cols="5" offset="1">                
                 <b-card title="Top 10 Users for last 30 days">
                     <b-card-text>
+                        <!--<b-select :options="['All Apps', 'Drug Reactions Review', 'Utility of Standing Orders']" required/>-->
                          <b-table striped :fields="top10Fields" :items="top10" small />
                     </b-card-text>
                 </b-card>
@@ -136,21 +137,7 @@ export default {
                                 onclick: function() {
                                     this.print();
                                 },
-                            } /*,
-                            {
-                                text: 'Download JPG',
-                                onclick: function() {
-                                    console.log("Inside download jpg dashboard") ;
-                                    console.log(this);
-                                    this.exportChartLocal({type:"image/jpeg"}) ;
-                                }
-                            },
-                            {
-                                text: 'Download PNG',
-                                onclick: function() {
-                                    this.exportChartLocal({type:"image/png"}) ;
-                                }
-                            }*/ ]
+                            } ]
                         }
                     }, 
                     error: function(opt, err) {
