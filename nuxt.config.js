@@ -10,8 +10,7 @@ export default {
       meta: [
         { "http-equiv" : "X-UA-Compatible", content : "IE=edge"  },
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { hid: 'description', name: 'description', content: '' }
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' }        
 	],
     link: [
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
@@ -20,7 +19,7 @@ export default {
       {
         src:
           'https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/7.4.4/polyfill.min.js'
-      }      
+      } 
     ]	
   },
 
@@ -98,4 +97,5 @@ export default {
       compact: true
     }
   }
+
 }

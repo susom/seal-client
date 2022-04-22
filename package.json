@@ -19,9 +19,8 @@
     "nuxt": "^2.15.7",
     "nuxt-highcharts": "^1.0.7",
     "nuxt-moment": "^1.0.5",
-    "splitpanes": "^2.3.8",
-    "vuedraggable": "^2.24.3"
-  },
+    "splitpanes": "^2.3.8"
+  },  
   "devDependencies": {
     "@nuxt/types": "^2.15.7",
     "@nuxt/typescript-build": "^2.1.0",

@@ -103,50 +103,7 @@
           </b-container>
       </b-col>
     </b-row>   
-
-    <!--
-    <b-row class="mt-5">
-      <b-col cols="10">
-        <b-container fluid class="rounded-lg border py-2 ml-5 shadow-lg bg-info text-white" style="cursor:pointer;" 
-          @click.stop="$bvModal.show('seal_highlights_modal')">
-          <b-row class="pt-2">
-            <b-col cols="1">
-              <b-img src="seal_highlight.png"  alt="SEAL Highlights" class="rounded-0 app-icon"></b-img>
-            </b-col>
-            <b-col>
-              <b-row class="align-self-stretch pt-2">
-                <b-col cols="10" class="text-top h4">
-                  SEAL Highlights
-                </b-col>
-              </b-row>
-              <b-row class="align-self-stretch">
-                <b-col cols="10" class="text-top">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum nec neque sit amet ex bibendum eleifend eget id magna. Nullam accumsan bibendum diam vehicula laoreet. Morbi facilisis urna eget pharetra dignissim. Nulla posuere consequat.
-                </b-col>
-              </b-row>
-            </b-col>
-          </b-row>
-          <b-row class="" style="height:30px;margin-top:-20px;" no-gutters>
-            <b-col class="text-right">
-              <b-img src="double_arrow_red.png" style="width:30px;"></b-img>
-            </b-col>
-          </b-row>
-        </b-container>
-      </b-col>
-    </b-row>
-    -->
     <feedback-form />
-    <b-modal id="seal_highlights_modal" title="SEAL Highlights" hide-footer size="xl" scrollable>
-      <b-row>
-        <b-col cols="12">
-          <b-embed
-            type="iframe"
-            src="https://med.stanford.edu/seal"
-            allowfullscreen>
-          </b-embed>
-        </b-col>
-      </b-row> 
-    </b-modal>
     <b-modal id="homepage-help-modal" size="xl" centered hide-footer title="Release Notes and Helpful Tips" 
         body-bg-variant="dark">
         <ul class="text-white">
@@ -190,8 +147,7 @@ export default {
     if (this.$store.state.patientId === "") {        
       var sessInfo = await this.$services.seal.sessinfo(0) ;
       this.$store.commit('setPatientId', sessInfo.patient_id) ;
-      this.$store.commit('setUser', { user_id: sessInfo.user_id, full_name: sessInfo.full_name, email: sessInfo.email }) ;
-      //this.$store.commit('setPatientId', 'eAuxn-zddQFGu2MQjkde-mQ3') ;
+      this.$store.commit('setUser', { user_id: sessInfo.user_id, full_name: sessInfo.full_name, email: sessInfo.email }) ;      
     } 
     this.$store.commit('setCurrentApp', { help : "homepage-help-modal" }) ;
     
@@ -238,9 +194,6 @@ export default {
       this.$services.seal.updatefav(app, 0).then(resp => {
         console.log("Response from update fav axios call :" + resp) ;
       })
-    },
-    openSealWeb() {
-      window.location.href='https://med.stanford.edu/seal' ;
     },
     openHelp() {
       if (this.$store.state.currentApp.help) {

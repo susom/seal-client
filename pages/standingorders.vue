@@ -208,7 +208,7 @@ export default {
 
         console.log("Before going into for loop for standing orders...") ;
         //var loincCodes = this.standingOrders.map(so => so.components.map(c => c.loinc_code).join(",")).join(",")
-        for (var sIdx=0; sIdx<this.standingOrders.length - 1; sIdx++) {
+        for (var sIdx=0; sIdx<this.standingOrders.length; sIdx++) {
             var so = this.standingOrders[sIdx] ;
             
             so.display = true ;

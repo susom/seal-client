@@ -20,6 +20,7 @@
                 v-b-tooltip.hover title="Feedback">
                 <b-icon icon="chat-dots-fill" variant="light" font-scale="2"></b-icon>
               </b-button>
+              
               <b-button variant="link" size="sm" class="mr-2"
                 v-b-tooltip.hover title="Help" @click="openHelp()">
                 <b-icon icon="question-circle-fill" variant="light" font-scale="2"></b-icon>
