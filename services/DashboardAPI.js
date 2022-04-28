@@ -20,6 +20,23 @@ export default class DashboardAPI {
         })          
     }
 
+    /**
+     * 
+     * @param {*} startdate in yyyy-mm-dd format
+     * @param {*} enddate in yyyy-mm-dd format
+     * @param {*} groupBy - yyyy-mm or yyyy format
+     * @returns 
+     */
+    appstats2(startdate, enddate, groupBy) {    
+        return this.axios({
+            method: 'get',
+            url: "/fhir-app/dashboard/api/v1/appstats2?start_date=" + startdate + "&end_date=" + enddate + "&groupBy=" + groupBy
+                  + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID 
+        }).then((response) => {            
+            return response.data.data ;
+        })          
+    }
+
     counts() {    
         return this.axios({
             method: 'get',
