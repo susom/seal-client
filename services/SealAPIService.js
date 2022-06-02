@@ -187,7 +187,7 @@ export default class SealAPI {
         
         if (nextUrl && nextUrl !== '') {
             url = "/fhir-app/medreview/api/v2/obs?pid=" + this.store.state.patientId + "&aid=" + appId + 
-                "&start_date=" + start_date + "&end_date=" + end_date + "&syndrome=" + syndrome +
+                "&category=" + category + "&start_date=" + start_date + "&end_date=" + end_date + "&syndrome=" + syndrome +
                 "&next=" + encodeURIComponent(nextUrl) ;
         }
 

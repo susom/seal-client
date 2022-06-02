@@ -11,6 +11,7 @@
                     Inpatient Standing Orders Assessment is an utility app developed by SEAL in partnership with Dr. Naveed (SHC). 
                 <p>
                 -->
+                <!--
                 <p class="pt-2">
                     The Inpatient Standing Orders Utility Assessment is designed to help the care team assess which 
                     standing orders should be canceled due to low clinical utility. Canceling unnecessary standing orders 
@@ -19,6 +20,17 @@
                 <p class="pt-2">
                     Abnormal results are <span style="color:red">red</span>, normal are <span  style="color:green">green</span>. 
                     Data shown in this report is up to 36 hours old. Click on panel name to see results.
+                </p>
+                -->
+                <p class="mt-2">
+                    Recurring Orders Dashboard App helps flags (<b-icon icon="flag-fill" font-scale="1" variant="info "/>)     recurring orders that might be canceled because they are predicted to be normal on the 
+                    next blood draw. As always, use your clinical judgment to determine the best care plan for your patient.
+                </p>
+                <p>
+                    <ul>
+                        <li>Benefits: Reduce patient blood loss and discomfort, preserve blood tubes during the current national shortage, and reduce healthcare cost</li>
+                        <li>Click <b-link style="color:blue">here</b-link> more information on the prediction mode </li>
+                    </ul>
                 </p>
             </b-col>
         </b-row>
@@ -49,7 +61,7 @@
         <b-row class="mt-3 ml-2">
             <b-col cols="11">
                 <b-card class="shadow-lg rounded-lg">
-                    <b-card-title>Active Recurring Lab Orders</b-card-title>
+                    <b-card-title>Recurring Lab Orders with Predictions</b-card-title>
                     <b-card-text>
                         <b-row align-content="center"  v-if="!loading && !patient.hospitalized">
                             <b-col style="text-align:center" class="h5 mt-3" offset="2" cols="7">
@@ -59,9 +71,92 @@
                         </b-row>
                         <b-row v-else>                            
                             <b-col>
+                                <div class="text-center text-primary my-2" v-if="loading">
+                                    <b-spinner class="align-middle"></b-spinner>
+                                    <strong>Loading...</strong>
+                                </div>                                
+                                <div class="text-center h5 my-2" v-if="!loading && panelOrders.length + nonPanelOrders.length == 0">
+                                    No active recurring orders available for this patient.
+                                </div>                                                                
+                                <b-table striped 
+                                    :items="panelOrders" :fields="panelOrderFields"
+                                    small
+                                    selectable
+                                    @row-clicked="onRowClick"
+                                    hover
+                                    show-empty
+                                    v-if="panelOrders.length > 0"
+                                    >
+                                    <template #empty>
+                                        <h5 style="text-align:center;height:80px;" class="mt-5">
+                                            No active panel recurring orders available for this patient.
+                                        </h5>
+                                    </template>                                     
+                                    <template #cell(display_name)="row">
+                                        <b-icon icon="flag-fill" font-scale="1" variant="info" class="mr-1" v-if="row.item.prediction_perc > 85"/> {{row.item.display_name}}
+                                    </template>
+                                    <template #cell(recent_values)="data">
+                                        <span v-html="data.value"></span>
+                                    </template>
+                                    <template #cell(show_details)="row">
+                                        <b-icon 
+                                            :icon="row.detailsShowing ? 'chevron-down' : 'chevron-up'"                                             
+                                            font-scale="1.3"
+                                            v-if="row.item.components.length > 1" />
+                                    </template>
+                                    <template #cell(graph)="row">
+                                        <highchart :options="sparklineChart(row.item)" v-if="row.item.components.length == 1"/> 
+                                    </template>
+                                    <template #row-details="row">
+                                        <b-card>
+                                            <b-table striped :items="row.item.components" :fields="compFields" hover>
+                                                <template #cell(name)="irow">
+                                                    <b-icon icon="flag-fill" font-scale="1" variant="info" class="mr-1" v-if="irow.item.prediction_perc > 85"/> {{irow.item.name}} 
+                                                </template>                                                
+                                                <template #cell(graph)="irow">
+                                                    <highchart :options="sparklineChart(irow.item)" />                                                    
+                                                </template>
+                                                <template #cell(recent_values)="irow">
+                                                    <span v-html="irow.value"></span>
+                                                </template>       
+                                                <template #cell(prediction_perc)="irow">
+                                                    {{irow.value ? irow.value + " %":""}}
+                                                </template>                                                                                                                                 
+                                            </b-table>
+                                        </b-card>
+                                    </template>
+                                </b-table> 
+                                <b-table striped 
+                                    :items="nonPanelOrders" :fields="orderFields"
+                                    small
+                                    selectable
+                                    hover      
+                                    show-empty                              
+                                    v-if="nonPanelOrders.length > 0"
+                                    >
+                                    <template #empty>
+                                        <h5 style="text-align:center;height:80px;" class="mt-5">
+                                            No active non panel recurring orders available for this patient.
+                                        </h5>
+                                    </template>                                     
+                                    <template #cell(display_name)="row">
+                                        <b-icon icon="flag-fill" font-scale="1" class="mr-1" variant="info" v-if="row.item.prediction_perc > 85"/> {{row.item.display_name}}
+                                    </template>
+                                    <template #cell(recent_values)="data">
+                                        <span v-html="data.value"></span>
+                                    </template>
+                                    <template #cell(graph)="row">
+                                        <highchart :options="sparklineChart(row.item)" v-if="row.item.components.length == 1"/> 
+                                    </template>
+                                    <template #cell(prediction_perc)="row">
+                                        {{row.value ? row.value + " %":""}}
+                                    </template>                                        
+                                </b-table>     
+
+                                <!--                                 
                                 <b-table striped 
                                     :items="standingOrdersWithComponents" :fields="orderFields"
-                                    small :busy="loading"
+                                    small :busy="loading"       
                                     selectable
                                     @row-clicked="onRowClick"
                                     hover
@@ -85,7 +180,6 @@
                                         <span v-html="data.value"></span>
                                     </template>
                                     <template #cell(show_details)="row">
-                                        <!-- @click="row.toggleDetails" -->
                                         <b-icon 
                                             :icon="row.detailsShowing ? 'chevron-down' : 'chevron-up'"                                             
                                             font-scale="1.3"
@@ -106,20 +200,42 @@
                                             </b-table>
                                         </b-card>
                                     </template>
-                                </b-table>                                
+                                </b-table>                                 
+                                -->                                
                             </b-col>                        
                         </b-row>
-                        <!--
-                        <b-row>
-                            <b-col>
-                                <highchart :options="localChart()" />                                                        
-                            </b-col>
-                        </b-row>                        
-                        -->
                     </b-card-text>
                 </b-card>
             </b-col>
         </b-row>
+
+        <b-row class="mt-3 ml-2" v-if="nonPredictedOrders.length > 0">
+            <b-col cols="11">
+                <b-card class="shadow-lg rounded-lg">
+                    <b-card-title>Recurring Lab Orders without Predictions</b-card-title>
+                    <b-card-text>
+                        <b-table striped 
+                            :items="nonPredictedOrders" :fields="nonPredictedOrderFields"
+                            small
+                            selectable                                    
+                            hover
+                            v-if="nonPredictedOrders.length > 0"
+                            >
+                            <template #cell(display_name)="row">
+                                {{row.item.display_name}}
+                            </template>
+                            <template #cell(recent_values)="data">
+                                <span v-html="data.value"></span>
+                            </template>
+                            <template #cell(graph)="row">
+                                <highchart :options="sparklineChart(row.item)" v-if="row.item.components.length == 1"/> 
+                            </template>
+                        </b-table>                        
+                    </b-card-text>
+                </b-card>
+            </b-col>
+        </b-row>
+
         <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
             <b-col cols="11">
                 <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
@@ -150,17 +266,32 @@ export default {
         return {
             patient: { length_of_stay: 0 },            
             standingOrders: [],
+            predictedComponentCodes: [],
+            predictedPanelCodes: [],
             orderFields: [
                 {label: '', key: 'show_details'},
-                {label: 'Order/Test (OrderId)', key:'display_name', sortable: false},
+                {label: 'Order Name', key:'display_name', sortable: false},
                 {label: 'Frequency', key:'frequency', sortable: false},
                 {label: '# of Blood draws', key: 'specimen_count', sortable: false, tdClass:'text-center', thClass:'text-center'},
                 {label: 'Graph', key: 'graph'},
                 {label: 'Recent Values', key: 'recent_values'} ,
                 {label: 'Predicted Normal', key: 'prediction_perc', tdClass:'text-center'}
             ],
+            nonPredictedOrderFields: [                
+                {label: 'Order Name', key:'display_name', sortable: false},
+                {label: 'Frequency', key:'frequency', sortable: false},
+                {label: '# of Blood draws', key: 'specimen_count', sortable: false, tdClass:'text-center', thClass:'text-center'},
+                {label: 'Graph', key: 'graph'},
+                {label: 'Recent Values', key: 'recent_values'}
+            ],
+            panelOrderFields: [
+                {label: '', key: 'show_details'},
+                {label: 'Order Name', key:'display_name', sortable: false},
+                {label: 'Frequency', key:'frequency', sortable: false},
+                {label: '# of Blood draws', key: 'specimen_count', sortable: false, tdClass:'text-center', thClass:'text-center'}                
+            ],            
             compFields: [
-                {label: 'Name', key: 'name'},
+                {label: 'Laboratory Test', key: 'name'},
                 {label: 'Graph', key: 'graph'},
                 {label: 'Recent Values', key: 'recent_values'},
                 {label: 'Predicted Normal', key: 'prediction_perc', tdClass:'text-center', thClass:'text-center'}
@@ -173,13 +304,14 @@ export default {
     },    
     async fetch() {
         console.log("In fetch method of the standing order page") ;
+
+        this.$store.commit('setAppId', this.$services.standingorders.APP_ID) ;
+        this.$store.commit('setPageTitle', "Recurring Orders Dashboard") ;
+        this.$store.commit('setCurrentApp', { help : "standingorders-help-modal" }) ;
+        this.$services.standingorders.dblog("StandingOrdersHome", "In Standing Orders Home Page") ;
         
         var _self = this ;
 
-        this.$store.commit('setAppId', this.$services.standingorders.APP_ID) ;
-        this.$store.commit('setPageTitle', "Inpatient Standing Orders Utility Assessment") ;
-        this.$store.commit('setCurrentApp', { help : "standingorders-help-modal" }) ;
-        this.$services.standingorders.dblog("StandingOrdersHome", "In Standing Orders Home Page") ;
         this.patient.hospitalized =  true ;
 
         this.patient = await this.$services.seal.patient(this.$services.standingorders.APP_ID) ;
@@ -192,6 +324,8 @@ export default {
         this.log("Invoking standing orders") ;
         var response = await this.$services.standingorders.orders(this.patient.epicPatientId) ;
         this.log("Got standing orders...") ;
+        this.predictedComponentCodes = response.predictedComponentCodes ;
+        this.predictedPanelCodes = response.predictedPanelCodes ;
 
         if (response.hospital_admission_time) {
             this.patient.hospital_admission_time = response.hospital_admission_time ;
@@ -207,17 +341,45 @@ export default {
         var totalSpecimenCount = 0 ;        
 
         console.log("Before going into for loop for standing orders...") ;
+        this.log("Predicted Panel Codes") ;
+        this.log(JSON.stringify(this.predictedPanelCodes)) ;
+        this.log("Predicted Panel Compo") ;
+        this.log(JSON.stringify(this.predictedComponentCodes)) ;
+
         //var loincCodes = this.standingOrders.map(so => so.components.map(c => c.loinc_code).join(",")).join(",")
         for (var sIdx=0; sIdx<this.standingOrders.length; sIdx++) {
+            try {
             var so = this.standingOrders[sIdx] ;
             
-            so.display = true ;
-            totalSpecimenCount += so.specimen_count ;            
-            var loincCodes = so.components.map(c => c.loinc_code).join(",") ;            
+            this.log("Standing Order :" + so.display_name + " Proc Code:" + so.proc_code + ":  index :" + (this.predictedPanelCodes.indexOf(so.proc_code))) ;
+            so.predicted = (this.predictedPanelCodes.indexOf(so.proc_code) >= 0) ;
+
+            so.display = false ;
+            totalSpecimenCount += so.specimen_count ;
+            so.components.forEach(comp => {
+                comp.predicted = (_self.predictedComponentCodes.indexOf(comp.base_name) >= 0) ;
+            })
+            
+            // get loinc code only for panels with components whose predict is true
+            // if it is a single order, then get all loinc codes
+            var loincCodes = [] ;
+            if (so.predicted)
+                loincCodes = so.components.filter(c => c.predicted).map(c => c.loinc_code).join(",") ;
+            else if (so.components.length == 1)
+                loincCodes = so.components.map(c => c.loinc_code).join(",") ;
+                
+            //var loincCodes = so.components.filter(c => c.predicted).map(c => c.loinc_code).join(",") ;            
+            //var loincCodes = so.components.map(c => c.loinc_code).join(",") ;            
             
             this.log("Lab data for Standing order " + so.display_name + "(" + so.standing_order_id + " min:" + so.order_time + ") loinc: " + loincCodes ) ;
+            if (loincCodes.length > 0) {
+                so.display = true ;
+                this.processLabData(loincCodes, so) ;                
+            }
 
-            this.processLabData(loincCodes, so) ;
+            } catch (err) {
+                _self.log("Error in for standing orders for loop1 : " + err) ;
+            }
         }
 
         console.log("After going into for loop for standing orders...") ;
@@ -225,9 +387,18 @@ export default {
         console.log("Set loadidng to false") ;
         this.loading = false ;
     },
-    computed: {
+    computed: { 
+        nonPredictedOrders() {
+            return this.standingOrders.filter(ord => ord.display && !ord.predicted) ;
+        },
         standingOrdersWithComponents () {
             return this.standingOrders.filter(ord => ord.display ) ;
+        },
+        panelOrders() {
+            return this.standingOrders.filter(ord => ord.display && ord.components.length > 1 && ord.predicted ) ;
+        },
+        nonPanelOrders() {
+            return this.standingOrders.filter(ord => ord.display && ord.components.length == 1 && ord.predicted) ;
         }
     },
     methods: {    
@@ -263,50 +434,55 @@ export default {
             }) ;
         },
         processComponents(so) {
-            var recentCountMax = 3 ;            
+            try {
+            var recentCountMax = 3 ;        
+            var _self = this;     
             so.components.forEach(comp => {
+                try {
                 this.log("Processing component " + comp.name + " for standing order " + so.standing_order_id) ;
                 var recentValues = [] ;
                 var cnt = 0 ; 
-                if (comp.data.length == 0) return ;                    
-                var resultDays = comp.data[comp.data.length - 1].result_days ;
-                var prevConseqPositives = 0 ;
-                var negativeFound = false ; 
                 for (var i=comp.data.length - 1; i >=0; i--) {
                     if (cnt < recentCountMax) {
                         recentValues.push("<span style='color:" + comp.data[i].color + "'>" + comp.data[i].y + "</span>");
+                        cnt++ ;
+                    } else {
+                        break ;
                     }
-                    if ( i == comp.data.length || !negativeFound)
-                        negativeFound = (comp.data[i].result.trim().length > 0) ;
-                    
-                    if (!negativeFound) {
-                        prevConseqPositives++ ;
-                    }                    
-                    cnt++ ;
-                }    
-                
-                if (prevConseqPositives > 5) prevConseqPositives = 5 ;
+                } 
 
-                var compNameLower = comp.name.toLowerCase() ;
-                //console.log("component :" + comp.name.toLowerCase() + ": result days :" + resultDays + " prevConseqPos :" + prevConseqPositives) ;
-                if (this.predictions[compNameLower]) {
-                    for (var j=0;j<this.predictions[compNameLower].length;j++) {
-                        if (this.predictions[compNameLower][j].window_size >= resultDays) {
-                            var leastWindowSize = this.predictions[compNameLower][j].window_size ;
-                            //console.log("window size :" + leastWindowSize) ;
-                            var wsizes = this.predictions[compNameLower].filter(ws => ws.window_size == leastWindowSize) ;
-                            var predIdx = wsizes.findIndex(sz => sz.prev_consecutive_normal == prevConseqPositives) ;
-                            if (predIdx > -1) {                            
-                                comp.prediction_perc = Math.round(wsizes[predIdx].prediction_rate) + ' %' ;
-                                //console.log("Pred Perc :" + comp.prediction_perc) ;
-                            }
+                var prevConseqPositives ;
+                // if no lab data or no lab data in last 7 days - set it to null condition - which is -1 in database
+                if (comp.data.length == 0 || _self.$moment().diff(_self.$moment(new Date(comp.data[comp.data.length - 1].result_time)), "days") > 7)
+                    prevConseqPositives = -1 ;
+                else {                
+                    prevConseqPositives = 0 ;  // this means there is a lab result but no positives yet
+                    for (var i=comp.data.length - 1; i >=0; i--) {
+                        // negative result or result is before 7 days
+                        if (comp.data[i].result.trim().length > 0 || _self.$moment().diff(_self.$moment(new Date(comp.data[comp.data.length - 1].result_time)), "days") > 7 ) { 
                             break ;
-                        } 
+                        }
+                        prevConseqPositives++ ;
+                    }
+                }
+
+                if (prevConseqPositives > 7) prevConseqPositives = 7 ;
+
+                var baseName = comp.base_name.toLowerCase() ;
+                //console.log("component :" + comp.name.toLowerCase() + ": result days :" + resultDays + " prevConseqPos :" + prevConseqPositives) ;
+                if (this.predictions[baseName]) {
+                    var predictions = this.predictions[baseName] ;
+                    var predIdx = predictions.findIndex(pred => pred.prev_consecutive_normal == prevConseqPositives) ;
+                    if (predIdx > -1) {                            
+                        comp.prediction_perc = Math.round(predictions[predIdx].prediction_rate) ; // + ' %' ;
                     }
                 } else {
-                    this.log("Predictions Do not exist for :" + compNameLower + ":") ;
+                    this.log("Predictions Do not exist for :" + baseName + ":") ;
                 }
                 comp.recent_values = recentValues.reverse().join(", ") ;
+                } catch (err) {
+                  this.log("****Error in processComponents (foreach) for standing order :" + so.display_name + " : " + err) ;  
+                }
             }) ;
 
             this.log("Processing components for predictions - end") ;
@@ -314,13 +490,27 @@ export default {
             if (so.components.length == 1) {
                 so.data = so.components[0].data ;
                 so.recent_values = so.components[0].recent_values ; 
-                so.prediction_perc = so.components[0].prediction_perc ;
+                so.prediction_perc = so.components[0].prediction_perc ;   
+                so.predicted = so.predicted || so.components[0].predicted ; // single row non panel orders
             }                    
             this.$set(so, "_showDetails", false) ; // triggers the chart display
                 
-            so.components = so.components.filter(comp => comp.data.length > 0) ;
-            so.display = so.components.length > 0 ;            
-        },
+            so.components = so.components.filter(comp1 => comp1.data.length > 0) ;
+            so.components.forEach(comp => {
+                comp.name = comp.name.replace(/\, ser\/plas/i, '') ;
+                comp.name = comp.name.replace(/\,ser\/plas/i, '') ;
+            }) ;
+            
+            so.display_name = so.display_name.replace(/\, serum\/plasma/i, '') ;
+            so.display_name = so.display_name.replace(/\,serum\/plasma/i, '') ;
+
+            so.display = so.components.length > 0 ; 
+            this.log("******Processed standing order") ;            
+            this.log(JSON.stringify(so)) ;  
+            } catch (err) {
+                this.log("****Error in processComponents for standing order :" + so.display_name + " : " + err) ;
+            }          
+        },        
         sparklineChart(component) {
             //console.log("Sparklone Chart invoked for {}", component) ;
             var chartOptions = {
@@ -417,109 +607,6 @@ export default {
             //console.log(JSON.stringify(chartOptions)) ;
 
             return chartOptions ;
-        },
-        localChart() {
-            var co = {
-                "chart": {
-                    //"backgroundColor": null,
-                    "borderWidth": 0,
-                    "type": "line",
-                    "margin": [2,0,2,0],
-                    "width": 120,
-                    "height": 50,
-                    "style": {
-                        "overflow": "visible"
-                    },
-                    "skipClone": true
-                },
-                "title": {
-                    "text": ""
-                },
-                "credits": {
-                    "enabled": false
-                },
-                exporting: {
-                    enabled: false
-                },
-                "xAxis": {
-                    "labels": {
-                        "enabled": false
-                    },
-                    "title": {
-                        "text": null
-                    },
-                    //"startOnTick": false,
-                    //"endOnTick": false,
-                    //"tickPositions": []
-                },
-                "yAxis": {
-                    //"endOnTick": false,
-                    //"startOnTick": false,
-                    "labels": {
-                        "enabled": false
-                    },
-                    "title": {
-                        "text": null
-                    },
-                    //"tickPositions": [
-                    //    0
-                    //]
-                },
-                "legend": {
-                    "enabled": false
-                },
-                "tooltip": {
-                    "hideDelay": 0,
-                    "outside": true,
-                    "shared": false,
-                    //"headerFormat": "",
-                    //"pointFormat": "<b>{point.y} - {point.result == ''?'Normal':point.result}</b>"
-                },
-                "plotOptions": {
-                    "series": {
-                        "animation": true,
-                        "lineWidth": 2,
-                        "shadow": true,
-                        "states": {
-                            "hover": {
-                                "lineWidth": 2
-                            }
-                        },
-                        "marker": {
-                            "radius": 3,
-                            "states": {
-                                "hover": {
-                                    "radius": 3
-                                }
-                            }
-                        },
-                        "fillOpacity": 0.25
-                    },
-                    //"column": {
-                    //    "negativeColor": "#910000",
-                    //    "borderColor": "silver"
-                    //}
-                },
-                "series": [
-                    {
-                        "data": [
-                            {y:133, result: "Low", color: "red"},
-                            {y:136, result:""},
-                            {y:135, result:""},
-                            {y:137, result:"High", color: "red"},
-                            {y:134, result:""},
-                            {y:137, result:"High", color: "red"},
-                            {y:136, result:""}
-                        ],                         
-                    }
-                ]
-            } ;
-            co.tooltip.formatter = function () {            
-                var tip =  this.point.y + (this.point.result == ""?"":" - " + this.point.result) ;                        
-                return tip ;
-            } ;
-
-            return co ;
         }
     }
 }

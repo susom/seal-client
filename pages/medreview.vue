@@ -778,6 +778,8 @@ export default {
             this.$set(this.launchModal, 'rpt_start_date_long', rpt_start_date_long) ;
             this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
 
+            await this.$services.medreview.resetSession() ;
+
             this.combinedLabChartOptions = this.$services.medreview.getDefaultChartConfig({ 
                 height: 500, title: '', 
                 start_time: rpt_start_date_long, 

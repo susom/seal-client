@@ -112,7 +112,7 @@
                                 <p style="font-size: 1.3em" v-if="rightRows[0].value == 2 || leftRows[0].value == 2">Your risk score is <b>{{totalPoints==-1?"":totalPoints}}</b> with advanced AMD in one or both eyes.</p>
                                 <p style="font-size: 1.3em" v-else>The AREDS Simplified Severity Score for this patient is <b>{{totalPoints==-1?"":totalPoints}}</b>. </p>
 
-                                <p style="font-size: 1.3em">This score indicates that there is a <b>{{aredsPercent}}%</b> likelihood of developing advanced AMD over the next <b>five</b> years.</p>
+                                <p style="font-size: 1.3em" v-if="showRiskScore">This score indicates that there is a <b>{{aredsPercent}}%</b> likelihood of developing advanced AMD over the next <b>five</b> years.</p>
                             </b-col>
                         </b-row>
                         <b-row>
@@ -223,7 +223,7 @@ export default {
     watch : {
         totalPoints : function(newPoints) {
             var percent = 0 ;
-            if (this.rightRows[0].value == 0 && this.leftRows[0].value == 0) {
+            if (this.rightRows[0].value <= 0 && this.leftRows[0].value <= 0) {
                 if (newPoints == 0)
                     percent = 0.4 ;
                 else if (newPoints == 1)
@@ -264,7 +264,8 @@ export default {
             else
                 return "secondary" ;
         },
-        selectRButton(rowIdx, btnIdx) {            
+        selectRButton(rowIdx, btnIdx) {
+            if (this.rightRows[0].value == 2 && rowIdx > 0) return ;
             this.rightRows[rowIdx].value = this.rightRows[rowIdx].buttons[btnIdx].points ;
             if (rowIdx == 0 && btnIdx == 1) {
                 this.rightRows[1].value = -1 ;
@@ -281,6 +282,7 @@ export default {
             console.log("Total Points: " + this.totalPoints) ;
         },
         selectLButton(rowIdx, btnIdx) {
+            if (this.leftRows[0].value == 2 && rowIdx > 0) return ;
             this.leftRows[rowIdx].value = this.leftRows[rowIdx].buttons[btnIdx].points ;
             if (rowIdx == 0 && btnIdx == 1) {
                 this.leftRows[1].value = -1 ;
@@ -300,23 +302,35 @@ export default {
             return (val == -1 ? 0 : val) ;
         },
         copyCalcEHR () {
-            var result = "AREDS Simplified Severity Score Calculation \n\n" ;
+            var result = "AREDS Simplified Severity Score Calculation \n" ;
+            result +=    "------------------------------------------- \n\n" ;
             result += this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n";
             result += "Date: " + this.$moment(new Date()).format("MM/DD/YYYY hh:mm:ss A") + "\n\n" ; 
 
             result += "Right Eye Factors:\n" ;
             result += "GA/CNV: " + this.handleDefaultOnValue(this.rightRows[0].value) + "\n";
-            result += "Large Drusen: " + this.handleDefaultOnValue(this.rightRows[1].value) + "\n";
-            result += "Pigment Changes: " + this.handleDefaultOnValue(this.rightRows[2].value) + "\n\n";
+            if (this.rightRows[0].value != 2) {
+                result += "Large Drusen: " + this.handleDefaultOnValue(this.rightRows[1].value) + "\n";
+                result += "Pigment Changes: " + this.handleDefaultOnValue(this.rightRows[2].value) + "\n\n";
+            } else {
+                result += "\n" ;
+            }
 
             result += "Left Eye Factors:\n" ;
             result += "GA/CNV: " + this.handleDefaultOnValue(this.leftRows[0].value) + "\n";
-            result += "Large Drusen: " + this.handleDefaultOnValue(this.leftRows[1].value) + "\n";
-            result += "Pigment Changes: " + this.handleDefaultOnValue(this.leftRows[2].value) + "\n\n";
-
+            if (this.leftRows[0].value != 2) {
+                result += "Large Drusen: " + this.handleDefaultOnValue(this.leftRows[1].value) + "\n";
+                result += "Pigment Changes: " + this.handleDefaultOnValue(this.leftRows[2].value) + "\n\n";
+            } else {
+                result += "\n" ;
+            }
+            
             result += "RESULTS: \n" ;
+            result += "-------- \n" ;
             result += "Total Score: " + this.handleDefaultOnValue(this.totalPoints) + "\n";
-            result += "5-Year Risk of Advanced AMD: " + this.aredsPercent + "%\n" ;
+            if (this.rightRows[0].value != 2 || this.leftRows[0].value != 2) {
+                result += "5-Year Risk of Advanced AMD: " + this.aredsPercent + "%\n" ;
+            }
 
             console.log(result) ;
 
@@ -331,7 +345,8 @@ export default {
         },
         copyCalcPatient () {
             
-            var result = "AREDS Simplified Severity Score Calculation \n\n" ;
+            var result = "AREDS Simplified Severity Score Calculation \n" ;
+            result +=    "------------------------------------------- \n\n" ;
             result += this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n";
             result += "Date: " + this.$moment(new Date()).format("MM/DD/YYYY hh:mm:ss A") + "\n\n" ; 
 
@@ -339,7 +354,7 @@ export default {
                 result += "Based on today’s eye examination, you currently have a Simplified Severity Score of " + this.handleDefaultOnValue(this.totalPoints) ;
                 result += " based on your current stage of age-related macular degeneration (AMD). \n\n" ;
                 result += "This score indicates that you have a " + this.aredsPercent + " % likelihood of developing advanced AMD over the next five years." ;
-            } else if (this.rightRows[0].value + this.leftRows[0].value == 2) {
+            } else if ((this.rightRows[0].value == -1?0:this.rightRows[0].value) + this.leftRows[0].value == 2) {
                 result += "Based on today’s eye examination, you currently have a Simplified Severity Score of " + this.handleDefaultOnValue(this.totalPoints) ;
                 result += " based on your current stage of age-related macular degeneration (AMD). \n\n" ;
                 result += "This score indicates that you have a " + this.aredsPercent + "% likelihood of developing advanced AMD in your other eye over the next five years." ;
@@ -360,6 +375,9 @@ export default {
         }
     },
     computed : {
+        showRiskScore() {
+            return !(this.leftRows[0].value == 2 && this.rightRows[0].value == 2) ;
+        },
         chartOptions() {
             var plotLineValue = 0 ;
             if (this.totalPoints == 0)

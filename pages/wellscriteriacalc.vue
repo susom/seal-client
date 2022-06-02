@@ -215,7 +215,7 @@ export default {
         console.log("In fetch method of the wells criteria page") ;
         
         this.$store.commit('setAppId', this.$services.wellscalc.APP_ID) ;
-        this.$services.wellscalc.dblog("WellsCalcHome", "In A3 Pain Tab Home Page") ;
+        this.$services.wellscalc.dblog("WellsCalcHome", "In Wells Criteria for PE Home Page") ;
         this.$store.commit('setPageTitle', "Wells' Criteria for Pulmonary Embolism") ;
         this.$store.commit('setCurrentApp', { help : "wells-help-modal" }) ;
 

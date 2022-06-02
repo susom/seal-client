@@ -65,6 +65,15 @@ export default class MedReviewAPI {
               return response.data ;
           }) ;        
     }
+
+    resetSession() {
+      return this.axios({
+        method: 'get',
+        url: "/fhir-app/medreview/api/v2/session/reset?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+      }).then((response) => {            
+          return response.data ;
+      })                  
+    }
     /**
      * Removes duplicates and merges
      * 
