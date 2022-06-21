@@ -457,26 +457,6 @@ export default {
             this.patient = await this.$services.a3pain.patient() ;      
 
             var encounters = await this.$services.a3pain.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
-            
-            /*
-            var medstats = {} ;
-
-            medstats = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
-            //response = this.getLocalMedData() ;
-            //responses.push(response) ;
-            //this.resultText += "\n Invoking medstats nextUrl is " + medstats.nextUrl ;
-
-            while (medstats.nextUrl && medstats.nextUrl != "") {
-                var response = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, medstats.nextUrl) ;
-                medstats.cats = [].concat(medstats.cats, response.cats) ;
-                if (response.nextUrl)
-                    medstats.nextUrl = response.nextUrl ;
-                else
-                    medstats.nextUrl = "" ;
-            }
-
-            this.resultText += "\n Response from MedStat Call " + JSON.stringify(medstats.cats) ;
-            */
 
             var responses = [] ;
             var response = {} ;
@@ -494,7 +474,6 @@ export default {
                 responses.push(response) ;
             }
             
-
             medstats.cats = [] ;
 
             try {
@@ -511,7 +490,6 @@ export default {
                         medstats.cats[medIdx].data = [].concat(medstats.cats[medIdx].data, med.data) ;
                         medstats.cats[medIdx].mme = Object.assign({}, medstats.cats[medIdx].mme, med.mme) ;                        
                         medstats.cats[medIdx].routes = this.merge(medstats.cats[medIdx].routes, med.routes) ;
-                        //medstats.cats[medIdx].pcat = this.merge(medstats.cats[medIdx].pcat, med.pcat) ;
                         medstats.cats[medIdx].med_order_ids = [].concat(medstats.cats[medIdx].med_order_ids, med.med_order_ids) ;
                     }
                     } catch (err) {

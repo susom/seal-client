@@ -49,33 +49,7 @@
                     </b-card>
                 </b-card-group>                
             </b-col>
-        </b-row>
-        <!--
-        <b-row class="mt-3">            
-            <b-col cols="10" offset="1">                
-                <b-card color="green">
-                    <b-card-title>
-                        <b-row>
-                            <b-col style="text-align:left">
-                                Seal App Views
-                            </b-col>
-                            <b-col style="text-align:right;font-size:.65em">
-                                <b-btn size="sm" @click="viewTableData">View Data</b-btn>  View Chart By <b-form-select style="width:40%" size="sm" class="ml-3" :options="['Total Views', 'Unique Users', 'Unique Patients']" 
-                                    v-model="statsViewBy" @change="updateChartSeries" />
-                            </b-col>
-                        </b-row>
-                    </b-card-title>
-                    <b-card-text>
-                        <highchart                             
-                            :options="chartOptions"
-                            :modules="['exporting', 'export-data']"
-                            ref="myChart"                             
-                             />
-                    </b-card-text>
-                </b-card>
-            </b-col>
-        </b-row>
-        -->
+        </b-row>        
         <b-row class="mt-3">            
             <b-col cols="10" offset="1">                
                 <b-card color="green">
@@ -109,9 +83,19 @@
         </b-row>
         <b-row class="mt-3">            
             <b-col cols="5" offset="1">                
-                <b-card title="Top 10 Users for last 30 days">
+                <b-card>
+                    <b-card-title>
+                        <b-row>
+                            <b-col cols="6">
+                                Top 10 Users for last 30 days
+                            </b-col>
+                            <b-col>
+                                <b-select v-model="top10SelectedApp" @change="top10AppChanged" :options="apps" size="sm" required/>
+                            </b-col>
+                        </b-row>
+                    </b-card-title>
                     <b-card-text>                        
-                         <b-table striped :fields="top10Fields" :items="top10" small />
+                         <b-table striped :fields="top10Fields" :items="top10" small show-empty />
                     </b-card-text>
                 </b-card>
             </b-col>
@@ -152,29 +136,39 @@ export default {
             top10Fields: [
                 {key: 'user_id', label: 'ID', sortable: false},
                 {key: 'full_name', label: 'Name', sortable: false},
-                {key: 'total_login', label: '# of logins', sortable: false},
+                {key: 'total_login', label: '# of logins', sortable: false, tdClass:'text-center'},
             ],
             showDebug: false,
             resultText: '',
-            initApp: true
+            initApp: true,
+            apps: [],
+            top10SelectedApp: -1
         }
     },
     async fetch() {
 
         console.log("In mounted method of the dashboard tab page") ;        
-        this.$store.commit('setAppId', 6) ;
+        this.$store.commit('setAppId', 5) ;
         this.$services.a3pain.dblog("DashboardHome", "In Dashboard Home Page") ;
-        this.$store.commit('setPageTitle', "SEAL Dashboard") ;
+        this.$store.commit('setPageTitle', "SEAL Dashboard") ;        
 
-        //this.appstats = await this.$services.dashboard.appstats() ;
-        //this.updateChartSeries() ;
-        this.log("In mounted method - before calling teh services to get counts") ;
+        this.apps = await this.$services.dashboard.apps() ;
+        this.apps = this.apps.map(app => {
+            app.value = app.id ;
+            app.text = app.name ;
+            return app ;
+        });
+        this.apps.unshift({value: -1, text: "All Apps"}) ;
+
+        console.log(this.apps) ;
+        this.log("Got the list of apps... " + JSON.stringify(this.apps)) ;
         
+        this.log("In mounted method - before calling teh services to get counts") ;
         this.counts = await this.$services.dashboard.counts() ;
 
         this.log("In mounted method - before calling teh services to get top10") ;
 
-        this.top10 = await this.$services.dashboard.top10() ;
+        this.top10 = await this.$services.dashboard.top10(-1) ;
 
         this.log("Got the top 10 result... " + JSON.stringify(this.top10)) ;
 
@@ -374,6 +368,11 @@ export default {
         }        
     },
     methods : {
+        async top10AppChanged(appId) {
+            console.log("In Top10 App Changed...") ;
+            console.log(appId) ;
+            this.top10 = await this.$services.dashboard.top10(appId) ;
+        },
         viewTableData() {
             try {
                 this.log("In viewTableData method....") ;
@@ -405,36 +404,6 @@ export default {
         log(mesg) {
             this.resultText += '\n' + mesg ;            
         },
-        /*
-        updateChartSeries () {
-            var _self = this ;
-            
-            this.appstats.forEach(function(stat) {
-                var cIdx = _self.chartseries.findIndex(function (cs) { return (cs.name == stat.app) }) ;
-                if (cIdx < 0) {                
-                    cIdx = _self.chartseries.length;
-                    _self.chartseries.push({ name: stat.app, data: [0,0,0,0,0,0,0,0,0,0,0,0] }) ;                
-                }
-                if (_self.statsViewBy == 'Total Views')                    
-                    _self.$set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.total_visit)) ;                    
-                else if (_self.statsViewBy == 'Unique Users')
-                    _self.$set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.unique_users)) ;
-                else if (_self.statsViewBy == 'Unique Patients')
-                    _self.$set(_self.chartseries[cIdx].data, parseInt(stat.mm) - 1, parseInt(stat.unique_patients)) ;
-            });
-            
-            var hChart = this.$refs.myChart.chart ;
-            console.log("Inside update series") ;
-            if (hChart.dataTableDiv) {
-                console.log(hChart.dataTableDiv.style.display) ;
-                hChart.dataTableDiv.remove() ;
-                //hChart.dataTableDiv.style.display = "none" ;
-                this.$refs.myChart.chart.viewData()  ;
-            } else {
-                console.log("datatablediv is not visible") ;
-            }            
-        },
-        */
         async fetchChartData() {
             this.log("Inside fetchChartData method..." + this.startdate + " to " + this.enddate + " group: " + this.groupBy) ;
             this.appstats2 = await this.$services.dashboard.appstats2(this.startdate, this.enddate, this.groupBy) ;

@@ -11,15 +11,6 @@ export default class DashboardAPI {
         this.seal = new SealAPI($axios) ;
     }
 
-    appstats() {    
-        return this.axios({
-            method: 'get',
-            url: "/fhir-app/dashboard/api/v1/appstats?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
-        }).then((response) => {            
-            return response.data.data ;
-        })          
-    }
-
     /**
      * 
      * @param {*} startdate in yyyy-mm-dd format
@@ -46,10 +37,19 @@ export default class DashboardAPI {
         })          
     }
 
-    top10() {    
+    top10(appId) {    
         return this.axios({
             method: 'get',
-            url: "/fhir-app/dashboard/api/v1/top10?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+            url: "/fhir-app/dashboard/api/v1/top10?app_id=" + appId + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+        }).then((response) => {            
+            return response.data.data ;
+        })          
+    }
+
+    apps() {    
+        return this.axios({
+            method: 'get',
+            url: "/fhir-app/dashboard/api/v1/apps?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
         }).then((response) => {            
             return response.data.data ;
         })          

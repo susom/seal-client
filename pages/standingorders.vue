@@ -5,32 +5,12 @@
             <b-col sm="2" xl="1" class="text-center">
                 <b-img src="standing_orders_app.png" style="height:100px"></b-img>
             </b-col>
-            <b-col sm="9" xl="10" class="text-left">
-                <!--
-                <p class="pt-2">
-                    Inpatient Standing Orders Assessment is an utility app developed by SEAL in partnership with Dr. Naveed (SHC). 
-                <p>
-                -->
-                <!--
-                <p class="pt-2">
-                    The Inpatient Standing Orders Utility Assessment is designed to help the care team assess which 
-                    standing orders should be canceled due to low clinical utility. Canceling unnecessary standing orders 
-                    reduces patient blood loss as well as saving money.
-                </p>
-                <p class="pt-2">
-                    Abnormal results are <span style="color:red">red</span>, normal are <span  style="color:green">green</span>. 
-                    Data shown in this report is up to 36 hours old. Click on panel name to see results.
-                </p>
-                -->
+            <b-col sm="9" xl="10" class="text-left ml-2">                
                 <p class="mt-2">
-                    Recurring Orders Dashboard App helps flags (<b-icon icon="flag-fill" font-scale="1" variant="info "/>)     recurring orders that might be canceled because they are predicted to be normal on the 
-                    next blood draw. As always, use your clinical judgment to determine the best care plan for your patient.
-                </p>
-                <p>
-                    <ul>
-                        <li>Benefits: Reduce patient blood loss and discomfort, preserve blood tubes during the current national shortage, and reduce healthcare cost</li>
-                        <li>Click <b-link style="color:blue">here</b-link> more information on the prediction mode </li>
-                    </ul>
+                    The Recurring Orders Dashboard helps providers keep track of recurring blood test orders and decide when repeat tests may be discontinued. 
+                    The app lists all active recurring inpatient blood test orders along with recent results and trends. Orders that are predicted with a 
+                    high probability to be normal on the next blood draw are flagged (<b-icon icon="flag-fill" font-scale="1" variant="info "/>) for potential discontinuation. 
+                    Click <b-link style="color:blue" @click="$bvModal.show('prediction-model-panel')">here</b-link> for more information on the prediction model.
                 </p>
             </b-col>
         </b-row>
@@ -93,7 +73,8 @@
                                         </h5>
                                     </template>                                     
                                     <template #cell(display_name)="row">
-                                        <b-icon icon="flag-fill" font-scale="1" variant="info" class="mr-1" v-if="row.item.prediction_perc > 85"/> {{row.item.display_name}}
+                                        <b-icon icon="flag-fill" font-scale="1" variant="info" class="mr-1" v-if="row.item.flag_order" 
+                                            v-b-tooltip.hover title="This order panel has been flagged because many of its components are predicted to be normal on the next blood draw"/> {{row.item.display_name}}
                                     </template>
                                     <template #cell(recent_values)="data">
                                         <span v-html="data.value"></span>
@@ -110,15 +91,15 @@
                                     <template #row-details="row">
                                         <b-card>
                                             <b-table striped :items="row.item.components" :fields="compFields" hover>
-                                                <template #cell(name)="irow">
-                                                    <b-icon icon="flag-fill" font-scale="1" variant="info" class="mr-1" v-if="irow.item.prediction_perc > 85"/> {{irow.item.name}} 
+                                                <template #cell(name)="irow">                                                    
+                                                    <b-icon icon="star-fill" font-scale="0.5" variant="info" class="mr-1" v-if="irow.item.flag_order"/> {{getComponentName(irow.item.name)}} 
                                                 </template>                                                
                                                 <template #cell(graph)="irow">
                                                     <highchart :options="sparklineChart(irow.item)" />                                                    
                                                 </template>
                                                 <template #cell(recent_values)="irow">
                                                     <span v-html="irow.value"></span>
-                                                </template>       
+                                                </template>         
                                                 <template #cell(prediction_perc)="irow">
                                                     {{irow.value ? irow.value + " %":""}}
                                                 </template>                                                                                                                                 
@@ -140,7 +121,7 @@
                                         </h5>
                                     </template>                                     
                                     <template #cell(display_name)="row">
-                                        <b-icon icon="flag-fill" font-scale="1" class="mr-1" variant="info" v-if="row.item.prediction_perc > 85"/> {{row.item.display_name}}
+                                        <b-icon icon="flag-fill" font-scale="1" class="mr-1" variant="info" v-if="row.item.flag_order"/> {{row.item.display_name}}
                                     </template>
                                     <template #cell(recent_values)="data">
                                         <span v-html="data.value"></span>
@@ -151,57 +132,7 @@
                                     <template #cell(prediction_perc)="row">
                                         {{row.value ? row.value + " %":""}}
                                     </template>                                        
-                                </b-table>     
-
-                                <!--                                 
-                                <b-table striped 
-                                    :items="standingOrdersWithComponents" :fields="orderFields"
-                                    small :busy="loading"       
-                                    selectable
-                                    @row-clicked="onRowClick"
-                                    hover
-                                    show-empty
-                                    >
-                                    <template #table-busy>
-                                        <div class="text-center text-primary my-2">
-                                            <b-spinner class="align-middle"></b-spinner>
-                                            <strong>Loading...</strong>
-                                        </div>
-                                    </template>
-                                    <template #empty>
-                                        <h5 style="text-align:center;height:80px;" class="mt-5">
-                                            No active standing orders available for this patient.
-                                        </h5>
-                                    </template>                                     
-                                    <template #cell(display_name)="row">
-                                        {{row.item.display_name}}  ({{row.item.standing_order_id}})
-                                    </template>
-                                    <template #cell(recent_values)="data">
-                                        <span v-html="data.value"></span>
-                                    </template>
-                                    <template #cell(show_details)="row">
-                                        <b-icon 
-                                            :icon="row.detailsShowing ? 'chevron-down' : 'chevron-up'"                                             
-                                            font-scale="1.3"
-                                            v-if="row.item.components.length > 1" />
-                                    </template>
-                                    <template #cell(graph)="row">
-                                        <highchart :options="sparklineChart(row.item)" v-if="row.item.components.length == 1"/> 
-                                    </template>
-                                    <template #row-details="row">
-                                        <b-card>
-                                            <b-table striped :items="row.item.components" :fields="compFields" hover>
-                                                <template #cell(graph)="irow">
-                                                    <highchart :options="sparklineChart(irow.item)" />                                                    
-                                                </template>
-                                                <template #cell(recent_values)="irow">
-                                                    <span v-html="irow.value"></span>
-                                                </template>                                                
-                                            </b-table>
-                                        </b-card>
-                                    </template>
-                                </b-table>                                 
-                                -->                                
+                                </b-table>                  
                             </b-col>                        
                         </b-row>
                     </b-card-text>
@@ -247,6 +178,13 @@
                 </b-card>
             </b-col>                        
         </b-row>
+        
+        <b-modal id="prediction-model-panel" centered hide-footer title="Model Information" size="lg">
+            The prediction is derived from the number of consecutive normal test findings in the prior 7 days as described in 
+            Xu S et al. Prevalence and predictability of low-yield inpatient laboratory diagnostic tests. JAMA Network Open. 2019. (https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2749559) 
+            This model was calculated using 12 months of Stanford Health Care laboratory data from 2020-01-01 to 2020-12-31.
+        </b-modal>
+        
         <b-modal id="standingorders-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
             body-bg-variant="dark">
             <ul class="text-white">
@@ -265,7 +203,7 @@ export default {
     data() {
         return {
             patient: { length_of_stay: 0 },            
-            standingOrders: [],
+            standingOrders: [],            
             predictedComponentCodes: [],
             predictedPanelCodes: [],
             orderFields: [
@@ -301,7 +239,7 @@ export default {
             showDebug: false,
             resultText: ""
         }
-    },    
+    },
     async fetch() {
         console.log("In fetch method of the standing order page") ;
 
@@ -358,8 +296,17 @@ export default {
             totalSpecimenCount += so.specimen_count ;
             so.components.forEach(comp => {
                 comp.predicted = (_self.predictedComponentCodes.indexOf(comp.base_name) >= 0) ;
+                comp.flag_order = false ;
             })
             
+            // For Predicted CBC Panel Orders, remove RBC
+            if (so.predicted && so.components.length > 1 && this.isCBCOrder(so.proc_code))
+            {
+                this.log("Filtering RBC in CBC Order comp size " + so.components.length) ;
+                so.components = so.components.filter(comp => comp.base_name != 'RBC') ;
+                this.log("Filtering after RBC in CBC Order comp size " + so.components.length) ;
+            }
+
             // get loinc code only for panels with components whose predict is true
             // if it is a single order, then get all loinc codes
             var loincCodes = [] ;
@@ -368,12 +315,9 @@ export default {
             else if (so.components.length == 1)
                 loincCodes = so.components.map(c => c.loinc_code).join(",") ;
                 
-            //var loincCodes = so.components.filter(c => c.predicted).map(c => c.loinc_code).join(",") ;            
-            //var loincCodes = so.components.map(c => c.loinc_code).join(",") ;            
-            
             this.log("Lab data for Standing order " + so.display_name + "(" + so.standing_order_id + " min:" + so.order_time + ") loinc: " + loincCodes ) ;
             if (loincCodes.length > 0) {
-                so.display = true ;
+                //so.display = true ;
                 this.processLabData(loincCodes, so) ;                
             }
 
@@ -405,6 +349,18 @@ export default {
         log(mesg) {
             this.resultText += "\n" + this.$moment().format("LTS") + ": " + mesg ;
         },
+        isCBCOrder(procCode) {
+            return (['LABCBCO', 'LAB234', 'LABCBCD', 'LAB373', 'LABCBCS'].indexOf(procCode) > -1) ;
+        },
+        getComponentName(name) {
+            if (name.toLowerCase() == 'Egfr refit without race (2021)'.toLowerCase())
+                name = 'EGFR' ;
+            if (['BUN', 'CO2', 'EGFR', 'WBC', 'RBC', 'AST', 'ALT'].indexOf(name.toUpperCase()) >= 0)
+                name = name.toUpperCase() ;
+            else 
+                name = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase() ;
+            return name ;
+        },        
         onRowClick(item) {
             console.log("row clicked") ;
             if (item.components.length > 1)
@@ -435,8 +391,9 @@ export default {
         },
         processComponents(so) {
             try {
-            var recentCountMax = 3 ;        
-            var _self = this;     
+            var recentCountMax = 7 ;        
+            var _self = this;
+            
             so.components.forEach(comp => {
                 try {
                 this.log("Processing component " + comp.name + " for standing order " + so.standing_order_id) ;
@@ -475,9 +432,11 @@ export default {
                     var predIdx = predictions.findIndex(pred => pred.prev_consecutive_normal == prevConseqPositives) ;
                     if (predIdx > -1) {                            
                         comp.prediction_perc = Math.round(predictions[predIdx].prediction_rate) ; // + ' %' ;
+                        comp.flag_order =  (comp.prediction_perc >= 85) ;
                     }
                 } else {
                     this.log("Predictions Do not exist for :" + baseName + ":") ;
+                    comp.flag_order = false ;
                 }
                 comp.recent_values = recentValues.reverse().join(", ") ;
                 } catch (err) {
@@ -490,9 +449,16 @@ export default {
             if (so.components.length == 1) {
                 so.data = so.components[0].data ;
                 so.recent_values = so.components[0].recent_values ; 
-                so.prediction_perc = so.components[0].prediction_perc ;   
+                so.prediction_perc = so.components[0].prediction_perc ;  
+                so.flag_order = so.components[0].flag_order ;
                 so.predicted = so.predicted || so.components[0].predicted ; // single row non panel orders
-            }                    
+            } else {
+                if (this.isCBCOrder(so.proc_code)) {
+                    so.flag_order = ( so.components.filter(comp => (comp.flag_order && ['WBC', 'HGB', 'HCT', 'PLT'].indexOf(comp.base_name.toUpperCase()) >= 0)).length >= 3 ) ;
+                } else {
+                    so.flag_order = ( so.components.filter(comp => (comp.flag_order && ['NA', 'K', 'CL', 'CO2', 'GLU', 'CR', 'BUN', 'CA'].indexOf(comp.base_name.toUpperCase()) >= 0)).length >= 6 ) ;
+                }
+            }
             this.$set(so, "_showDetails", false) ; // triggers the chart display
                 
             so.components = so.components.filter(comp1 => comp1.data.length > 0) ;
