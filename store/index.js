@@ -2,7 +2,7 @@
 
 export const state = () => ({
     pageTitle: "",
-    user : { user_id: 0, full_name: ""},
+    user : { user_id: "0", full_name: ""},
     patientId: "",
     appId: 0,
     currentApp : {}
@@ -28,7 +28,7 @@ export const mutations = {
 
 export const getters = {
     sealTeam(state) {
-        return (state.user.user_id == "S0311772" || state.user.user_id == "SHC")
+        return (state.user.user_id == "S0311772" || state.user.user_id == "SHC" || state.user.user_id == "0")
     }
 }
 

@@ -145,6 +145,114 @@
                 </b-card>
             </b-col>
         </b-row>
+
+        <b-row class="mt-3 ml-2 mb-5"  v-if="$store.getters.sealTeam">
+            <b-col cols="11">
+                <b-card class="shadow-lg rounded-lg">
+                    <b-card-title class="chart-title">ROAD - Rational Opioids At Discharge</b-card-title>                    
+                    <b-card-text>
+                        <b-row>
+                            <b-col cols="4"> 
+                                Discharge at <b-form-input type="date" v-model="road.discharge_date" size="sm" style="width:30%;display:inline"/> 
+                                <b-form-input type="time" v-model="road.discharge_time" size="sm" style="width:25%;display:inline"/>
+                            </b-col>
+                            <b-col cols="6"> 
+                                <b-button @click="generateRoadChart">Generate Chart</b-button> 
+                                <b-button @click="testRoadChart">Redraw Road Chart</b-button> <b-form-input type="text" v-model="road.totalMME" size="sm" style="width:25%;display:inline"/>
+                            </b-col>
+                        </b-row>
+                        <b-row class="mt-1 mb-1">
+                            <b-col cols="6" style="font-size:1.2em;font-weight:bold">Total MME for Past 24 Hours: {{road.totalMME}}</b-col>
+                            <b-col cols="6">Discharge schedule for <b-select style="width:30%" :options="['oxycodone']" value="oxycodone"></b-select></b-col>
+                        </b-row>
+                        <!--
+                        <b-row>
+                            <b-col cols="12" style="font-size:1.2em;font-weight:bold">Discharge Opioid schedule for <b-select style="width:30%" :options="['oxycodone']" value="oxycodone"></b-select></b-col>
+                        </b-row>                        
+                        -->
+                        <b-row>
+                            <b-col cols="12">
+                                <b-table-simple bordered>
+                                    <b-thead head-variant="light">
+                                        <b-tr>
+                                            <b-th v-for="week in road.chart.weeks" class="text-center">
+                                                week # {{week.week_nbr}}
+                                            </b-th>
+                                        </b-tr>
+                                        <b-tr>
+                                            <b-th v-for="week in road.chart.weeks" class="text-center">
+                                                {{$moment().add(week.week_nbr - 1, 'weeks').format("MM/DD/YYYY")}} - {{$moment().add(week.week_nbr, 'weeks').add(-1, 'days').format("MM/DD/YYYY")}}
+                                            </b-th>
+                                        </b-tr>                                        
+                                    </b-thead>
+                                    <b-tbody>                                        
+                                        <b-tr>
+                                            <b-td v-for="week in road.chart.weeks" class="text-center">
+                                                {{week.mme}} mg <br /> per day
+                                            </b-td>
+                                        </b-tr>                                        
+                                    </b-tbody>
+                                </b-table-simple>
+                                <b-table-simple bordered>
+                                    <b-thead head-variant="light">
+                                        <b-tr>
+                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
+                                                day # {{(road.chart.weeks.length * 7) + idx + 1}}
+                                            </b-th>                                            
+                                        </b-tr>
+                                        <b-tr>
+                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
+                                                {{$moment().add(road.chart.weeks.length, 'weeks').add(idx, 'days').format('MM/DD/YYYY')}}
+                                            </b-th>                                            
+                                        </b-tr>                                        
+                                    </b-thead>
+                                    <b-tbody>                                        
+                                        <b-tr>
+                                            <b-td v-for="(day, idx) in road.chart.days" class="text-center">
+                                                {{day.dose}} mg <br/> {{day.freq}}
+                                            </b-td>                                            
+                                        </b-tr>                                        
+                                    </b-tbody>
+                                </b-table-simple>
+                                <!--
+                                <b-table-simple bordered>
+                                    <b-thead head-variant="light">
+                                        <b-tr>
+                                            <b-th v-for="week in road.chart.weeks" class="text-center">
+                                                week # {{week.week_nbr}}
+                                            </b-th>
+                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
+                                                day # {{(road.chart.weeks.length * 7) + idx + 1}}
+                                            </b-th>                                            
+                                        </b-tr>
+                                        <b-tr>
+                                            <b-th v-for="week in road.chart.weeks" class="text-center">
+                                                {{$moment().add(week.week_nbr - 1, 'weeks').format("MM/DD/YYYY")}} - {{$moment().add(week.week_nbr, 'weeks').add(-1, 'days').format("MM/DD/YYYY")}}
+                                            </b-th>
+                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
+                                                {{$moment().add(road.chart.weeks.length, 'weeks').add(idx, 'days').format('MM/DD/YYYY')}}
+                                            </b-th>                                            
+                                        </b-tr>                                        
+                                    </b-thead>
+                                    <b-tbody>                                        
+                                        <b-tr>
+                                            <b-td v-for="week in road.chart.weeks" class="text-center">
+                                                {{week.mme}} mg <br /> per day
+                                            </b-td>
+                                            <b-td v-for="(day, idx) in road.chart.days" class="text-center">
+                                                {{day.dose}} mg <br/> {{day.freq}}
+                                            </b-td>                                            
+                                        </b-tr>                                        
+                                    </b-tbody>
+                                </b-table-simple>
+                                -->
+                            </b-col>
+                        </b-row>
+                    </b-card-text>
+                </b-card>
+            </b-col>
+        </b-row>
+
         <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
             <b-col cols="11">
                 <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
@@ -393,7 +501,13 @@ export default {
                 {label: 'OPIOID', key: 'name'},
                 {label: 'Route of Administration', key: 'routes'},
                 {label: 'Conversion Factor', key: 'factors'}
-            ]            
+            ],
+            road : {
+                discharge_date: "",
+                discharge_time: "",
+                totalMME: 0,
+                chart: { weeks: [], days: [] }
+            }
         }
     },
     computed : {
@@ -423,6 +537,9 @@ export default {
         this.medChartOptions = {} ; //this.getMedsChart() ;
         this.mmeChartOptions = {} ; //this.getMMEChart() ;
         this.mmeStackedChartOptions = {} ; //this.getMMEStackedChart() ;
+        
+        this.road.discharge_date = this.$moment().format("YYYY-MM-DD") ;
+        this.road.discharge_time = this.$moment().format("HH:mm") ;
         
         //this.marData = this.getLocalMarData() ;
         //this.medCategories = this.getLocalMedCategories() ;
@@ -994,6 +1111,27 @@ export default {
         merge(string1, string2) {
             return this.$services.medreview.unique_merge(string1, string2) ;
         },        
+        async generateRoadChart() {
+            console.log("Generate Road for :" + this.road.discharge_date + " " + this.road.discharge_time) ;
+            var disch_datetime = this.$moment(this.road.discharge_date + " " + this.road.discharge_time).valueOf() ;
+            var dischargeDateLong = this.$moment(disch_datetime).startOf('day').valueOf() ;
+            var dischargeDate24HrEarlierLong = this.$moment(dischargeDateLong).add(-1, 'days').valueOf() ;
+            if (dischargeDateLong >= this.launchModal.rpt_start_date_long && dischargeDateLong <= this.launchModal.rpt_end_date_long
+                && dischargeDate24HrEarlierLong >= this.launchModal.rpt_start_date_long && dischargeDate24HrEarlierLong <= this.launchModal.rpt_end_date_long)
+                this.road.totalMME = await this.$services.a3pain.getTotalMMEForLast24Hours(disch_datetime, this.marData, this.patient.epicPatientId, this.tlog) ;
+            else
+                this.road.totalMME = await this.$services.a3pain.getTotalMMEForLast24Hours(disch_datetime, null, this.patient.epicPatientId, this.tlog) ;
+            
+            this.tlog("In generateroadchart totalMME is: " + this.road.totalMME) ;
+
+            this.road.chart = this.$services.a3pain.roadChart(this.road.totalMME) ;
+
+
+        },
+        testRoadChart() {
+            console.log("road chart test invoked") ;                        
+            this.road.chart = this.$services.a3pain.roadChart(this.road.totalMME) ;
+        },
         mousemove(e) {
             var chart,
                 point,
@@ -1363,7 +1501,7 @@ export default {
         },
         tlog(mesg) {
             console.log(mesg) ;
-            // this.resultText += "\n" + mesg ;
+            this.resultText += "\n" + mesg ;
         },
         getLocalMarData() {
             return [{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620488340000,"x2":1620488340000,"y":4,"name":"oxyCODONE (Roxicodone) oral solution 5-10 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620737940000,"x2":1620737940000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620716280000,"x2":1620716280000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620696780000,"x2":1620696780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620675000000,"x2":1620675000000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620654300000,"x2":1620654300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620631980000,"x2":1620631980000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620610380000,"x2":1620610380000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620575640000,"x2":1620575640000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620549480000,"x2":1620549480000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620531780000,"x2":1620531780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620510420000,"x2":1620510420000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620517560000,"x2":1620517560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621254120000,"x2":1621254120000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621238100000,"x2":1621238100000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621211880000,"x2":1621211880000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621168140000,"x2":1621168140000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621149780000,"x2":1621149780000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621127940000,"x2":1621127940000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621102380000,"x2":1621102380000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621080900000,"x2":1621080900000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621058640000,"x2":1621058640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621044840000,"x2":1621044840000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621021560000,"x2":1621021560000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620997860000,"x2":1620997860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620955440000,"x2":1620955440000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620886860000,"x2":1620886860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620867660000,"x2":1620867660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620780480000,"x2":1620780480000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1620758640000,"x2":1620758640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621210440000,"x2":1621210440000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621179960000,"x2":1621179960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621164540000,"x2":1621164540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621149840000,"x2":1621149840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621134300000,"x2":1621134300000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621119780000,"x2":1621119780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621104600000,"x2":1621104600000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621089360000,"x2":1621089360000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621074540000,"x2":1621074540000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621057680000,"x2":1621057680000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621035840000,"x2":1621035840000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621021740000,"x2":1621021740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621005720000,"x2":1621005720000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620990660000,"x2":1620990660000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620976080000,"x2":1620976080000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620961560000,"x2":1620961560000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620929820000,"x2":1620929820000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620915960000,"x2":1620915960000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620900780000,"x2":1620900780000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620886200000,"x2":1620886200000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620871320000,"x2":1620871320000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620856620000,"x2":1620856620000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620841860000,"x2":1620841860000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620826740000,"x2":1620826740000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620812460000,"x2":1620812460000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620796800000,"x2":1620796800000,"y":2,"name":"oxyCODONE (Roxicodone) tablet 2.5-5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1620943110000,"x2":1620943110000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942608000,"x2":1620942608000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620942083000,"x2":1620942083000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1620949560000,"x2":1620949560000,"y":3,"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621141620000,"x2":1621141620000,"y":6,"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621141560000,"x2":1621141560000,"y":1,"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"isOpioid":true,"isOral":true},{"x":1621204440000,"x2":1621204440000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621204140000,"x2":1621204140000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"25","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621203240000,"x2":1621203240000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621201920000,"x2":1621201920000,"y":7,"name":"fentaNYL 50 mcg/mL injection","dose":"100","unit":"mcg","mme":0,"isOpioid":true,"isOral":false},{"x":1621254180000,"x2":1621254180000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621239000000,"x2":1621239000000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621225500000,"x2":1621225500000,"y":0,"name":"oxyCODONE (Roxicodone) tablet 5-10 mg","dose":"10","unit":"mg","mme":15,"isOpioid":true,"isOral":true},{"x":1621213680000,"x2":1621213680000,"y":5,"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":0,"isOpioid":true,"isOral":false},{"x":1621623180000,"x2":1621623180000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621602300000,"x2":1621602300000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621579860000,"x2":1621579860000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621559340000,"x2":1621559340000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621539960000,"x2":1621539960000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621515660000,"x2":1621515660000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621472460000,"x2":1621472460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621450680000,"x2":1621450680000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621431540000,"x2":1621431540000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621404240000,"x2":1621404240000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621385520000,"x2":1621385520000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621340640000,"x2":1621340640000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621323720000,"x2":1621323720000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621298460000,"x2":1621298460000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true},{"x":1621278060000,"x2":1621278060000,"y":8,"name":"acetaminophen (Tylenol) tablet 500 mg","dose":"500","unit":"mg","mme":0,"isOpioid":false,"isOral":true}]

@@ -7,6 +7,7 @@ import DashboardAPI from "~/services/DashboardAPI";
 import TrueImageAPI from "~/services/TrueImageAPI";
 import StandingOrdersAPI from "~/services/StandingOrdersAPI";
 import AredsCalcAPI from "~/services/AredsCalcAPI";
+import AntiMicrobialAPI from "~/services/AntiMicrobialAPI";
 
 export default (ctx, inject) => {
 
@@ -17,12 +18,13 @@ export default (ctx, inject) => {
       seal: new SealAPI(ctx.$axios, ctx.store),
       srcalc: new StrokeRiskAPI(ctx.$axios, ctx.store),
       wellscalc: new WellsCalcAPI(ctx.$axios, ctx.store),
-      a3pain: new A3PainAPI(ctx.$axios, ctx.store),
+      a3pain: new A3PainAPI(ctx.$axios, ctx.store, ctx.$moment),
       medreview: new MedReviewAPI(ctx.$axios, ctx.store),
       dashboard: new DashboardAPI(ctx.$axios, ctx.store),
       trueimage: new TrueImageAPI(ctx.$axios, ctx.store),
       standingorders: new StandingOrdersAPI(ctx.$axios, ctx.store),
-      aredscalc: new AredsCalcAPI(ctx.$axios, ctx.store)
+      aredscalc: new AredsCalcAPI(ctx.$axios, ctx.store),
+      antimicrobial: new AntiMicrobialAPI(ctx.$axios, ctx.store)
     }
   
     inject('services', services)
