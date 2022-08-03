@@ -9,6 +9,15 @@ export default class AntiMicrobialAPI {
         this.seal = new SealAPI($axios) ;
     }
 
+    inpatientdate() {
+        return this.axios({
+            method: 'get',
+            url: "/fhir-app/antimicrobial/api/v1/inpatientdate?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+        }).then((response) => {            
+            return response.data ;            
+        })        
+    }
+
     dblog(act, msg) {
         this.seal.dblog(act, msg, this.APP_ID) ;
     }

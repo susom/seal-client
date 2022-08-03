@@ -46,19 +46,29 @@
             centered hide-footer no-close-on-backdrop 
             title="Report Criteria" title-class="mx-auto">
             <b-row>
+                <b-col class="text-center">
+                    <b-form-radio-group
+                        v-model="launchModal.period_type"
+                        :options="[{value: 'I', text: 'Current Inpatient Period', disabled: (inpatient_start_date == '')}, {value:'C', text: 'Custom Period'}]"                        
+                    ></b-form-radio-group>                    
+                </b-col>                
+            </b-row>
+            <b-row class="mt-3">
                 <b-col class="text-right" cols="4">
                     <label for="startDate">Start Date</label>
                 </b-col>                
                 <b-col>
-                    <editable-date-picker v-model="launchModal.start_date" @error="(event) => {launchModal.errors.start_date = event}" />
+                    <b-form-input disabled="true" v-if="launchModal.period_type == 'I'" size="sm" :value="inpatient_start_date"/>
+                    <editable-date-picker v-model="launchModal.start_date" @error="(event) => {launchModal.errors.start_date = event}" v-else/>
                 </b-col>
             </b-row>
             <b-row class="mt-3">
-                <b-col class="text-right" cols="4">
+                <b-col class="text-right" cols="4">                    
                     <label for="endDate">End Date</label>
                 </b-col>
                 <b-col>
-                    <editable-date-picker v-model="launchModal.end_date" @error="(event) => {launchModal.errors.end_date = event}"/>
+                    <b-form-input disabled="true" v-if="launchModal.period_type == 'I'" size="sm" :value="inpatient_end_date"/>
+                    <editable-date-picker v-model="launchModal.end_date" @error="(event) => {launchModal.errors.end_date = event}" v-else/>
                 </b-col>                
             </b-row>  
             <b-row>
@@ -106,11 +116,14 @@ export default {
                 errors : {
                     start_date: null,
                     end_date: null
-                }
+                },
+                period_type : 'C'  // Custom
             },
             notes: "",
             showDebug: false,
-            resultText: ""
+            resultText: "",
+            inpatient_start_date: "" ,
+            inpatient_end_date : ""
         }
     },
     async fetch() {
@@ -123,13 +136,23 @@ export default {
         
         var _self = this ;
 
-        this.patient = await this.$services.seal.patient(this.$services.standingorders.APP_ID) ;        
+        this.patient = await this.$services.seal.patient(this.$services.standingorders.APP_ID) ;
+        var response = await this.$services.antimicrobial.inpatientdate() ;
+        if (response.inpatient_start_date) {
+            this.inpatient_start_date = response.inpatient_start_date ;
+            this.launchModal.period_type = 'I' ;
+        } else {
+            this.launchModal.period_type = 'C' ;
+        }
+
     },
     mounted() {
         console.log("In Mounted methood of antimicrobial page") ;
         this.launchModal.start_date = this.$moment().add(-7, 'days').format("MM/DD/YYYY") ;
-        this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;
+        this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;        
         console.log(this.launchModal) ;
+        this.inpatient_end_date = this.$moment().format("MM/DD/YYYY") ;
+
         this.$bvModal.show("launch-modal") ;                
     },
     computed: { 
@@ -155,8 +178,13 @@ export default {
 
             this.launchModal.loading = true ;
                             
-            this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
-            this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+            if (this.launchModal.period_type == 'I') {
+                this.launchModal.rpt_start_date = this.$moment(this.inpatient_start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+                this.launchModal.rpt_end_date = this.$moment(this.inpatient_end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+            } else {
+                this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+                this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+            }
 
             var rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime() ;
             var rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime() ;

@@ -1,6 +1,7 @@
 /* eslint-disable */
 
 import SealAPI from "./SealAPIService";
+import Highcharts from 'highcharts' ;
 
 export default class A3PainAPI {
 
@@ -364,39 +365,50 @@ export default class A3PainAPI {
 
         var days = [] ;
         var weeks = [] ;
-        
+        var dosage = [] ;
+        var currentDate = this.moment().add(1, 'days').startOf("day") ;
+
         if (totalMME > 60) {
             var remainingMME = Math.floor(totalMME / 5) * 5 ;
             var weekNbr = 0 ;
             while (remainingMME > 60) {      
                 weekNbr++ ;          
                 weeks.push({ week_nbr: weekNbr, mme: remainingMME}) ;
+
+                for (var i=0;i<7;i++) {
+                    dosage.push({strength: remainingMME, freq: 0, date: currentDate.valueOf()}) ;
+                    currentDate.add(1, 'days') ;
+                }
                 remainingMME = remainingMME * .9 ;
-                remainingMME = Math.floor(remainingMME / 5) * 5 ;
+                remainingMME = Math.floor(remainingMME / 5) * 5 ;                
             }
             totalMME = remainingMME ;
         }
-
-        if (totalMME <= 10 && totalMME > 0)
-            days = [ {dose: 5, freq: 'bid'}, {dose: 5, freq: 'bid'}] ;
+    
+        if (totalMME == 0)
+            dosage = [] ;
+        else if (totalMME <= 10)
+            dosage = dosage.concat([ {strength: 5, freq: 2}, {strength: 5, freq: 2}]) ;
         else if (totalMME <= 20)
-            days = [{dose: 5, freq: 'qid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'bid'}, {dose: 5, freq: 'bid'}] ;
+            dosage = dosage.concat([{strength: 5, freq: 4}, {strength: 5, freq: 4}, {strength: 5, freq: 2}, {strength: 5, freq: 2}]) ;
         else if (totalMME <= 30)
-            days = [{dose: 5, freq: '6 times a day'}, {dose: 5, freq: '6 times a day'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'bid'}, {dose: 5, freq: 'bid'}] ;
+            dosage = dosage.concat([{strength: 5, freq: 6}, {strength: 5, freq: 6}, {strength: 5, freq: 4}, {strength: 5, freq: 4}, {strength: 5, freq: 2}, {strength: 5, freq: 2}]) ;
         else if (totalMME <= 40)
-            days = [{dose: 10, freq: 'qid'}, {dose: 10, freq: 'qid'}, {dose: 10, freq: 'tid'}, {dose: 10, freq: 'tid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'bid'}, {dose: 5, freq: 'bid'}] ;
+            dosage = dosage.concat([{strength: 10, freq: 4}, {strength: 10, freq: 4}, {strength: 10, freq: 3}, {strength: 10, freq: 3}, {strength: 5, freq: 4}, {strength: 5, freq: 4}, {strength: 5, freq: 2}, {strength: 5, freq: 2}]) ;
         else if (totalMME <= 50)
-            days = [{dose: 10, freq: '5 times a day'}, {dose: 10, freq: '5 times a day'}, {dose: 10, freq: 'qid'}, {dose: 10, freq: 'qid'}, {dose: 10, freq: 'tid'}, {dose: 10, freq: 'tid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'bid'}, {dose: 5, freq: 'bid'}] ;
+            dosage = dosage.concat([{strength: 10, freq: 5}, {strength: 10, freq: 5}, {strength: 10, freq: 4}, {strength: 10, freq: 4}, {strength: 10, freq: 3}, {strength: 10, freq: 3}, {strength: 5, freq: 4}, {strength: 5, freq: 4}, {strength: 5, freq: 2}, {strength: 5, freq: 2}]) ;
         else if (totalMME <= 60)
-            days = [{dose: 10, freq: '6 times a day'}, {dose: 10, freq: '6 times a day'}, {dose: 10, freq: '5 times a day'}, {dose: 10, freq: '5 times a day'}, {dose: 10, freq: 'qid'}, {dose: 10, freq: 'qid'}, {dose: 10, freq: 'tid'}, {dose: 10, freq: 'tid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'qid'}, {dose: 5, freq: 'bid'}, {dose: 5, freq: 'bid'}] ;
-        
-        days.forEach(day => {
-            if (day.freq == 'qid') day.freq = '4 times a day' ;
-            if (day.freq == 'bid') day.freq = '2 times a day' ;
-            if (day.freq == 'tid') day.freq = '3 times a day' ;
+            dosage = dosage.concat([{strength: 10, freq: 6}, {strength: 10, freq: 6}, {strength: 10, freq: 5}, {strength: 10, freq: 5}, {strength: 10, freq: 4}, {strength: 10, freq: 4}, {strength: 10, freq: 3}, {strength: 10, freq: 3}, {strength: 5, freq: 4}, {strength: 5, freq: 4}, {strength: 5, freq: 2}, {strength: 5, freq: 2}]) ;
+
+        dosage.forEach(dose => {
+            if (!dose.date) {
+                dose.date = currentDate.valueOf() ;
+                currentDate.add(1, 'days') ;
+            }
         });
-        console.log("returning from roadchart : " + JSON.stringify({ days: days, weeks: weeks })) ;
-        return { days: days, weeks: weeks } ;
+        console.log("returning from roadchart : " + JSON.stringify(dosage)) ;
+        
+        return { dosage: dosage } ;
     }
 }
 /* eslint-enable */

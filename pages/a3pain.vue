@@ -152,6 +152,15 @@
                     <b-card-title class="chart-title">ROAD - Rational Opioids At Discharge</b-card-title>                    
                     <b-card-text>
                         <b-row>
+                            <b-col cols="10" style="font-size:1.1em;font-weight:bold;" class="mt-1">
+                                Oxycodone discharge schedule based on {{road.totalMME}} mg of MME opioid usage in past 24 hours.
+                            </b-col>
+                            <b-col cols="2" v-if="$store.getters.sealTeam">                                 
+                                <b-form-input type="text" v-model="road.totalMME" size="sm" style="width:25%;display:inline"/><b-button @click="testRoadChart" size="sm" class="ml-2">Redraw</b-button>
+                            </b-col>                            
+                        </b-row>
+                        <!--
+                        <b-row>
                             <b-col cols="4"> 
                                 Discharge at <b-form-input type="date" v-model="road.discharge_date" size="sm" style="width:30%;display:inline"/> 
                                 <b-form-input type="time" v-model="road.discharge_time" size="sm" style="width:25%;display:inline"/>
@@ -161,15 +170,67 @@
                                 <b-button @click="testRoadChart">Redraw Road Chart</b-button> <b-form-input type="text" v-model="road.totalMME" size="sm" style="width:25%;display:inline"/>
                             </b-col>
                         </b-row>
+                        -->
+                        <!--
                         <b-row class="mt-1 mb-1">
                             <b-col cols="6" style="font-size:1.2em;font-weight:bold">Total MME for Past 24 Hours: {{road.totalMME}}</b-col>
                             <b-col cols="6">Discharge schedule for <b-select style="width:30%" :options="['oxycodone']" value="oxycodone"></b-select></b-col>
                         </b-row>
-                        <!--
-                        <b-row>
-                            <b-col cols="12" style="font-size:1.2em;font-weight:bold">Discharge Opioid schedule for <b-select style="width:30%" :options="['oxycodone']" value="oxycodone"></b-select></b-col>
-                        </b-row>                        
                         -->
+                        <b-row class="mt-2">
+                            <b-col>
+                                <highchart 
+                                    :options="road.chart.chartOptions"                                     
+                                />
+                            </b-col>
+                        </b-row>
+                        <b-row>
+                            <b-col cols="6" offset="1">
+                                <b-table striped hover small
+                                    :items="road.chart.dosageTable" :fields="road.dosageTableFields" 
+                                    :total-rows="road.chart.dosageTable.length"
+                                    per-page="10" :current-page="road.currentPage">
+                                </b-table>
+                                <b-pagination                                 
+                                    :total-rows="road.chart.dosageTable.length" 
+                                    per-page="10" 
+                                    align="right"
+                                    hide-ellipsis
+                                    v-model="road.currentPage"  />
+                                <h5>
+                                    Total oxycodone 5mg tablets: {{totalNumberOfTablets}}
+                                </h5>    
+                            </b-col>
+                        </b-row>
+                        <!--
+                        <b-row class="mt-2">
+                            <b-col class="ml-5 mr-5">
+                                    <calendar
+                                    class="custom-calendar max-w-full"                                    
+                                    :attributes="road.chart.events"
+                                    disable-page-swipe
+                                    is-expanded
+                                    >
+                                        <template v-slot:day-content="{ day, attributes }">
+                                            <div class="flex flex-col h-full z-10 overflow-hidden">
+                                            <span class="day-label text-sm text-gray-900">{{ day.day }}</span>
+                                            <div class="flex-grow overflow-y-auto overflow-x-auto">
+                                                <p
+                                                v-for="attr in attributes"
+                                                :key="attr.key"
+                                                class="text-xs leading-tight rounded-sm p-1 mt-0 mb-1"
+                                                :class="attr.customData.class"
+                                                >
+                                                {{ attr.customData.title }}
+                                                </p>
+                                            </div>
+                                            </div>
+                                        </template>
+                                    </calendar>
+                            </b-col>
+                        </b-row>
+                        -->
+                        <!--
                         <b-row>
                             <b-col cols="12">
                                 <b-table-simple bordered>
@@ -181,7 +242,7 @@
                                         </b-tr>
                                         <b-tr>
                                             <b-th v-for="week in road.chart.weeks" class="text-center">
-                                                {{$moment().add(week.week_nbr - 1, 'weeks').format("MM/DD/YYYY")}} - {{$moment().add(week.week_nbr, 'weeks').add(-1, 'days').format("MM/DD/YYYY")}}
+                                                {{$moment().add(1, 'days').add(week.week_nbr - 1, 'weeks').format("MM/DD/YYYY")}} - {{$moment().add(week.week_nbr, 'weeks').add(-1, 'days').format("MM/DD/YYYY")}}
                                             </b-th>
                                         </b-tr>                                        
                                     </b-thead>
@@ -202,7 +263,7 @@
                                         </b-tr>
                                         <b-tr>
                                             <b-th v-for="(day, idx) in road.chart.days" class="text-center">
-                                                {{$moment().add(road.chart.weeks.length, 'weeks').add(idx, 'days').format('MM/DD/YYYY')}}
+                                                {{$moment().add(road.chart.weeks.length, 'weeks').add(idx + 1, 'days').format('MM/DD/YYYY')}}
                                             </b-th>                                            
                                         </b-tr>                                        
                                     </b-thead>
@@ -213,41 +274,10 @@
                                             </b-td>                                            
                                         </b-tr>                                        
                                     </b-tbody>
-                                </b-table-simple>
-                                <!--
-                                <b-table-simple bordered>
-                                    <b-thead head-variant="light">
-                                        <b-tr>
-                                            <b-th v-for="week in road.chart.weeks" class="text-center">
-                                                week # {{week.week_nbr}}
-                                            </b-th>
-                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
-                                                day # {{(road.chart.weeks.length * 7) + idx + 1}}
-                                            </b-th>                                            
-                                        </b-tr>
-                                        <b-tr>
-                                            <b-th v-for="week in road.chart.weeks" class="text-center">
-                                                {{$moment().add(week.week_nbr - 1, 'weeks').format("MM/DD/YYYY")}} - {{$moment().add(week.week_nbr, 'weeks').add(-1, 'days').format("MM/DD/YYYY")}}
-                                            </b-th>
-                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
-                                                {{$moment().add(road.chart.weeks.length, 'weeks').add(idx, 'days').format('MM/DD/YYYY')}}
-                                            </b-th>                                            
-                                        </b-tr>                                        
-                                    </b-thead>
-                                    <b-tbody>                                        
-                                        <b-tr>
-                                            <b-td v-for="week in road.chart.weeks" class="text-center">
-                                                {{week.mme}} mg <br /> per day
-                                            </b-td>
-                                            <b-td v-for="(day, idx) in road.chart.days" class="text-center">
-                                                {{day.dose}} mg <br/> {{day.freq}}
-                                            </b-td>                                            
-                                        </b-tr>                                        
-                                    </b-tbody>
-                                </b-table-simple>
-                                -->
+                                </b-table-simple>                                
                             </b-col>
                         </b-row>
+                        -->
                     </b-card-text>
                 </b-card>
             </b-col>
@@ -368,6 +398,7 @@
 import Highcharts from 'highcharts' ;
 import offlineExporting from 'highcharts/modules/offline-exporting'
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
+/* import Calendar from 'v-calendar/lib/components/calendar.umd' */
 
 offlineExporting(Highcharts) ;
 
@@ -412,10 +443,10 @@ offlineExporting(Highcharts) ;
     function syncExtremes(e) {
         var thisChart = this.chart;
 
-        if (e.trigger !== 'syncExtremes') { // Prevent feedback loop
+        if (e.trigger !== 'syncExtremes') { // Prevent feedback loop            
             Highcharts.charts.forEach(function(chart, idx) {
             //$.each(Highcharts.charts, function(idx, chart) {
-                if (chart !== thisChart) {
+                if (chart !== thisChart && chart.index != 3) {
                     try {
                         if (chart.xAxis[0].setExtremes) { // It is null while updating
                             setTimeout(function() {
@@ -456,7 +487,7 @@ offlineExporting(Highcharts) ;
     ] ;
 
 export default {
-    components: { EditableDatePicker },
+    components: { EditableDatePicker },  /* ,Calender */
     data () {
         return {
             resultText: "",
@@ -506,7 +537,16 @@ export default {
                 discharge_date: "",
                 discharge_time: "",
                 totalMME: 0,
-                chart: { weeks: [], days: [] }
+                currentPage: null,
+                chart: { weeks: [], days: [], dosage: [], events: [], dosageTable: [] },
+                dosageTableFields: [
+                    {label: 'Day', key: 'day'} ,
+                    {label: 'Date', key: 'date'} ,
+                    {label: 'Dosage', key: 'dosage'} ,
+                    {label: 'Total Opioid', key: 'total'},
+                    {label: 'Total 5mg tablets', key: 'total_tablets', class: 'text-center'}
+                ],
+                chartOptions: {}
             }
         }
     },
@@ -516,6 +556,11 @@ export default {
         },
         endDateFormatted() {
             return this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
+        },
+        totalNumberOfTablets() {
+            var totalTablets =  0 ;
+            this.road.chart.dosageTable.forEach(dose => totalTablets += dose.total_tablets) ;
+            return totalTablets ;
         }
     },
     async fetch() {
@@ -872,6 +917,11 @@ export default {
                     this.resultText += "\nBefore calling refreshMMEChart method...." ;
                     this.refreshMMEChart() ;
                     
+                    this.resultText += "\nBefore calling generateROADChart method..." ;
+                    
+                    this.generateRoadChart() ;
+                    
+                    this.resultText += "\nDone creating road chart" ;
                     this.resultText += "\n Done...calling pain services now" ;
 
                     } catch (err) {
@@ -1112,25 +1162,163 @@ export default {
             return this.$services.medreview.unique_merge(string1, string2) ;
         },        
         async generateRoadChart() {
-            console.log("Generate Road for :" + this.road.discharge_date + " " + this.road.discharge_time) ;
-            var disch_datetime = this.$moment(this.road.discharge_date + " " + this.road.discharge_time).valueOf() ;
-            var dischargeDateLong = this.$moment(disch_datetime).startOf('day').valueOf() ;
-            var dischargeDate24HrEarlierLong = this.$moment(dischargeDateLong).add(-1, 'days').valueOf() ;
-            if (dischargeDateLong >= this.launchModal.rpt_start_date_long && dischargeDateLong <= this.launchModal.rpt_end_date_long
-                && dischargeDate24HrEarlierLong >= this.launchModal.rpt_start_date_long && dischargeDate24HrEarlierLong <= this.launchModal.rpt_end_date_long)
-                this.road.totalMME = await this.$services.a3pain.getTotalMMEForLast24Hours(disch_datetime, this.marData, this.patient.epicPatientId, this.tlog) ;
-            else
-                this.road.totalMME = await this.$services.a3pain.getTotalMMEForLast24Hours(disch_datetime, null, this.patient.epicPatientId, this.tlog) ;
-            
-            this.tlog("In generateroadchart totalMME is: " + this.road.totalMME) ;
+            this.tlog("Generate Road for :" + this.road.discharge_date + " " + this.road.discharge_time) ;
+            try {
+                var disch_datetime = this.$moment(this.road.discharge_date + " " + this.road.discharge_time).valueOf() ;
+                var dischargeDateLong = this.$moment(disch_datetime).startOf('day').valueOf() ;
+                var dischargeDate24HrEarlierLong = this.$moment(dischargeDateLong).add(-1, 'days').valueOf() ;
+                if (dischargeDateLong >= this.launchModal.rpt_start_date_long && dischargeDateLong <= this.launchModal.rpt_end_date_long
+                    && dischargeDate24HrEarlierLong >= this.launchModal.rpt_start_date_long && dischargeDate24HrEarlierLong <= this.launchModal.rpt_end_date_long)
+                    this.road.totalMME = await this.$services.a3pain.getTotalMMEForLast24Hours(disch_datetime, this.marData, this.patient.epicPatientId, this.tlog) ;
+                else
+                    this.road.totalMME = await this.$services.a3pain.getTotalMMEForLast24Hours(disch_datetime, null, this.patient.epicPatientId, this.tlog) ;
+                
+                this.tlog("In generateroadchart totalMME is: " + this.road.totalMME) ;
+                
+                this.road.chart.dosage = this.$services.a3pain.roadChart(this.road.totalMME).dosage ;
 
-            this.road.chart = this.$services.a3pain.roadChart(this.road.totalMME) ;
+                if (this.road.chart.dosage.length == 0)
+                {
+                    this.tlog("No Dosage has bee computed.. returning") ;
+                    return ;
+                }
+                var roadChartOptions = this.getDefaultChartConfig({
+                    start_time: this.road.chart.dosage[0].date,
+                    end_time: this.road.chart.dosage[this.road.chart.dosage.length - 1].date,                
+                    //type: 'column', 
+                    title: '',
+                    height: 400
+                }) ;
+                roadChartOptions.events =  {} ; // resetting setExtremes method
+                roadChartOptions.chart.id = 'roadChart' ;
+                roadChartOptions.tooltip.useHTML = true ;
+                roadChartOptions.yAxis[0].title = {
+                    text: "Total mg of Oxycodone"
+                }
+                roadChartOptions.tooltip.formatter = function () {           
+                    var tip = "" ;
+                    if (this.point.freq > 0) { 
+                        tip = this.point.y + " mg per day" ;
+                        tip += "<br>" + this.point.strength + " mg " + this.point.freq + " times a day" ; 
+                    } else {
+                        tip = this.point.strength + " mg per day" ; 
+                    }
+                    tip += "<br><span style='font-size:smaller'>" + Highcharts.dateFormat('%m/%d/%Y', this.point.x) + "</span>" ;
 
+                    return tip ;
+                } ;
+
+                roadChartOptions.plotOptions = {
+                    line: {
+                        dataLabels: {
+                            enabled: true,
+                            formatter: function() {
+                                return this.y + " mg" ;
+                            }
+                        }
+                    }
+                } ;
+
+                roadChartOptions.series = [{
+                    data: this.road.chart.dosage.map(dose => { return { x: dose.date, y : (dose.freq > 0 ? dose.strength * dose.freq : dose.strength), freq: dose.freq, strength: dose.strength } }) ,
+                    xDateFormat: '%m/%d/%Y',
+                    type: 'line',
+                    name: ''
+                }] ;
+
+                this.road.chart.chartOptions = roadChartOptions ;
+                var key = 0 ;
+                this.road.chart.events = this.road.chart.dosage.map(dose => {
+                    if (dose.freq > 0)
+                        return { key: key++, customData: { title: dose.strength + " mg " + dose.freq + " times a day", class: 'text-info text-small ml-2'} , dates: new Date(dose.date) } ;
+                    else 
+                        return { key: key++, customData: { title: dose.strength + " mg per day", class: 'text-info text-small ml-2'} , dates: new Date(dose.date) } ;
+                }) ;
+
+                var key = 1 ;
+                this.road.chart.dosageTable = this.road.chart.dosage.map(dose => {
+                    if (dose.freq > 0)
+                        return { day: "day " + key++, date: this.$moment(dose.date).format("MM/DD/YYYY"),  dosage: dose.strength + " mg " + dose.freq + " times a day", 
+                            total: (dose.freq * dose.strength) + " mg", total_tablets: ((dose.freq * dose.strength) / 5) } ;
+                    else 
+                        return { day: "day " + key++, date: this.$moment(dose.date).format("MM/DD/YYYY"), dosage: dose.strength + " mg per day", 
+                            total: dose.strength + " mg" , total_tablets: (dose.strength / 5)} ;
+                }) ;
+
+                this.tlog("Road Chart Options") ;
+                this.tlog(this.road.chart) ;
+            } catch (err) {
+                this.tlog("Error in generateRoadChart Method :" + err) ;
+            }
 
         },
         testRoadChart() {
             console.log("road chart test invoked") ;                        
             this.road.chart = this.$services.a3pain.roadChart(this.road.totalMME) ;
+            
+            var chartOptions = this.getDefaultChartConfig({
+                start_time: this.road.chart.dosage[0].date,
+                end_time: this.road.chart.dosage[this.road.chart.dosage.length - 1].date,                
+                //type: 'column', 
+                title: '',
+                height: 400
+            }) ;
+
+            chartOptions.tooltip.useHTML = true ;
+            chartOptions.yAxis[0].title = {
+                text: "Total mg of Oxycodone"
+            }
+            chartOptions.tooltip.formatter = function () {           
+                var tip = "" ;
+                if (this.point.freq > 0) { 
+                    tip = this.point.y + " mg per day" ;
+                    tip += "<br>" + this.point.strength + " mg " + this.point.freq + " times a day" ; 
+                } else {
+                    tip = this.point.strength + " mg per day" ; 
+                }
+                tip += "<br><span style='font-size:smaller'>" + Highcharts.dateFormat('%m/%d/%Y', this.point.x) + "</span>" ;
+
+                return tip ;
+            } ;
+
+            chartOptions.plotOptions = {
+                line: {
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function() {
+                            return this.y + " mg" ;
+                         }
+                    }
+                }
+            } ;
+
+            chartOptions.series = [{
+                data: this.road.chart.dosage.map(dose => { return { x: dose.date, y : (dose.freq > 0 ? dose.strength * dose.freq : dose.strength), freq: dose.freq, strength: dose.strength } }) ,
+                xDateFormat: '%m/%d/%Y',
+                type: 'line'
+            }] ;
+
+            this.road.chart.chartOptions = chartOptions ;
+            var key = 0 ;
+            this.road.chart.events = this.road.chart.dosage.map(dose => {
+                if (dose.freq > 0)
+                    return { key: key++, customData: { title: dose.strength + " mg " + dose.freq + " times a day", class: 'text-info text-small ml-2'} , dates: new Date(dose.date) } ;
+                else 
+                    return { key: key++, customData: { title: dose.strength + " mg per day", class: 'text-info text-small ml-2'} , dates: new Date(dose.date) } ;
+            }) ;
+
+            var key = 1 ;
+            this.road.chart.dosageTable = this.road.chart.dosage.map(dose => {
+                if (dose.freq > 0)
+                    return { day: "day " + key++, date: this.$moment(dose.date).format("MM/DD/YYYY"),  dosage: dose.strength + " mg " + dose.freq + " times a day", 
+                        total: (dose.freq * dose.strength) + " mg", total_tablets: ((dose.freq * dose.strength) / 5) } ;
+                else 
+                    return { day: "day " + key++, date: this.$moment(dose.date).format("MM/DD/YYYY"), dosage: dose.strength + " mg per day", 
+                        total: dose.strength + " mg" , total_tablets: (dose.strength / 5)} ;
+            }) ;
+
+
+            console.log(this.road.chart) ;
         },
         mousemove(e) {
             var chart,
@@ -1280,8 +1468,7 @@ export default {
                     if (this.total)
                         return parseFloat(this.total.toFixed(2)) ;
                     else
-                        return 0 ;
-                    //return Highcharts.numberFormat(this.total, 1, ',', '.') ;
+                        return 0 ;                 
                 }
             }
             
@@ -1376,20 +1563,8 @@ export default {
                                     text: 'Print Chart',
                                     onclick: function() {
                                         this.print();
-                                    },
-                                } /*,
-                                {
-                                    text: 'Download JPG',
-                                    onclick: function() {
-                                        this.exportChartLocal({type:"image/jpeg"}) ;
                                     }
-                                },
-                                {
-                                    text: 'Download PNG',
-                                    onclick: function()     {
-                                        this.exportChartLocal({type:"image/png"}) ;
-                                    }
-                                } */]
+                                }]
                             }
                         }, 
                         error: function(opt, err) {
@@ -1679,5 +1854,76 @@ export default {
         padding-right: 5px;
         padding-left: 5px;
         color: red ;
+    }
+</style>
+
+<style>
+    .custom-calendar.vc-container {
+        --day-border: 1px solid #b8c2cc;
+        --day-border-highlight: 1px solid #b8c2cc;
+        --day-width: 90px;
+        --day-height: 90px;
+        --weekday-bg: #f8fafc;
+        --weekday-border: 1px solid #eaeaea;
+        border-radius: 0;
+        width: 100%
+    }
+
+    .custom-calendar.vc-container .vc-header {
+        background-color: #f1f5f8;
+        padding: 10px 0
+    }
+
+    .custom-calendar.vc-container .vc-weeks {
+        padding: 0
+    }
+
+    .custom-calendar.vc-container .vc-weekday {
+        background-color: var(--weekday-bg);
+        border-bottom: var(--weekday-border);
+        border-top: var(--weekday-border);
+        padding: 5px 0
+    }
+
+    .custom-calendar.vc-container .vc-day {
+        padding: 0 5px 3px;
+        text-align: left;
+        height: 60px;
+        min-width: 60px;
+        background-color: #fff
+    }
+
+    .custom-calendar.vc-container .vc-day.weekday-1,
+    .custom-calendar.vc-container .vc-day.weekday-7 {
+        background-color: #eff8ff
+    }
+
+    .custom-calendar.vc-container .vc-day:not(.on-bottom) {
+        border-bottom: var(--day-border)
+    }
+
+    .custom-calendar.vc-container .vc-day:not(.on-bottom).weekday-1 {
+        border-bottom: var(--day-border-highlight)
+    }
+
+    .custom-calendar.vc-container .vc-day:not(.on-right) {
+        border-right: var(--day-border)
+    }
+
+    .custom-calendar.vc-container .vc-day-dots {
+        margin-bottom: 5px
+    }
+
+    .c-day:not(.in-month) {
+        opacity: 0;
+        pointer-events: none
+    }
+
+    .av-highlight {
+        width: 100%;
+        height: 100%
+    }
+    .text-small {
+        font-size: .9em;        
     }
 </style>

@@ -26,9 +26,13 @@ export const mutations = {
     }
 }
 
+// || state.user.user_id == "S0169406" /* Ron */                    
 export const getters = {
     sealTeam(state) {
-        return (state.user.user_id == "S0311772" || state.user.user_id == "SHC" || state.user.user_id == "0")
+        return (state.user.user_id == "S0311772" /* SRINI */
+                    || state.user.user_id == "S0100197" /* Susan */
+                    || state.user.user_id == "S0296837" /* JoeP */                    
+                    || state.user.user_id == "SHC" || state.user.user_id == "0")
     }
 }
 
