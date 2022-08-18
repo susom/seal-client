@@ -137,6 +137,7 @@ export default class SealAPI {
     }
 
     /**
+     * Returns list of Inpatient Encounters
      * 
      * @param {start date} start_date 
      * @param {end date} end_date 
@@ -145,11 +146,11 @@ export default class SealAPI {
     encounters(start_date, end_date, nextUrl, appId) {    
 
         var url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId +
-            "&start_date=" + start_date + "&end_date=" + end_date ;
+            "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=inpatient";
 
         if (nextUrl && nextUrl !== '') {
             url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId + 
-                    "&start_date=" + start_date + "&end_date=" + end_date + "&next=" + encodeURIComponent(nextUrl) ;
+                    "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=inpatient" + "&next=" + encodeURIComponent(nextUrl) ;
         }
 
         return this.axios({
@@ -159,6 +160,32 @@ export default class SealAPI {
             return response.data.data ;
         })        
     }
+
+    /**
+     * Returns list of Surgical Encounters
+     * 
+     * @param {start date} start_date 
+     * @param {end date} end_date 
+     * @returns Surgical Encounters
+     */
+     surgical_encounters(start_date, end_date, nextUrl, appId) {    
+
+        var url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId +
+            "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=surgery" ;
+
+        if (nextUrl && nextUrl !== '') {
+            url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId + 
+                    "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=surgery" + "&next=" + encodeURIComponent(nextUrl) ;
+        }
+
+        return this.axios({
+            method: 'get',
+            url: url
+        }).then((response) => {            
+            return response.data.data ;
+        })        
+    }
+
 
     /**
      * 

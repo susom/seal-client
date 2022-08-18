@@ -23,16 +23,6 @@ export default class A3PainAPI {
             return response.data ;            
         })        
     }
-
-    encounters(start_date, end_date) {    
-        return this.axios({
-            method: 'get',
-            url: "/fhir-app/a3pain/api/v1/enc?pid=" + this.store.state.patientId + "&aid=" + this.APP_ID +
-                    "&start_date=" + start_date + "&end_date=" + end_date 
-        }).then((response) => {            
-            return response.data.data ;
-        })        
-    }
     
     medstats(start_date, end_date, nextUrl) {    
 
@@ -360,13 +350,16 @@ export default class A3PainAPI {
         this.seal.dblog(act, msg, this.APP_ID) ;
     }
 
-    roadChart(totalMME) {
+    roadChart(totalMME, distStartDate) {
         console.log("In roadChart totalMME :" + totalMME) ;        
 
         var days = [] ;
         var weeks = [] ;
         var dosage = [] ;
-        var currentDate = this.moment().add(1, 'days').startOf("day") ;
+        //var currentDate = this.moment().add(1, 'days').startOf("day") ;
+        var currentDate = this.moment(distStartDate, "MM/DD/YYYY").startOf("day") ;
+
+        totalMME = Math.round(totalMME / 1.5) ;
 
         if (totalMME > 60) {
             var remainingMME = Math.floor(totalMME / 5) * 5 ;

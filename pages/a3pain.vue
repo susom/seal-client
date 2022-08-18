@@ -148,40 +148,60 @@
 
         <b-row class="mt-3 ml-2 mb-5"  v-if="$store.getters.sealTeam">
             <b-col cols="11">
-                <b-card class="shadow-lg rounded-lg">
+                <b-card class="shadow-lg rounded-lg"  v-if="!road.opioidNaivePatient">
+                    <b-card-title class="chart-title">ROAD - Rational Opioids At Discharge</b-card-title>                    
+                    <b-card-text>
+                        <b-row class="mt-5 mb-3">
+                            <b-col cols="11" class="text-center h4">
+                                This patient is not an opioid naive patient. This app is designed for use in opioid naive patients.                                
+                            </b-col>                            
+                        </b-row>
+                    </b-card-text>                                        
+                </b-card>
+                <b-card class="shadow-lg rounded-lg"  v-if="!road.hasSurgicalEncounter">
+                    <b-card-title class="chart-title">ROAD - Rational Opioids At Discharge</b-card-title>                    
+                    <b-card-text>
+                        <b-row class="mt-5 mb-3">
+                            <b-col cols="11" class="text-center h4">
+                                This patient is not recovering from surgery. This app is not designed for use in cases of acute non-surgical pain.
+                            </b-col>                            
+                        </b-row>
+                    </b-card-text>                                        
+                </b-card>                
+                <b-card class="shadow-lg rounded-lg"  v-if="road.opioidNaivePatient && road.hasSurgicalEncounter">
                     <b-card-title class="chart-title">ROAD - Rational Opioids At Discharge</b-card-title>                    
                     <b-card-text>
                         <b-row>
                             <b-col cols="10" style="font-size:1.1em;font-weight:bold;" class="mt-1">
-                                Oxycodone discharge schedule based on {{road.totalMME}} mg of MME opioid usage in past 24 hours.
-                            </b-col>
+                                Oxycodone discharge schedule based on {{road.totalMME}} MME opioid usage in past 24 hours.
+                            </b-col>    
                             <b-col cols="2" v-if="$store.getters.sealTeam">                                 
                                 <b-form-input type="text" v-model="road.totalMME" size="sm" style="width:25%;display:inline"/><b-button @click="testRoadChart" size="sm" class="ml-2">Redraw</b-button>
                             </b-col>                            
                         </b-row>
-                        <!--
-                        <b-row>
-                            <b-col cols="4"> 
-                                Discharge at <b-form-input type="date" v-model="road.discharge_date" size="sm" style="width:30%;display:inline"/> 
-                                <b-form-input type="time" v-model="road.discharge_time" size="sm" style="width:25%;display:inline"/>
-                            </b-col>
-                            <b-col cols="6"> 
-                                <b-button @click="generateRoadChart">Generate Chart</b-button> 
-                                <b-button @click="testRoadChart">Redraw Road Chart</b-button> <b-form-input type="text" v-model="road.totalMME" size="sm" style="width:25%;display:inline"/>
+                        <b-row v-if="road.totalMME > 90" class="mt-2">
+                            <b-col cols="11">
+                                <b style="color:red">Disclaimer: </b>This patient's opioid usage in the past 24 hours exceeded 90 mg of MME. 
+                                Please re-evaluate the patient's pain management plan. If proceeding with discharge planning at ≥90 MME/day total, we recommend 
+                                specialist referral, careful justification of the opioid prescription, and naloxone co-prescription.
                             </b-col>
                         </b-row>
-                        -->
-                        <!--
-                        <b-row class="mt-1 mb-1">
-                            <b-col cols="6" style="font-size:1.2em;font-weight:bold">Total MME for Past 24 Hours: {{road.totalMME}}</b-col>
-                            <b-col cols="6">Discharge schedule for <b-select style="width:30%" :options="['oxycodone']" value="oxycodone"></b-select></b-col>
-                        </b-row>
-                        -->
                         <b-row class="mt-2">
                             <b-col>
                                 <highchart 
                                     :options="road.chart.chartOptions"                                     
                                 />
+                            </b-col>
+                        </b-row>
+                        <b-row>
+                            <b-col offset="1" class="mb-2" cols="11">
+                                Please maximize non-pharmacological and non-opioid analgesic options in addition to this opioid prescription recommendation.
+                            </b-col>
+                        </b-row>
+                        <b-row class="mb-2">
+                            <b-col cols="6" offset="1">
+                                Distribution Start Date: 
+                                <editable-date-picker v-model="road.distributionStartDate" style="width:30%;display:inline-block" class="ml-2" @change="testRoadChart()"/>
                             </b-col>
                         </b-row>
                         <b-row>
@@ -197,87 +217,11 @@
                                     align="right"
                                     hide-ellipsis
                                     v-model="road.currentPage"  />
-                                <h5>
+                                <h5 v-if="road.totalMME < 90">
                                     Total oxycodone 5mg tablets: {{totalNumberOfTablets}}
                                 </h5>    
                             </b-col>
                         </b-row>
-                        <!--
-                        <b-row class="mt-2">
-                            <b-col class="ml-5 mr-5">
-                                    <calendar
-                                    class="custom-calendar max-w-full"                                    
-                                    :attributes="road.chart.events"
-                                    disable-page-swipe
-                                    is-expanded
-                                    >
-                                        <template v-slot:day-content="{ day, attributes }">
-                                            <div class="flex flex-col h-full z-10 overflow-hidden">
-                                            <span class="day-label text-sm text-gray-900">{{ day.day }}</span>
-                                            <div class="flex-grow overflow-y-auto overflow-x-auto">
-                                                <p
-                                                v-for="attr in attributes"
-                                                :key="attr.key"
-                                                class="text-xs leading-tight rounded-sm p-1 mt-0 mb-1"
-                                                :class="attr.customData.class"
-                                                >
-                                                {{ attr.customData.title }}
-                                                </p>
-                                            </div>
-                                            </div>
-                                        </template>
-                                    </calendar>
-                            </b-col>
-                        </b-row>
-                        -->
-                        <!--
-                        <b-row>
-                            <b-col cols="12">
-                                <b-table-simple bordered>
-                                    <b-thead head-variant="light">
-                                        <b-tr>
-                                            <b-th v-for="week in road.chart.weeks" class="text-center">
-                                                week # {{week.week_nbr}}
-                                            </b-th>
-                                        </b-tr>
-                                        <b-tr>
-                                            <b-th v-for="week in road.chart.weeks" class="text-center">
-                                                {{$moment().add(1, 'days').add(week.week_nbr - 1, 'weeks').format("MM/DD/YYYY")}} - {{$moment().add(week.week_nbr, 'weeks').add(-1, 'days').format("MM/DD/YYYY")}}
-                                            </b-th>
-                                        </b-tr>                                        
-                                    </b-thead>
-                                    <b-tbody>                                        
-                                        <b-tr>
-                                            <b-td v-for="week in road.chart.weeks" class="text-center">
-                                                {{week.mme}} mg <br /> per day
-                                            </b-td>
-                                        </b-tr>                                        
-                                    </b-tbody>
-                                </b-table-simple>
-                                <b-table-simple bordered>
-                                    <b-thead head-variant="light">
-                                        <b-tr>
-                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
-                                                day # {{(road.chart.weeks.length * 7) + idx + 1}}
-                                            </b-th>                                            
-                                        </b-tr>
-                                        <b-tr>
-                                            <b-th v-for="(day, idx) in road.chart.days" class="text-center">
-                                                {{$moment().add(road.chart.weeks.length, 'weeks').add(idx + 1, 'days').format('MM/DD/YYYY')}}
-                                            </b-th>                                            
-                                        </b-tr>                                        
-                                    </b-thead>
-                                    <b-tbody>                                        
-                                        <b-tr>
-                                            <b-td v-for="(day, idx) in road.chart.days" class="text-center">
-                                                {{day.dose}} mg <br/> {{day.freq}}
-                                            </b-td>                                            
-                                        </b-tr>                                        
-                                    </b-tbody>
-                                </b-table-simple>                                
-                            </b-col>
-                        </b-row>
-                        -->
                     </b-card-text>
                 </b-card>
             </b-col>
@@ -285,11 +229,11 @@
 
         <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
             <b-col cols="11">
-                <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
+                <b-link @click="showDebug = !showDebug" style="font-size:small">SEAL Logs Link</b-link>
                 <b-card v-show="showDebug">                    
                     <b-card-title>Debug Info</b-card-title>
                     <b-card-text>
-                        <b-textarea v-model="resultText" rows="10" auto-grow />
+                        <b-textarea v-model="resultText" rows="10" auto-grow id="logText" />
                     </b-card-text>
                 </b-card>
             </b-col>                        
@@ -536,6 +480,7 @@ export default {
             road : {
                 discharge_date: "",
                 discharge_time: "",
+                distributionStartDate: "",
                 totalMME: 0,
                 currentPage: null,
                 chart: { weeks: [], days: [], dosage: [], events: [], dosageTable: [] },
@@ -546,7 +491,9 @@ export default {
                     {label: 'Total Opioid', key: 'total'},
                     {label: 'Total 5mg tablets', key: 'total_tablets', class: 'text-center'}
                 ],
-                chartOptions: {}
+                chartOptions: {},
+                opioidNaivePatient: true, // display the road by default
+                hasSurgicalEncounter: true // has inpatient surgical record
             }
         }
     },
@@ -561,10 +508,23 @@ export default {
             var totalTablets =  0 ;
             this.road.chart.dosageTable.forEach(dose => totalTablets += dose.total_tablets) ;
             return totalTablets ;
+        },
+        roadEnabled() {
+            return this.road.hasSurgicalEncounter && this.road.opioidNaivePatient ;
         }
     },
     async fetch() {
-
+        console.log("In Fetch method of a3 pain tab page") ;
+        
+        var response = await this.$services.antimicrobial.inpatientdate() ;            
+        this.resultText += "\nInpatient date :" + JSON.stringify(response) ;
+        if (response.inpatient_start_date) {
+            this.road.hasSurgicalEncounter = await this.surgicalEncounter(response.inpatient_start_date) ;
+            this.resultText += "\nHas Surgical Encounter :" + this.road.hasSurgicalEncounter ;            
+            if (!this.road.hasSurgicalEncounter) return ;
+            this.road.opioidNaivePatient = await this.opioidNaive(response.inpatient_start_date) ;
+            this.resultText += "\nIs Opioid Naive Patient :" + this.road.opioidNaivePatient ;            
+        }        
     },
     mounted () {
         console.log("In mounted method of the a3 pain tab page") ;    
@@ -585,15 +545,71 @@ export default {
         
         this.road.discharge_date = this.$moment().format("YYYY-MM-DD") ;
         this.road.discharge_time = this.$moment().format("HH:mm") ;
-        
+
+        this.road.distributionStartDate = this.$moment().add(1, 'days').format("MM/DD/YYYY") ;
+                
         //this.marData = this.getLocalMarData() ;
         //this.medCategories = this.getLocalMedCategories() ;
         //this.medChartOptions = this.getLocalMedChartOptions() ;
-        //this.mmeStackedChartOptions = this.getLocalStackedChartOptions() ;
+        //this.mmeStackedChartOptions = this.getLocalStackedChartOptions() ;            
 
     },
+    watch: {
+        'road.distributionStartDate': function (newVal, oldVal) { 
+            if (oldVal == "") return ;
+            this.testRoadChart() ;
+        }
+    },
     methods : { 
+        async surgicalEncounter(inpatientStartDate) {
+            this.resultText += "\nIn Surgical Encountner Method...." ;
 
+            var stdt = this.$moment(inpatientStartDate, "MM/DD/YYYY").format("YYYY-MM-DD") ;
+            var enddt = this.$moment().format("YYYY-MM-DD") ;
+            
+            this.resultText += "\nFinding Surgical Encounters after " + stdt ;
+            var encounters = await this.$services.seal.surgical_encounters(stdt, enddt, '', this.$services.a3pain.APP_ID) ;
+            this.resultText += "\n Surgical Encounters :" + JSON.stringify(encounters) ;
+
+            if (encounters.length > 0)
+                return true ;
+            else
+                return false ;
+
+        },
+        
+        async opioidNaive(inpatientStartDate) {
+            this.resultText += "\nIn OpioidNative Method...." ;
+            
+            var responses = [] ;
+
+            var enddt = this.$moment(inpatientStartDate, "MM/DD/YYYY").add(-1, "months") ;
+            var stdt = enddt.clone().add(-2, "months") ;
+            
+            this.resultText += "\nOpioid Naive: Getting med data for st dt " + stdt.format("YYYY-MM-DD") + " end dt " + enddt.format("YYYY-MM-DD") ;
+            var response = await this.$services.seal.medicationData(stdt.format("YYYY-MM-DD"), enddt.format("YYYY-MM-DD"), "ALL", '', this.$services.a3pain.APP_ID ) ;
+            //response = await this.$services.a3pain.medstats(stdt.format("YYYY-MM-DD"), enddt.format("YYYY-MM-DD")) ;                
+            responses.push(response) ;
+
+            this.resultText += "\n MedStat3 Call1 nexturl :" + (response.nextUrl?response.nextUrl:"Doesn't exist") ;
+
+            while (response.nextUrl) {
+                response = await this.$services.seal.medicationData(stdt.format("YYYY-MM-DD"), enddt.format("YYYY-MM-DD"), "ALL", response.nextUrl, this.$services.a3pain.APP_ID ) ;
+                for (var cIdx = 0; cIdx < response.cats.length ; cIdx++) {
+                    var med = response.cats[cIdx] ;
+                    if (!med.pharma_class) med.pharma_class = "" ;
+                    var isOpioid = (med.pharma_class.toLowerCase().indexOf("opioid") >= 0) ;
+                    this.resultText += "\nMedStat3 Processing Med :" + med.name + ": Pharma :" + med.pharma_class + ": Opioid: " + isOpioid ;
+                    if (isOpioid) {
+                        this.resultText += "\n Returing false for opioidNaive patient check" ;
+                        return false ;
+                    }                        
+                }                                        
+            }
+            
+            this.resultText += "\n Returing true for opioidNaive patient check" ;
+            return true  ;
+        }, 
         async populateData() {
             try {
             var _self = this ;
@@ -618,7 +634,7 @@ export default {
 
             this.patient = await this.$services.a3pain.patient() ;      
 
-            var encounters = await this.$services.a3pain.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
+            var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.a3pain.APP_ID) ;
 
             var responses = [] ;
             var response = {} ;
@@ -1175,7 +1191,7 @@ export default {
                 
                 this.tlog("In generateroadchart totalMME is: " + this.road.totalMME) ;
                 
-                this.road.chart.dosage = this.$services.a3pain.roadChart(this.road.totalMME).dosage ;
+                this.road.chart.dosage = this.$services.a3pain.roadChart(this.road.totalMME, this.road.distributionStartDate).dosage ;
 
                 if (this.road.chart.dosage.length == 0)
                 {
@@ -1226,6 +1242,19 @@ export default {
                     name: ''
                 }] ;
 
+                roadChartOptions.series[0].data = roadChartOptions.series[0].data.map(point => { 
+                    point.color = (point.y > 60 ? "red": "green") ;
+                    return point ;
+                }) ;
+
+
+                roadChartOptions.yAxis[0].plotLines = [{
+                    color: '#FF0000',
+                    dashStyle: 'ShortDash',
+                    width: 2,
+                    value: 60
+                }] ;
+
                 this.road.chart.chartOptions = roadChartOptions ;
                 var key = 0 ;
                 this.road.chart.events = this.road.chart.dosage.map(dose => {
@@ -1254,7 +1283,7 @@ export default {
         },
         testRoadChart() {
             console.log("road chart test invoked") ;                        
-            this.road.chart = this.$services.a3pain.roadChart(this.road.totalMME) ;
+            this.road.chart = this.$services.a3pain.roadChart(this.road.totalMME, this.road.distributionStartDate) ;
             
             var chartOptions = this.getDefaultChartConfig({
                 start_time: this.road.chart.dosage[0].date,
@@ -1288,14 +1317,29 @@ export default {
                         formatter: function() {
                             return this.y + " mg" ;
                          }
-                    }
+                    }                    
                 }
             } ;
 
             chartOptions.series = [{
-                data: this.road.chart.dosage.map(dose => { return { x: dose.date, y : (dose.freq > 0 ? dose.strength * dose.freq : dose.strength), freq: dose.freq, strength: dose.strength } }) ,
+                data: this.road.chart.dosage.map(dose => { 
+                    return { x: dose.date, y : (dose.freq > 0 ? dose.strength * dose.freq : dose.strength), 
+                            freq: dose.freq, strength: dose.strength } 
+                }) ,
                 xDateFormat: '%m/%d/%Y',
                 type: 'line'
+            }] ;
+
+            chartOptions.series[0].data = chartOptions.series[0].data.map(point => { 
+                point.color = (point.y > 60 ? "red": "green") ;
+                return point ;
+            }) ;
+
+            chartOptions.yAxis[0].plotLines = [{
+                color: '#FF0000',
+                dashStyle: 'ShortDash',
+                width: 2,
+                value: 60
             }] ;
 
             this.road.chart.chartOptions = chartOptions ;
@@ -1381,6 +1425,7 @@ export default {
                         }                
                     },
                     "min": 0,
+                    "max": 10,
                     "opposite": true
                 }        
             ] ; 

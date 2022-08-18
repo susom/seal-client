@@ -3,7 +3,7 @@
     <b-container fluid  class="nopadding">
         <b-row class="my-2" no-gutters>
             <b-col sm="2" xl="1" class="text-center">
-                <b-img src="drug_reaction_app.png" style="height:100px"></b-img>
+                <b-img src="antimicrobial_app.png" style="height:100px"></b-img>
             </b-col>
             <b-col sm="9" xl="10" class="text-left ml-2">                
                 <p class="pt-2">

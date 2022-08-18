@@ -63,6 +63,7 @@
                             </b-col>
                             <b-col>
                                 <b-btn size="sm" variant="primary" @click="fetchData">Fetch Data</b-btn>
+                                <b-btn size="sm" variant="primary" @click="sendAGLData">Send AGL Messagae</b-btn>
                             </b-col>
                         </b-row>
                         <b-row>
@@ -83,7 +84,7 @@
                     <b-card-text>
                         <b-row>
                             <b-col cols="12">
-                                <b-form-textarea max-rows="20" plaintext size="sm" v-model="result"/>                                
+                                <b-form-textarea max-rows="20" plaintext size="sm" v-model="result" id="result"/>                                
                             </b-col>
                         </b-row>
                     </b-card-text>
@@ -94,6 +95,62 @@
 </template>
 
 <script>
+
+    var epicToken = "" ;
+    
+    function oLog(text) {
+        document.getElementById("result").value = document.getElementById("result").value + "\n" + text  ;
+    }
+
+    function Listener(event) {
+      oLog("********* In Listener method...") ;
+      oLog(event) ;
+        for (var type in event.data) {
+            oLog("Inside loop type :" + type) ;            
+            var payload = event.data[type];
+            oLog("Payload ") ;
+            oLog(JSON.stringify(payload)) ;
+            // NDC 35356-0839
+            switch (type) {
+                case "token":
+                    // this is the token passed down by Epic
+                    // which every post message needs to include
+                    epicToken = payload;
+                    break;
+                case "error":
+                    // payload is an error string
+                    break;
+                case "actions":
+                    // payload is a list of features (or actions)
+                    for (var feature in payload) {
+                        // feature is a string representing a single feature
+                    }
+                    break;
+                case "state":
+                    // payload is some state which you have saved
+                    // before AGL hibernated
+                    break;
+                case "actionExecuted":
+                    // payload is a boolean set to "true" if the action
+                    // completed, "false" otherwise
+                    break;
+                case "errorCodes":
+                    // payload is an array of all errors which might have been // encountered
+                    break;
+                case "historyPackage":
+                    // payload is an object that contains the history state you saved 
+                    // as well as a Boolean indicating whether Hyperspace came out of hibernation
+                    break;
+                case "history":
+                    // payload is a string that corresponds to the history button the user clicked
+                    break;
+                default:
+                    // if new properties get implemented which are not
+                    // handled above, you end up here
+                    break;
+            }
+        }
+    }
 
 /* eslint-disable */
 
@@ -128,6 +185,19 @@ export default {
 
         this.patient = await this.$services.a3pain.patient() ;
     },
+    mounted() {
+        try {
+            this.result += "\nIn mounted method... adding windows listener" ;
+            window.addEventListener("message", Listener, false);
+            this.result += "\nIn mounted method... sending post messaagae" ;
+            // Request the initial handshake
+            window.parent.postMessage({
+                "action": "Epic.Clinical.Informatics.Web.InitiateHandshake"
+            }, "*");    
+        } catch (err) {
+            this.result += "\nError in mounnt method :" + err ;
+        }
+    },
     computed : {
 
     },
@@ -148,6 +218,14 @@ export default {
                 .catch (error => {
                     this.result = error ;
                 }) ;
+        },
+        sendAGLData() {
+            console.log("epicToken :" + window.epicToken) ;
+            if (!window.epicToken)  window.epicToken = "wrongone" ;
+            this.post_data = this.post_data.replace('<epicToken>', window.epicToken) ;
+            console.log("Sending JSON Data :" + this.post_data) ;
+            var mesg = JSON.parse(this.post_data) ;
+            window.parent.postMessage(mesg, "*");
         },
         exampleApiChanged() {
             if (this.exampleApi == 'MedicationStatement') {
