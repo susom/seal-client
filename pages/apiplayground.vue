@@ -58,7 +58,7 @@
                             <b-col cols="2">
                                 <b-form-select 
                                     v-model="url_type"
-                                    :options="[{text: 'FHIR Endpoint', value: 'FHIR'}, {text: 'Webservice Endpoint', value: 'WS'}]" 
+                                    :options="[{text: 'FHIR Endpoint', value: 'FHIR'}, {text: 'FHIR R4 Endpoint', value: 'FHIRR4'}, {text: 'Webservice Endpoint', value: 'WS'}]" 
                                     size="sm"/>
                             </b-col>
                             <b-col>

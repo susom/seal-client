@@ -212,8 +212,6 @@ export default {
             responses.forEach((response) => {                
                 response.cats.forEach((med) => {
                     try {
-                        //if (med.name.startsWith('aceta') || med.name.startsWith('cephalexin') || med.name.startsWith('nicotine'))
-                        //    med.thera_class = 'antibiotics' ;
                         // Only antibiotics
                         if (med.thera_class.toLowerCase() == 'antibiotics') {
                             var medIdx = medNames.indexOf(med.name) ;

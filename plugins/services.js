@@ -8,6 +8,7 @@ import TrueImageAPI from "~/services/TrueImageAPI";
 import StandingOrdersAPI from "~/services/StandingOrdersAPI";
 import AredsCalcAPI from "~/services/AredsCalcAPI";
 import AntiMicrobialAPI from "~/services/AntiMicrobialAPI";
+import SynopsisAPI from "~/services/SynopsisAPI";
 
 export default (ctx, inject) => {
 
@@ -24,7 +25,8 @@ export default (ctx, inject) => {
       trueimage: new TrueImageAPI(ctx.$axios, ctx.store),
       standingorders: new StandingOrdersAPI(ctx.$axios, ctx.store),
       aredscalc: new AredsCalcAPI(ctx.$axios, ctx.store),
-      antimicrobial: new AntiMicrobialAPI(ctx.$axios, ctx.store)
+      antimicrobial: new AntiMicrobialAPI(ctx.$axios, ctx.store),
+      synopsis: new SynopsisAPI(ctx.$axios, ctx.store)
     }
   
     inject('services', services)

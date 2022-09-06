@@ -6,7 +6,7 @@ export default class StrokeRiskAPI {
         this.axios = $axios ;
         this.store = $store ;
         this.APP_ID = 3 ;            
-        this.seal = new SealAPI($axios) ;
+        this.seal = new SealAPI($axios) ;        
     }
 
     conditions() {
