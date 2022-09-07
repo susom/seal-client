@@ -46,6 +46,15 @@ export default class SynopsisAPI {
       }) ;                      
     }
 
+    surgicalhistory(stdt, enddt) {
+      return this.axios({
+        method: 'get',
+        url: "/fhir-app/synopsis/api/v1/surgicalhistory?start_date=" + stdt + "&end_date=" + enddt + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+      }).then((response) => {            
+          return response.data ;
+      }) ;                      
+    }
+
     dblog(act, msg) {
         this.seal.dblog(act, msg, this.APP_ID) ;
     }

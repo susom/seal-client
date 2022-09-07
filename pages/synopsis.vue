@@ -53,7 +53,8 @@
                             </b-card>
                             <b-card title="Procedures">
                                 <b-card-text>
-
+                                    <b-table :items="eyeSurgeries" small>
+                                    </b-table>
                                 </b-card-text>
                             </b-card>                            
                             <b-card title="Medications">
@@ -165,6 +166,7 @@ export default {
             patient: {},
             rChartOptions: {},
             lChartOptions: {},
+            eyeSurgeries: [],
             launchModal : {              
                 start_date: '',
                 end_date: '',
@@ -186,14 +188,13 @@ export default {
 
         this.$store.commit('setAppId', this.$services.synopsis.APP_ID) ;
         this.$services.synopsis.dblog("SynopsisHome", "In Ophthamology Synopsis+ Home Page") ;
-        this.$store.commit('setPageTitle', "Ophthamology Synopsis+") ;
-
-        //this.patient = await this.$services.a3pain.patient() ;
+        this.$store.commit('setPageTitle', "Ophthamology Synopsis+") ;        
     },
     mounted() {
         this.launchModal.start_date = this.$moment().add(-1, 'year').format("MM/DD/YYYY") ;
         this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;
         this.$bvModal.show("launch-modal") ;
+
     },
     computed : {
         startDateFormatted () {
@@ -230,14 +231,29 @@ export default {
                 var lIOPdata = [] ;                
                 var _self = this ; 
 
+                var surgicalHistory = await this.$services.synopsis.surgicalhistory(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
+                this.log("Surgical History Response") ;
+                this.log(JSON.stringify(surgicalHistory)) ;
+                
+                this.eyeSurgeries = surgicalHistory.map(surg => {
+                    return {
+                        "surgery" : surg.surgery,
+                        "side" : surg.side,
+                        "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY")                        
+                    }
+                }) ;
+
+                this.log("Surgical History Map") ;
+                this.log(JSON.stringify(this.eyeSurgeries)) ;
+
                 this.$services.synopsis.getresults(evisits).then(responses => {
                     _self.log("Got responses for smartdata results :" + responses.length) ;
                     responses.forEach(response => {
                         this.log("Response Data : " + JSON.stringify(response.data)) ;
                         if (response.data.RVA)
-                            rVAdata.push({ x: response.data.dt , y: response.data.RVA, value: response.data.value } ) ;
+                            rVAdata.push({ x: response.data.dt , y: response.data.RVA, value: response.data.Rvalue } ) ;
                         if (response.data.LVA)                        
-                            lVAdata.push({ x: response.data.dt , y: response.data.LVA, value: response.data.value } ) ;
+                            lVAdata.push({ x: response.data.dt , y: response.data.LVA, value: response.data.Lvalue } ) ;
                         if (response.data.RIOP)                        
                             rIOPdata.push({ x: response.data.dt , y: response.data.RIOP } ) ;                                                        
                         if (response.data.LIOP)                        
@@ -276,6 +292,7 @@ export default {
                 }) ;
                 chartOptions.title = { text: "" } ;
                 chartOptions.chart.marginTop = 20 ;
+                chartOptions.chart.marginLeft = 80 ;
                 chartOptions.xAxis.min = this.rpt_start_date_long ;
                 chartOptions.xAxis.max = this.rpt_end_date_long ;
                 chartOptions.yAxis[0] = {
