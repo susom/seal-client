@@ -30,6 +30,16 @@
                 </b-card>
             </b-col>
         </b-row>
+        <b-row class="mt-4 ml-2">
+            <b-col cols="11">
+                <b-card>
+                    <b-card-title>Culture Notes</b-card-title>
+                    <b-card-text>
+                        <b-textarea v-model="cultureNotes" rows="10" readonly></b-textarea>
+                    </b-card-text>
+                </b-card>
+            </b-col>
+        </b-row>        
         <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
             <b-col cols="11">
                 <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
@@ -120,6 +130,7 @@ export default {
                 period_type : 'C'  // Custom
             },
             notes: "",
+            cultureNotes: "",
             showDebug: false,
             resultText: "",
             inpatient_start_date: "" ,
@@ -195,6 +206,86 @@ export default {
             var responses = [] ;
             var response = {} ;
 
+            this.log("Fetching Surgical Data") ;
+            var surgicalData = await this.$services.antimicrobial.surgicalData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
+            this.log(JSON.stringify(surgicalData)) ;
+
+            this.log("Fetching Culture Data")
+            var cresponse = await this.$services.antimicrobial.cultureData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
+            this.log(JSON.stringify(cresponse)) ;  
+
+            var susp = [] ;
+            cresponse.forEach(spec => {
+               spec.results.forEach(result => {
+                    if (result.memberId) {
+                        susp.push(result.memberId.substr(result.memberId.indexOf("/") + 1)) ;
+                    }
+                }) ;
+            }) ;
+            this.log("Before invoking susceptability call size :" + susp.length) ;
+
+            this.$services.antimicrobial.susceptability(susp).then(sresponses => {     
+                var susceptability = [] ;                      
+                _self.log("After invoking susceptability call size :" + sresponses.length) ;
+                sresponses.forEach(sresponse => {
+                    try {
+                    _self.log("susceptability response");
+                    _self.log(JSON.stringify(sresponse.data)) ;
+                    var str = "" ;                     
+                    if (sresponse.data.susceptability_data) {
+                        sresponse.data.susceptability_data.forEach(tresult => {
+                            str += tresult.test + "\t\t" + tresult.result + "\t\t" + tresult.value + "\t\t" + tresult.note + "\n" ;
+                        }) ;
+                        console.log("got sreport for " + sresponse.data.memberId) ;
+                        console.log(str) ;
+                        susceptability.push({ memberId: sresponse.data.memberId, report: str }) ;
+                    }
+                    } catch (err) {
+                        _self.log("Error in handling susceptability response :" + err) ;
+                    }
+                }) ;
+
+                var cultureNotes = "Culture History:\n"
+                            + "----------------------\n\n" ;
+                
+                cresponse.forEach(spec => {
+                    try {
+                    cultureNotes += "\n\nSpecimen: " + spec.specimen_id + " collected at " + _self.$moment(spec.collection_dt).format("MM/DD/YYYY HH:mm");
+                
+                    var sIdx = surgicalData.findIndex(elem => {
+                            return (spec.collection_dt >= elem.dtstart && spec.collection_dt <= elem.dtend) ;
+                        }) ;
+                    if (sIdx >= 0) {
+                        cultureNotes += "\n\tSurgery :" + surgicalData[sIdx].surgery + " on " + _self.$moment(surgicalData[sIdx].dtstart).format("MM/DD/YYYY HH:mm") ;
+                    }
+                    var memberId = "" ;
+                    spec.results.forEach(result => {
+                        if (result.memberId) {
+                            memberId = result.memberId ;
+                        }
+                        if (result != null) {
+                            cultureNotes += "\n" + result.name + " - " + result.value ;
+                            if (result.result && result.result != null)
+                                cultureNotes += " (" + result.result + ")" ;
+                        }
+                    }) ;
+                    if (memberId.length > 0) {
+                        memberId = memberId.substr(memberId.indexOf("/") + 1) ;
+                        cultureNotes += "\nSusceptability Report\n\n" ;
+                        var idx = susceptability.findIndex(elem => elem.memberId == memberId) ;
+                        if (idx > -1) {
+                            cultureNotes += susceptability[idx].report ;
+                        }
+                    }                    
+                    } catch (err) {
+                        _self.log("Error in culture note constructions..." + err) ;
+                    }
+                }) ;
+                _self.log("Culture Notes constructed") ;
+                _self.log(cultureNotes) ;
+                _self.cultureNotes = cultureNotes ;
+            }) ;
+
             response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.antimicrobial.APP_ID ) ;            
             responses.push(response) ;
 
@@ -213,7 +304,7 @@ export default {
                 response.cats.forEach((med) => {
                     try {
                         // Only antibiotics
-                        if (med.thera_class.toLowerCase() == 'antibiotics') {
+                        if (med.thera_class && med.thera_class.toLowerCase() == 'antibiotics') {
                             var medIdx = medNames.indexOf(med.name) ;
                             if (medIdx === -1) {
                                 medNames.push(med.name) ;
@@ -234,6 +325,7 @@ export default {
 
             var ingredients = [] ;
             meds.forEach(med => {
+                try {
                 var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
                 _self.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
                 if (ingIdx > -1) {
@@ -242,15 +334,14 @@ export default {
                     var ingObj = JSON.parse(JSON.stringify(med))  ;
                     ingObj.name = (med.ingredient?med.ingredient:med.name) ;                    
                     ingredients.push(ingObj) ;
-                }                
+                }    
+                } catch (err) {
+                    _self.log("error in ingredient constructions :" + err) ;
+                }            
             }) ;
     
             _self.notes = "Antimicrobial History:\n"
                         + "----------------------\n\n" ;
-
-            // 06/05-06/08  
-            // 06/07-06/20 
-            // 07/02-present 
 
             ingredients.forEach(ing => {
                 var dates = "" ;
@@ -291,11 +382,6 @@ export default {
                 if (enddt)
                     dates += "-" + enddt.format("MM/DD/YY") + " ";
 
-/*
-                dates = dates.trim() ;
-                if (dates.endsWith(","))
-                    dates = dates.slice(0, dates.length - 1) ;
-                */
                 ing.dates = dates ;
                 _self.notes += ing.name + " " + ing.dates + "\n";
             }) ;
