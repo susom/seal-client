@@ -33,6 +33,7 @@
             <b-col cols="11" class="text-center h5 pb-2 pt-2 bg-secondary rounded-lg">
                 Inpatient Time Period between {{startDateFormatted}} and {{endDateFormatted}}  
                 <b-button class="ml-4" size="sm" variant="primary" @click="$bvModal.show('launch-modal')">Modify Period</b-button>
+                <b-button style="float:right;" class="mr-2" size="sm" variant="primary" v-b-toggle.sidebar-right>MME Conversion Factors</b-button>
             </b-col>
         </b-row>
         <!--
@@ -316,36 +317,42 @@
             </b-row> 
         </b-modal>
 
-        <b-modal id="common-opioids-modal" size="lg" centered scrollable hide-footer title="Common Opioid MME Conversion Factors">
-            <b-row style="font-size:smaller">
-                <b-col>
-                    References:
-                    <ol>
-                        <li><a href="https://www.cdc.gov/opioids/providers/prescribing/guideline.html">https://www.cdc.gov/opioids/providers/prescribing/guideline.html</a></li>
-                        <li><a href="https://medicaid.utah.gov/Documents/files/Opioid-Morphine-EQ-Conversion-Factors.pdf">https://medicaid.utah.gov/Documents/files/Opioid-Morphine-EQ-Conversion-Factors.pdf</a></li>
-                        <li><a href="https://www.unmc.edu/NebraskaGWEP/wp-content/uploads/2020/01/052718_COM-IntMEd_Opioid-Pocket-Card_4x6.pdf">https://www.unmc.edu/NebraskaGWEP/wp-content/uploads/2020/01/052718_COM-IntMEd_Opioid-Pocket-Card_4x6.pdf</a></li>
-                    </ol>
-                </b-col>
-            </b-row>                
-            <b-row style="font-size:smaller">
-                <b-col>
-                    <b-table :items="commonOpioids" :fields="opioidFields" small class="mb-0">
-                        <template #cell(routes)="data">
-                            <b-table :items="data.item.mmes" :fields="[{label: '', key: 'route'}]" thead-class="d-none" small class="mb-0">
-                            </b-table>
-                        </template>
-                        <template #cell(factors)="data">
-                            <b-table :items="data.item.mmes" :fields="[{label: '', key: 'mme'}]" thead-class="d-none" small class="mb-0">
-                            </b-table>
-                        </template>                        
-                    </b-table>
-                    <span style="font-style:italic;font-size:small">*The unit metric for Fentanyl is micrograms (mcg) as opposed to milligrams (mg).</span>
-                </b-col>
-            </b-row>
-            <b-row>
-                
-            </b-row>
-        </b-modal>
+        <!--<b-modal id="common-opioids-modal" size="lg" centered scrollable hide-footer title="Common Opioid MME Conversion Factors">-->
+        <b-sidebar id="sidebar-right" right shadow width="25%" title="Common MME Conversion Factors" header-class="bg-primary">
+            <template #footer="{ hide }">                
+                <div class="text-right mr-3 mt-2 mb-2">
+                    <b-button variant="primary" size="sm" @click="hide">Close</b-button>                
+                </div>
+            </template>            
+            <b-container class="ml-1 mr-1">
+                <b-row style="font-size:smaller">
+                    <b-col>
+                        <b-table :items="commonOpioids" :fields="opioidFields" small class="mb-0">
+                            <template #cell(routes)="data">
+                                <b-table :items="data.item.mmes" :fields="[{label: '', key: 'route'}]" thead-class="d-none" small class="mb-0">
+                                </b-table>
+                            </template>
+                            <template #cell(factors)="data">
+                                <b-table :items="data.item.mmes" :fields="[{label: '', key: 'mme'}]" thead-class="d-none" small class="mb-0">
+                                </b-table>
+                            </template>                        
+                        </b-table>
+                        <span style="font-style:italic;font-size:small">*The unit metric for Fentanyl is micrograms (mcg) as opposed to milligrams (mg).</span>
+                    </b-col>
+                </b-row>
+                <b-row style="font-size:smaller" class="mt-3 mb-3">
+                    <b-col>
+                        References:
+                        <ol>
+                            <li><a href="https://www.cdc.gov/opioids/providers/prescribing/guideline.html">https://www.cdc.gov/opioids/providers/prescribing/guideline.html</a></li>
+                            <li><a href="https://medicaid.utah.gov/Documents/files/Opioid-Morphine-EQ-Conversion-Factors.pdf">https://medicaid.utah.gov/Documents/files/Opioid-Morphine-EQ-Conversion-Factors.pdf</a></li>
+                            <li><a href="https://www.unmc.edu/NebraskaGWEP/wp-content/uploads/2020/01/052718_COM-IntMEd_Opioid-Pocket-Card_4x6.pdf">https://www.unmc.edu/NebraskaGWEP/wp-content/uploads/2020/01/052718_COM-IntMEd_Opioid-Pocket-Card_4x6.pdf</a></li>
+                        </ol>
+                    </b-col>
+                </b-row>                
+            </b-container>
+        </b-sidebar>
+        <!--</b-modal>-->
 
         <b-modal id="a3pain-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
             body-bg-variant="dark">
@@ -1218,7 +1225,7 @@ export default {
                     
                     this.log("Before calling generateROADChart method...") ;
                     
-                    //TODO: this.generateRoadChart() ;
+                    this.generateRoadChart() ;
                     
                     this.log("Done creating road chart") ;
 
@@ -1412,27 +1419,31 @@ export default {
 
                     var chunkIdx = dateChunks.findIndex(period => { return (marPoint.x > period.start && marPoint.x <= period.end) }) ;
                     
-                    _self.log("Processing MarPoint :" + JSON.stringify(marPoint)) ;
+                    //_self.log("Processing MarPoint :" + JSON.stringify(marPoint)) ;
                     
                     if (chunkIdx < 0) {
                         _self.log("This should not happen - chunkIdx is negative") ;
                         return ;
                     }
-                    _self.log(" period bucket end :" + dateChunks[chunkIdx].end + " : " + _self.$moment(dateChunks[chunkIdx].end).format("MM/DD/YYYY HH:mm")) ;
+                    //_self.log(" period bucket end :" + dateChunks[chunkIdx].end + " : " + _self.$moment(dateChunks[chunkIdx].end).format("MM/DD/YYYY HH:mm")) ;
 
                     var chartPoint = {} ;
                     var chartDataIdx = mmeChartData.findIndex(point => { return (point.x == dateChunks[chunkIdx].end) }) ;                    
                     if (chartDataIdx > -1) {
                         chartPoint = mmeChartData[chartDataIdx] ;
-                        chartPoint.y = chartPoint.y + marPoint.mme ;
-                        var idx = chartPoint.meds.findIndex(function(point) { return point.name == marPoint.name }) ;
-                        if (idx >= 0) {
-                            chartPoint.meds[idx].mme = chartPoint.meds[idx].mme + marPoint.mme ;
-                        } else {
-                            chartPoint.meds.push({name: marPoint.name, mme: marPoint.mme}) ;
-                        }
+                        chartPoint.y = chartPoint.y + marPoint.mme ;                        
+                       marPoint.meds.forEach(med => {
+                            var idx = chartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
+                            if (idx >= 0) {
+                                chartPoint.meds[idx].mme = chartPoint.meds[idx].mme + marPoint.mme ;
+                            } else {
+                                chartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // cloning and addding
+                            }
+                       }) ;
+
                     } else {
-                        chartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, start: dateChunks[chunkIdx].start, meds: [ { name: marPoint.name, mme: marPoint.mme } ] } ;
+                        //chartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, start: dateChunks[chunkIdx].start, meds: [ { name: marPoint.name, mme: marPoint.mme } ] } ;
+                        chartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, start: dateChunks[chunkIdx].start, meds: JSON.parse(JSON.stringify(marPoint.meds)) } ;
                         mmeChartData.push( chartPoint ) ;
                     }
 
@@ -1441,15 +1452,28 @@ export default {
                     if (_self.divideOpioidsBy == "opioids") {
                         catName = marPoint.name ;
                     } else {
-                      catName = marPoint.routes ;  
+                        catName = marPoint.routes ;  
                     }
 
                     var catIdx = categories.findIndex(function(cat) { return cat.name == catName }) ;
                     var dtIdx = categories[catIdx].data.findIndex(function(row) { return (row.x == dateChunks[chunkIdx].end) }) ;
                     if (dtIdx > -1) {
-                        categories[catIdx].data[dtIdx].y = categories[catIdx].data[dtIdx].y + marPoint.mme ;
+                        var catChartPoint = categories[catIdx].data[dtIdx] ;
+                        //_self.log("Existing data :" + JSON.stringify(catChartPoint)) ;                        
+                        catChartPoint.y = catChartPoint.y + marPoint.mme ;
+                        marPoint.meds.forEach(med => {
+                            var idx = catChartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
+                            if (idx >= 0) {
+                                catChartPoint.meds[idx].mme = catChartPoint.meds[idx].mme + marPoint.mme ;
+                            } else {
+                                catChartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // clone and add
+                            }
+                        }) ;
+                        //_self.log("After merging chartPoit: " + JSON.stringify(catChartPoint)) ;
                     } else {
-                        categories[catIdx].data.push({ x: dateChunks[chunkIdx].end, y: marPoint.mme, name: catName, start: dateChunks[chunkIdx].start}) ;
+                        var catChartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, name: catName, start: dateChunks[chunkIdx].start, meds: JSON.parse(JSON.stringify(marPoint.meds))} ;
+                        categories[catIdx].data.push(catChartPoint) ;
+                        //_self.log("New one - so pushing it to categories: " + JSON.stringify(catChartPoint)) ;                        
                     }   
                 }) ;
                             
@@ -1697,7 +1721,7 @@ export default {
                 name: 'MME',
                 type: 'line',
                 title: '',
-                height: 500                
+                height: 450                
             }) ;
 
             chartOptions.xAxis.title = {
@@ -1763,15 +1787,22 @@ export default {
                     formatter: function() { return this.y + " mme" }
                 }
             } ;
+            
             chartOptions.tooltip.useHTML = true ;
-            chartOptions.tooltip.formatter = function () {        
+            
+            chartOptions.tooltip.formatter = function () {
                 var tip = "" ;
-                if (this.series.name == "MME") {
+                if (this.series.name == "Pain Score") {
+                    tip = this.point.series.name + ": " + this.point.y ;
+                } else if (this.series.name == "MME") {
                     tip = "Total MME: " + this.point.y ;                    
                 } else {
                     tip = this.point.series.name + " <br> MME: " + this.point.y ;                    
                 }
-                tip += "<BR> Period: <span style='font-size:smaller'>" + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.start) + " to " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) + "</span>";                                                             
+                if (this.point.start)
+                    tip += "<BR> Period: <span style='font-size:smaller'>" + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.start) + " to " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) + "</span>";
+                else 
+                    tip += "<BR> Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
                 
                 //var tip =  this.point.series.name + ": " + this.point.y  ;
                 //tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
