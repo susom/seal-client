@@ -516,7 +516,7 @@ export default {
     async fetch() {
         console.log("In Fetch method of a3 pain tab page") ;
         
-        var response = await this.$services.antimicrobial.inpatientdate() ;            
+        var response = await this.$services.seal.inpatientdate(this.$services.a3pain.APP_ID) ;            
         this.resultText += "\nInpatient date :" + JSON.stringify(response) ;
         if (response.inpatient_start_date) {
             this.road.hasSurgicalEncounter = await this.surgicalEncounter(response.inpatient_start_date) ;

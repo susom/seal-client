@@ -226,4 +226,19 @@ export default class SealAPI {
         }) ;
 
     }
+
+    /**
+     * returns current inpatient start date.  If not inpatient, it will return empty json
+     * @param {appId} appId 
+     * @returns JSON object which has the current inpatient_start_date in MM/DD/YYYY format and
+     * inpatient_start_time_long which represents the start timestamp in long value
+     */
+    inpatientdate(appId) {
+        return this.axios({
+            method: 'get',
+            url: "/fhir-app/antimicrobial/api/v1/inpatientdate?pid=" + this.store.state.patientId + "&aid=" + appId
+        }).then((response) => {            
+            return response.data ;            
+        })        
+    }
 }

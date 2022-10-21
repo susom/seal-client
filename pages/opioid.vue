@@ -98,16 +98,20 @@
         <b-row class="mt-3 ml-2">
             <b-col cols="11">                
                 <b-card class="shadow-lg rounded-lg">
-                    <b-card-title class="chart-title">Figure 2. Opioid MME Aggregated at {{mmeDuration / 60}} Hours and Pain Scores </b-card-title>                    
+                    <b-card-title class="chart-title">Figure 1. Opioid MME Aggregated at {{mmeDuration / 60}} Hours and Pain Scores </b-card-title>                    
                     <b-card-text>
                         <b-row class="mb-2">
-                            <b-col class="text-right">
-                                <span class="font-weight-bold">Start time of interval:</span> 
+                            <b-col class="text-left ml-4">
+                                <span class="font-weight-bold">Start time of interval:</span>   
+                                <vue-timepicker v-model="start_time" format="hh:mm a" class="ml-2" 
+                                    manual-input style="font-size:smaller" @change="refreshMMEChart"></vue-timepicker>
+                                <!--                                
                                 <b-select :options="[{value: '00:00', text: '00:00 am'}, {value:'06:00', text: '06:00 am'}, {value: '07:00', text: '07:00 am'}, 
                                                     {value: '08:00', text: '08:00 am'}, { value: '12:00', text: '12:00 pm'}, {value:'18:00', text: '6:00 pm'}]" 
                                     v-model="start_time"
                                     @change="refreshMMEChart"
                                     class="ml-2 text-small" style="width:40%"/>
+                                -->
                             </b-col>
                             <b-col class="text-left ml-3">
                                 <span class="font-weight-bold">Sum MMEs over:</span> 
@@ -157,7 +161,7 @@
         <b-row class="mt-3 ml-2">
             <b-col cols="11">                
                 <b-card class="shadow-lg rounded-lg">
-                    <b-card-title class="chart-title">Figure 1. Administered Analgesics ({{analgesicCategory}}) during date {{startDateFormatted}} and {{endDateFormatted}}</b-card-title>
+                    <b-card-title class="chart-title">Figure 2. Administered Analgesics ({{analgesicCategory}}) during date {{startDateFormatted}} and {{endDateFormatted}}</b-card-title>
                     <b-card-text>
                         <b-row class="mb-2">
                             <b-col class="text-right">
@@ -392,7 +396,9 @@
 import Highcharts from 'highcharts' ;
 import offlineExporting from 'highcharts/modules/offline-exporting'
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
-/* import Calendar from 'v-calendar/lib/components/calendar.umd' */
+import VueTimepicker from 'vue2-timepicker'
+
+import 'vue2-timepicker/dist/VueTimepicker.css';
 
 offlineExporting(Highcharts) ;
 
@@ -481,7 +487,7 @@ offlineExporting(Highcharts) ;
     ] ;
 
 export default {
-    components: { EditableDatePicker },  /* ,Calender */
+    components: { EditableDatePicker, VueTimepicker },  /* ,Calender */
     data () {
         return {
             resultText: "",
@@ -507,7 +513,7 @@ export default {
                 rpt_end_date_long: 0,                
                 loading: false
             },
-            start_time: '00:00',
+            start_time: '12:00 am',
             divideOpioidsBy: 'opioids',
             analgesicCategory: 'All',
             routeOfAdmin: 'All',
@@ -567,9 +573,9 @@ export default {
         }
     },
     async fetch() {
-        this.log("In Fetch method of a3 pain tab page") ;
-        
-        var response = await this.$services.antimicrobial.inpatientdate() ;            
+        this.log("In Fetch method of a3 pain tab page") ;        
+
+        var response = await this.$services.seal.inpatientdate(this.$services.a3pain.APP_ID) ;                          
         this.log("Inpatient date :" + JSON.stringify(response)) ;
         if (response.inpatient_start_date) {
             this.road.hasSurgicalEncounter = await this.surgicalEncounter(response.inpatient_start_date) ;
@@ -595,31 +601,22 @@ export default {
         this.medChartOptions = {} ; //this.getMedsChart() ;
         this.mmeChartOptions = {} ; //this.getMMEChart() ;
         this.mmeStackedChartOptions = {} ; //this.getMMEStackedChart() ;
-        
+                
         this.road.discharge_date = this.$moment().format("YYYY-MM-DD") ;
         this.road.discharge_time = this.$moment().format("HH:mm") ;
 
-        this.road.distributionStartDate = this.$moment().add(1, 'days').format("MM/DD/YYYY") ;                
-
-        //var mmeChartOptions =           {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":400},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1658214000000,"max":1658473200000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"tickInterval":86400000},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalemt (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0},{"title":{"text":"Pain Scores","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,"max":10,"opposite":true}],"tooltip":{"shadow":false,"valueDecimals":2,"useHTML":true},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10},"line":{"dataLabels":{"enabled":true}},"column":{"stacking":"normal", "dataLabels":{"enabled":true, "formatter": function() { return this.y + " mme" }}}},"series":[{"name":"MME","yAxis":0,"color":"#820000","pointPlacement":-0.25, 
-        //     "data":[{"x":1658300399000,"y":85,"start":1658214000000,"meds":[{"name":"fentanyl citrate/pf","mme":45},{"name":"hydromorphone hcl/pf","mme":40}]},{"x":1658386799000,"y":24,"start":1658300400000,"meds":[{"name":"hydromorphone","mme":24}]},{"x":1658473199000,"y":44,"start":1658386800000,"meds":[{"name":"hydromorphone","mme":44}]}],"zIndex":20},{"name":"Pain Score","yAxis":1,"color":"#00548f","data":[],"zIndex":19},{"name":"fentanyl citrate/pf","type":"column","data":[{"x":1658300399000,"y":45,"name":"fentanyl citrate/pf"}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{"name":"hydromorphone hcl/pf","type":"column","data":[{"x":1658300399000,"y":40,"name":"hydromorphone hcl/pf"}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{"name":"hydromorphone","type":"column","data":[{"x":1658473199000,"y":44,"name":"hydromorphone"},{"x":1658386799000,"y":24,"name":"hydromorphone"}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000}]} 
-        //;     
-
-        // mmeChartOptions.tooltip = {            
-        //     formatter : function() {            
-        //         console.log("series name :" + this.series.name) ;    
-        //         if (this.series.name == "MME") {                                        
-        //             var tip = "Total MME: " + this.point.y ;
-        //             tip += "<BR> Period: <span style='font-size:smaller'>" + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.start) + " to " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) + "</span>";                    
-        //             return tip ;
-        //         } else {
-        //             return this.point.series.name + " <br> MME: " + this.point.y ;
-        //         }
-        //     }
-        // }
-
-        //this.mmeChartOptions =  mmeChartOptions ;
+        this.road.distributionStartDate = this.$moment().add(1, 'days').format("MM/DD/YYYY") ; 
         
+        /*
+        var _self = this ;
+
+        window.setTimeout(function() {
+            _self.mmeChartOptions = 
+                //{"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":450},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1658214000000,"max":1658646000000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"tickInterval":86400000},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalemt (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0},{"title":{"text":"Pain Scores","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,"max":10,"opposite":true}],"tooltip":{"shadow":false,"valueDecimals":2,"useHTML":true},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10, showCheckbox: true},"line":{"dataLabels":{"enabled":true}},"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"MME","yAxis":0,"color":"#999999","data":[{"x":1658300399000,"y":85,"start":1658214000000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"805585030"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".6","unit":"mg","mme":40,"order_id":"805611607"}]},{"x":1658386799000,"y":24,"start":1658300400000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":1.2,"unit":"mg","mme":24}]},{"x":1658473199000,"y":44,"start":1658386800000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":0.8,"unit":"mg","mme":44}]},{"x":1658559599000,"y":198,"start":1658473200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":60,"order_id":"806163422"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":36,"order_id":"806170682"},{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"806168461"},{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"806168462"},{"name":"hydromorphone pca total given (mg)","dose":2.6,"unit":"mg","mme":60}]},{"x":1658645999000,"y":96,"start":1658559600000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.4,"unit":"mg","mme":96}]}],"zIndex":20,"pointPlacement":-0.25},{showCheckbox:true, "name":"Pain Score","yAxis":1,"color":"#00548f","data":[],"zIndex":19},{"name":"fentanyl citrate/pf","type":"column","data":[{"x":1658559599000,"y":90,"name":"fentanyl citrate/pf","start":1658473200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":60,"order_id":"806163422"},{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"806168462"}]},{"x":1658300399000,"y":45,"name":"fentanyl citrate/pf","start":1658214000000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"805585030"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{showCheckbox: true, "name":"hydromorphone hcl/pf","type":"column","data":[{"x":1658559599000,"y":36,"name":"hydromorphone hcl/pf","start":1658473200000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":36,"order_id":"806170682"}]},{"x":1658300399000,"y":40,"name":"hydromorphone hcl/pf","start":1658214000000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".6","unit":"mg","mme":40,"order_id":"805611607"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{"name":"hydromorphone hcl","type":"column","data":[{"x":1658559599000,"y":12,"name":"hydromorphone hcl","start":1658473200000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"806168461"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{"name":"hydromorphone","type":"column","data":[{"x":1658645999000,"y":96,"name":"hydromorphone","start":1658559600000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.4,"unit":"mg","mme":96}]},{"x":1658559599000,"y":60,"name":"hydromorphone","start":1658473200000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.6,"unit":"mg","mme":60}]},{"x":1658473199000,"y":44,"name":"hydromorphone","start":1658386800000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":0.8,"unit":"mg","mme":44}]},{"x":1658386799000,"y":24,"name":"hydromorphone","start":1658300400000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":1.2,"unit":"mg","mme":24}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000}]} ;
+                {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":450},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1658214000000,"max":1658646000000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"tickInterval":86400000},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalemt (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0},{"title":{"text":"Pain Scores","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,"max":10,"opposite":true}],"tooltip":{"shadow":false,"valueDecimals":2,"useHTML":true},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10, "showCheckbox": true, "events" :  { "legendItemClick": function(obj) { console.log("In legendItems Click"); console.log(obj) ;} }},"line":{"dataLabels":{"enabled":true}},"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"MME","yAxis":0,"color":"#999999","data":[{"x":1658300399000,"y":85,"start":1658214000000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"805585030"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".6","unit":"mg","mme":40,"order_id":"805611607"}]},{"x":1658386799000,"y":24,"start":1658300400000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":1.2,"unit":"mg","mme":24}]},{"x":1658473199000,"y":44,"start":1658386800000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":0.8,"unit":"mg","mme":44}]},{"x":1658559599000,"y":198,"start":1658473200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":60,"order_id":"806163422"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":36,"order_id":"806170682"},{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"806168461"},{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"806168462"},{"name":"hydromorphone pca total given (mg)","dose":2.6,"unit":"mg","mme":60}]},{"x":1658645999000,"y":96,"start":1658559600000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.4,"unit":"mg","mme":96}]}],"zIndex":20,"pointPlacement":-0.25},{showCheckbox:true, "name":"Pain Score","yAxis":1,"color":"#00548f","data":[],"zIndex":19},{"name":"fentanyl citrate/pf","type":"column","data":[{"x":1658559599000,"y":90,"name":"fentanyl citrate/pf","start":1658473200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":60,"order_id":"806163422"},{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"806168462"}]},{"x":1658300399000,"y":45,"name":"fentanyl citrate/pf","start":1658214000000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"805585030"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{showCheckbox: true, "name":"hydromorphone hcl/pf","type":"column","data":[{"x":1658559599000,"y":36,"name":"hydromorphone hcl/pf","start":1658473200000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":36,"order_id":"806170682"}]},{"x":1658300399000,"y":40,"name":"hydromorphone hcl/pf","start":1658214000000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".6","unit":"mg","mme":40,"order_id":"805611607"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{"name":"hydromorphone hcl","type":"column","data":[{"x":1658559599000,"y":12,"name":"hydromorphone hcl","start":1658473200000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"806168461"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000},{"name":"hydromorphone","type":"column","data":[{"x":1658645999000,"y":96,"name":"hydromorphone","start":1658559600000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.4,"unit":"mg","mme":96}]},{"x":1658559599000,"y":60,"name":"hydromorphone","start":1658473200000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.6,"unit":"mg","mme":60}]},{"x":1658473199000,"y":44,"name":"hydromorphone","start":1658386800000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":0.8,"unit":"mg","mme":44}]},{"x":1658386799000,"y":24,"name":"hydromorphone","start":1658300400000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":1.2,"unit":"mg","mme":24}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000}]} ;
+            console.log("Really>>>>>>") ;
+        }, 3000) ;
+        */
     },
     watch: {
         'road.distributionStartDate': function (newVal, oldVal) { 
@@ -628,232 +625,6 @@ export default {
         }
     },
     methods : { 
-        getLocalMMEChartOptions () {
-            var xx = 
-                {
-                    "chart": {
-                        "spacingTop": 20,
-                        "zoomType": "x",
-                        "displayErrors": true,
-                        "height": 500,
-                        "type": "column"
-                    },
-                    "exporting": {
-                        "libURL": "https://www.noidea.com",
-                        "buttons": {
-                            "contextButton": {
-                                "menuItems": [
-                                    {
-                                        "text": "Print Chart"
-                                    }
-                                ]
-                            }
-                        },
-                        "fallbackToExportServer": false
-                    },
-                    "title": {
-                        "text": "",
-                        "align": "center"
-                    },
-                    "credits": {
-                        "enabled": false
-                    },
-                    "legend": {
-                        "enabled": true
-                    },
-                    "xAxis": {
-                        "crosshair": true,
-                        "events": {},
-                        "type": "datetime",
-                        "min": 1662015600000,
-                        "max": 1663138800000,
-                        "title": {
-                            "text": "Inpatient Time Period",
-                            "margin": 15,
-                            "style": {
-                                "font-size": "1.2em",
-                                "font-weight": "bold"
-                            }
-                        },
-                        "tickInterval": 14400000 
-                    },
-                    "yAxis": [
-                        {
-                            "title": {
-                                "text": "Opioid Morphine Milliequivalent (MME)",
-                                "margin": 15,
-                                "style": {
-                                    "font-size": "1.2em",
-                                    "font-weight": "bold"
-                                }
-                            },
-                            "stackLabels": {
-                                "enabled": true
-                            }
-                        }
-                    ],
-                    "tooltip": {
-                        "shadow": false,
-                        "valueDecimals": 2
-                    },
-                    "plotOptions": {                        
-                        "column": {
-                            "stacking": "normal",
-                            "dataLabels": {
-                                "enabled": true
-                            }
-                        },                        
-                        "series": {
-                            "pointPlacement": -0.2,
-                            //pointStart: 0,
-                            "pointInterval": 14400000,
-                            "pointRange": (14400000 * 1.8),
-                        }
-                       /*
-                        area: {
-                            stacking: 'normal',
-                            lineColor: '#666666',
-                            lineWidth: 1,
-                            marker: {
-                                lineWidth: 1,
-                                lineColor: '#666666'
-                            }
-                        }
-                        */
-                    },
-                    "series": [
-                        {                            
-                            "name": "methadone hcl",
-                            "data": [
-                                {
-                                    "x": 1662879600000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                },
-                                {
-                                    "x": 1662793200000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                },
-                                {
-                                    "x": 1662706800000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                },
-                                {
-                                    "x": 1662620400000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                },
-                                {
-                                    "x": 1662534000000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                },
-                                {
-                                    "x": 1662447600000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                },
-                                {
-                                    "x": 1662361200000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                },
-                                {
-                                    "x": 1662274800000,
-                                    "y": 11.75,
-                                    "z": 100,
-                                    "name": "methadone hcl"
-                                }
-                            ],
-                            "isOpioid": true                            
-                        },
-                        {
-                            "name": "hydromorphone hcl",
-                            "data": [
-                                {
-                                    "x": 1663138800000,
-                                    "y": 22,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                                                          
-                                {
-                                    "x": 1662966000000,
-                                    "y": 36,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                {
-                                    "x": 1662879600000,
-                                    "y": 4,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                {
-                                    "x": 1662793200000,
-                                    "y": 48,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                {
-                                    "x": 1662447600000,
-                                    "y": 16,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                {
-                                    "x": 1662361200000,
-                                    "y": 52,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                {
-                                    "x": 1662274800000,
-                                    "y": 64,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                {
-                                    "x": 1662188400000,
-                                    "y": 52,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },                                          
-                                {
-                                    "x": 1662102000000,
-                                    "y": 58,
-                                    "z": 100,
-                                    "name": "hydromorphone hcl"
-                                },
-                                                                           
-                            ],
-                            "isOpioid": true                            
-                        },
-                        {
-                            "name": "oxycodone hcl",
-                            "data": [
-                                {
-                                    "x": 1662274800000,
-                                    "y": 3.75,
-                                    "z": 100,
-                                    "name": "oxycodone hcl"
-                                }
-                            ],
-                            "isOpioid": true
-                        }
-                    ]
-                }
-            return xx ;            
-        },
         async surgicalEncounter(inpatientStartDate) {
             this.resultText += "\nIn Surgical Encountner Method...." ;
 
@@ -1259,7 +1030,7 @@ export default {
                                 } catch (err) {
                                      _self.resultText += "\n Error in timeout stuff :" +  err ; 
                                 } 
-                            }, 3000 ) ;                            
+                            }, 2000 ) ;                            
                                                         
                             } catch (err) {
                                 this.log("Error in pain handler code :" + err) ;
@@ -1378,7 +1149,15 @@ export default {
 
             var _self = this ;
             try {
-                var start_time_long = this.$moment(this.launchModal.rpt_start_date_long).startOf('day').add(this.start_time.split(":")[0], 'hours').add(this.start_time.split(":")[1], 'minutes').valueOf() ;
+                var hr = parseInt(this.start_time.split(":")[0])  ;
+                var am_pm = this.start_time.substr(-2).toLowerCase() ;
+
+                if (hr == 12 && "am" == am_pm) hr = 0 ;
+                if (hr < 12 && "pm" == am_pm) hr = hr + 12 ;
+
+                var min = parseInt( (this.start_time.split(":")[1]).substr(0, 2) ) ;
+
+                var start_time_long = this.$moment(this.launchModal.rpt_start_date_long).startOf('day').add(hr, 'hours').add(min, 'minutes').valueOf() ;
                 this.log("start time :" + this.$moment(start_time_long).format("MM/DD/YYYY HH:mm:ss")) ;
 
                 var dateChunks = this.getTimePeriods(start_time_long, this.launchModal.rpt_end_date_long, this.mmeDuration) ;
@@ -1395,15 +1174,18 @@ export default {
                             } 
                     }) ;                    
                 } else {
-                    var fixedRoutes = ['Sublingual', 'Transdermal', 'Intravenous', 'Epidural', 'Injection', 'Oral', 'PCA'] ;
+                    var fixedRoutes = ['Sublingual', 'Transdermal', 'Intravenous', 'Epidural', 'Oral', 'PCA'] ; // 'Injection', 
 
                     this.medCategories.filter(cat => cat.isOpioid).forEach(function(cat) {
-                        if (fixedRoutes.indexOf(cat.routes) < 0)
-                            cat.routes = "Others" ;
-                        var rIdx = categories.findIndex(x => { return x.name == cat.routes }) ;
-                        if (rIdx < 0) {
+                        var catRoute = cat.routes ;
+                        if (catRoute == "Injection") catRoute = "Intravenous" ;
+
+                        if (fixedRoutes.indexOf(catRoute) < 0)
+                            catRoute = "Others" ;
+                        var rIdx = categories.findIndex(x => { return x.name == catRoute }) ;
+                        if (rIdx < 0) {                            
                             categories.push({
-                                name: cat.routes, type: 'column', data: [], isOpioid: cat.isOpioid, color: cat.medColor, 
+                                name: catRoute, type: 'column', data: [], isOpioid: cat.isOpioid, color: cat.medColor, 
                                 pointPlacement: -0.25, pointInterval: (_self.mmeDuration * 60 * 1000), pointRange: ((_self.mmeDuration * 60 * 1000) * 1.95) 
                             })
                         }                        
@@ -1451,8 +1233,9 @@ export default {
                     var catName = "" ;
                     if (_self.divideOpioidsBy == "opioids") {
                         catName = marPoint.name ;
-                    } else {
-                        catName = marPoint.routes ;  
+                    } else {                        
+                        catName = marPoint.routes ; 
+                        if (catName == "Injection") catName = "Intravenous" ;
                     }
 
                     var catIdx = categories.findIndex(function(cat) { return cat.name == catName }) ;
@@ -1493,12 +1276,48 @@ export default {
 
                 categories.forEach(cat => {
                     cat.data.sort(function(a, b) { return b.x - a.x }) ;
+                    cat.selected = true ;
                     mmeChartOptions.series.push(cat) ;
                 }) ;
+
+                           
+                mmeChartOptions = 
+                    {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":450},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1658214000000,"max":1658646000000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"tickInterval":86400000},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalemt (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0},{"title":{"text":"Pain Scores","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,"max":10,"opposite":true}],"tooltip":{"shadow":false,"valueDecimals":2,"useHTML":true},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10,"showCheckbox":true,"events":{}},"line":{"dataLabels":{"enabled":true}},"column":{"stacking":"normal","dataLabels":{"enabled":true}}},"series":[{"name":"MME","yAxis":0,"color":"#999999","data":[{"x":1658300399000,"y":85,"start":1658214000000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"805585030"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".6","unit":"mg","mme":40,"order_id":"805611607"}]},{"x":1658386799000,"y":24,"start":1658300400000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":1.2,"unit":"mg","mme":24}]},{"x":1658473199000,"y":44,"start":1658386800000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":0.8,"unit":"mg","mme":44}]},{"x":1658559599000,"y":198,"start":1658473200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":60,"order_id":"806163422"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":36,"order_id":"806170682"},{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"806168461"},{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"806168462"},{"name":"hydromorphone pca total given (mg)","dose":2.6,"unit":"mg","mme":60}]},{"x":1658645999000,"y":96,"start":1658559600000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.4,"unit":"mg","mme":96}]}],"zIndex":20,"pointPlacement":-0.25,"selected":true},{"name":"Pain Score","yAxis":1,"color":"#00548f","data":[],"zIndex":19,"selected":true},{"name":"fentanyl citrate/pf","type":"column","data":[{"x":1658559599000,"y":90,"name":"fentanyl citrate/pf","start":1658473200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":60,"order_id":"806163422"},{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"806168462"}]},{"x":1658300399000,"y":45,"name":"fentanyl citrate/pf","start":1658214000000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"805585030"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"hydromorphone hcl/pf","type":"column","data":[{"x":1658559599000,"y":36,"name":"hydromorphone hcl/pf","start":1658473200000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":36,"order_id":"806170682"}]},{"x":1658300399000,"y":40,"name":"hydromorphone hcl/pf","start":1658214000000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".6","unit":"mg","mme":40,"order_id":"805611607"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"hydromorphone hcl","type":"column","data":[{"x":1658559599000,"y":12,"name":"hydromorphone hcl","start":1658473200000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"806168461"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"hydromorphone","type":"column","data":[{"x":1658645999000,"y":96,"name":"hydromorphone","start":1658559600000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.4,"unit":"mg","mme":96}]},{"x":1658559599000,"y":60,"name":"hydromorphone","start":1658473200000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":2.6,"unit":"mg","mme":60}]},{"x":1658473199000,"y":44,"name":"hydromorphone","start":1658386800000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":0.8,"unit":"mg","mme":44}]},{"x":1658386799000,"y":24,"name":"hydromorphone","start":1658300400000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":1.2,"unit":"mg","mme":24}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true}]} ;
                 
+                mmeChartOptions.plotOptions.line = {
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function() { 
+                            if (this.series.name == "MME")
+                                return parseFloat(this.y.toFixed(2))  + " mme" ;
+                            else
+                                return this.y ;                        
+                        }
+                    }
+                } ;
+                
+
                 this.log("Completed MME Chart Options: " + JSON.stringify(mmeChartOptions)) ;
 
                 this.mmeChartOptions = mmeChartOptions ;
+
+                // checkbox legend handling
+                this.$nextTick(() => {
+                    _self.log("In Nextick event - attaching listener/event") ;
+                    if (_self.$refs.mmeChart.chart.legend.allItems) {
+                        _self.$refs.mmeChart.chart.legend.allItems.forEach(p => {
+                            p.checkbox.addEventListener("click", function() {                            
+                                _self.log("attach event listener fired : checked: ") ;
+                                if (this.checked) {
+                                    p.show();
+                                } else {
+                                    p.hide();
+                                }
+                            }) ;
+                        }) ;
+                    }
+                }) ;
+
             } catch (err) {
                 this.log("*****Error in refreshMMEChart :"  + err) ;
             }
@@ -1762,29 +1581,46 @@ export default {
             chartOptions.series[0] = {
                 name : "MME",
                 yAxis: 0,
-                color: "#820000",
+                color: "#999999", // #820000",
                 data: [],
                 zIndex: 20,
-                pointPlacement: -0.25
+                pointPlacement: -0.25,
+                selected: true
             } ;
             chartOptions.series[1] = {
                 name : "Pain Score",
                 yAxis: 1,
                 color: "#00548f",
                 data: [],
-                zIndex: 19
+                zIndex: 19,
+                selected: true
             } ;
+
+            chartOptions.plotOptions.series.showCheckbox = true ;
+            chartOptions.plotOptions.series.events = {
+                "legendItemClick": function(legend) {
+                    if (legend.target.checkbox) {
+                        legend.target.checkbox.checked = !legend.target.visible ;
+                    }
+                }
+            }
 
             chartOptions.plotOptions.line = {
                 dataLabels: {
-                    enabled: true
+                    enabled: true,
+                    formatter: function() { 
+                        if (this.series.name == "MME")
+                            return parseFloat(this.y.toFixed(2))  + " mme" ;
+                        else
+                            return this.y ;                        
+                    }
                 }
             } ;
             chartOptions.plotOptions.column = {
                 stacking: 'normal',
                 dataLabels: {
                     enabled: true,
-                    formatter: function() { return this.y + " mme" }
+                    formatter: function() { return parseFloat(this.y.toFixed(2)) + " mme" }
                 }
             } ;
             
