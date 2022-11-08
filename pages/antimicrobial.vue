@@ -54,26 +54,31 @@
                                     style="width:20%;display:inline"
                                     class="ml-3"
                                 />
+                                <div style="font-size:small" class="mb-2">Hint: Please enter "Abnormal" to search for abnormal results. Enter "View" to get all results with susceptability report.</div>
                                 <!--
                                 <b-btn variant="primary" size="sm" class="float-right ml-2" @click="selectAll">Select Results in All Pages</b-btn>
                                 <b-btn variant="primary" size="sm" class="float-right ml-2" @click="clearAll">Clear Selection in All Pages</b-btn>
                                 -->
                                 <!-- :total-rows="totalRows"
                                     :current-page="currentPage"
-                                -->
-                                <b-table striped :items="cultureData" :fields="cultureFields" 
-                                    small hover
+                                    :sticky-header="tableHeight()"
                                     :per-page="rowsPerPage"
-                                    ref="cultureResultsTable"
-                                    v-model="displayedRows"
+                                    striped 
+                                    hover
                                     selectable
-                                    select-mode="multi"                                    
+                                    select-mode="multi" 
                                     @row-clicked="onRowClicked"
+                                -->
+                                <!--<div class="scroll-table2">-->
+                                <b-table :items="cultureData" :fields="cultureFields" 
+                                    small bordered        
+                                    :sticky-header="tableHeight()"                            
+                                    ref="cultureResultsTable"
+                                    v-model="displayedRows"                                    
                                     :filter="cultureFilter"
                                     :filter-included-fields="cultureFilterOn"
                                     @filtered="onFiltered"                                                                
-                                    :tbody-tr-class="cultureRowCSS" 
-                                    :sticky-header="tableHeight()" 
+                                    :tbody-tr-class="cultureRowCSS"                                     
                                     sort-icon-left                          
                                     >
                                     
@@ -98,6 +103,7 @@
                                     </template>
 
                                 </b-table>
+                                <!--</div>-->
                                 <!-- hide-ellipsis -->
                                 <!--
                                 <b-pagination                                 
@@ -106,8 +112,8 @@
                                     align="right"                                    
                                     v-model="currentPage"  />
                                 -->
-                                <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2">Generate Notes</b-btn>                        
-                                <b-btn @click="copyToClipboard('cultureNotes')" variant="primary" size="sm" class="mb-2">Copy Notes to Clipboard</b-btn>
+                                <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2 mt-2">Generate Notes</b-btn>                        
+                                <b-btn @click="copyToClipboard('cultureNotes')" variant="primary" size="sm" class="mb-2 mt-2">Copy Notes to Clipboard</b-btn>
                                 <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>
                                 
                                 <b-form-textarea max-rows="20" plaintext size="sm" v-model="cultureNotes" class="box"/>                                                              
@@ -118,89 +124,6 @@
             </b-col>
         </b-row>
 
-        <!--
-        <b-row class="mt-1 ml-2">
-            <b-col cols="11">
-                <b-card>
-                    <b-card-title>Summary Notes</b-card-title>
-                    <b-card-text>
-                        <b-form-textarea max-rows="20" plaintext size="sm" v-model="notes" id="result"/>                                          
-                    </b-card-text>
-                </b-card>
-            </b-col>
-        </b-row>
-
-        <b-row class="mt-4 ml-2">
-            <b-col cols="11">
-                <b-card>
-                    <b-card-title>Culture Notes</b-card-title>
-                    <b-card-text>                        
-                        <b-form-input
-                            id="filter-input"
-                            v-model="cultureFilter"
-                            type="search"    
-                            placeholder="Type to Search"
-                            size="sm"
-                            debounce="300"
-                            class="mb-2"
-                            style="width:30%;display:inline"
-                        ></b-form-input>
-                        
-                        <b-form-select
-                            :options="[{text:'All Fields', value: ''}, {text: 'Date', value: 'collection_dttm'}, {text:'Specimen ID', value: 'specimen_id'}, {text: 'Specimen', value:'specimen_test'}, {text: 'Specimen Source', value:'specimen_source'}, {text:'Result', value: 'result'}, {text: 'Susceptibility', value: 'susceptibility' }]"
-                            v-model="cultureFilterOn"
-                            size="sm"
-                            style="width:30%;display:inline"
-                            class="ml-3"
-                        />
-                        
-                        <b-table striped :items="cultureData" :fields="cultureFields" 
-                            small hover
-                            per-page="10"
-                            ref="cultureResultsTable"
-                            :filter="cultureFilter"
-                            :filter-included-fields="cultureFilterOn"
-                            @filtered="onFiltered"                            
-                            :total-rows="totalRows"
-                            :current-page="currentPage"
-                            :tbody-tr-class="cultureRowCSS"                            
-                            select-mode="multi">
-                            
-                            <template #head(rowSelected)="data">
-                                <b-checkbox v-model="toggleAllResults"/>
-                            </template>
-
-                            <template #cell(rowSelected)="row">                                
-                                <b-form-checkbox v-model="row.item.rowSelected" size="sm" @change="checkboxClicked(row.item)"/>
-                            </template>
-
-                            <template #cell(specimen_test)="row">
-                                {{row.value}}
-                                <div v-if="row.item.surgery_name">
-                                    Surgery: {{row.item.surgery_name}} on {{row.item.surgery_start_dttm}}
-                                </div>
-                            </template>
-                            
-                            <template #cell(susceptibility)="row">                                
-                                <b-link @click="showSucepModal(row.item)" v-if="row.value == 'Yes'" style="color:blue">View</b-link>
-                                <span v-else>{{row.value}}</span>
-                            </template>
-
-                        </b-table>
-                        <b-pagination                                 
-                            :total-rows="totalRows" 
-                            per-page="10" 
-                            align="right"
-                            hide-ellipsis
-                            v-model="currentPage"  />
-
-                        <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2">Generate Notes</b-btn>
-                        <b-form-textarea max-rows="20" plaintext size="sm" v-model="cultureNotes"/>                                                      
-                    </b-card-text>
-                </b-card>
-            </b-col>
-        </b-row>        
-        -->
         <b-row class="mt-3 ml-2" v-if="$store.getters.sealTeam">
             <b-col cols="11">
                 <b-link @click="showDebug = !showDebug" style="font-size:small">Logs Link</b-link>
@@ -306,13 +229,13 @@ export default {
                 errors : {
                     start_date: null,
                     end_date: null
-                },
+                },                
                 period_type : 'C'  // Custom
             },
             notes: "Generating Antibiotics Summary...",
             cultureNotes: "",
             cultureFilter: "",  
-            cultureFilterOn: "",
+            cultureFilterOn: [],
             cultureFields: [
                 {label: '', key: 'rowSelected'},
                 {label: 'Date/Time Collected', key: 'collection_dttm', sortable: true},
@@ -335,7 +258,8 @@ export default {
             inpatient_start_date: "" ,
             inpatient_end_date : "",
             susceptability_data: [],
-            copyBtnInfo: ""
+            copyBtnInfo: "",
+            loadingMessage: ""
         }
     },
     async fetch() {
@@ -385,6 +309,17 @@ export default {
             console.log("displayed Rows Changed") ;            
             console.log(val) ;
             var _self = this ;
+
+            var rowCss = "" ;
+            var prevSpecId = "" ;
+            for (var i=0;i<val.length;i++) {
+                var row = val[i] ;
+                if (row.specimen_id != prevSpecId) {
+                    rowCss = (rowCss == ""?"specimen-css":"") ;
+                    prevSpecId = row.specimen_id ;
+                }
+                row.row_color = rowCss ;
+            }
             this.$nextTick(() => {
                 var rowIdx = 0 ;            
                 val.forEach(cresult => {
@@ -460,7 +395,11 @@ export default {
             }            
         },
         cultureRowCSS(item) {  
-            if (item.normal && item.normal.toLowerCase() == "abnormal") return "text-danger" ;
+            var rowCss = "" ;
+            if (item.normal && item.normal.toLowerCase() == "abnormal") 
+                rowCss = "text-danger" ;
+            rowCss = rowCss + " " + item.row_color ;
+            return rowCss ;
         },
         showSucepModal(cultureResult) {
             console.log("In show Modal Link {}", cultureResult) ;
@@ -568,7 +507,9 @@ export default {
 
             this.log(JSON.stringify(cresponse)) ;  
 
+            var rowColor = "" ;
             cresponse.forEach( spec => {
+                rowColor = (rowColor == ""?"specimen-css":"") ;
                 spec.results.forEach(res => {
                     var cresult = {
                         id: res.id,
@@ -585,9 +526,10 @@ export default {
                         surgery_end_dttm: '',
                         susceptibility: ((res.memberId && res.memberId.length > 0)?"View Report":"") ,
                         susceptability_data: [],
-                        memberId: (res.memberId ? res.memberId.substr(res.memberId.indexOf("/") + 1) : "")
+                        memberId: (res.memberId ? res.memberId.substr(res.memberId.indexOf("/") + 1) : ""),
+                        row_color: rowColor
                     } ;
-                    if (!cresult.result) cresult.result = "" ;                    
+                    if (!cresult.result) cresult.result = "" ;     
                     var sIdx = surgicalData.findIndex(elem => {
                         return (spec.collection_dt >= elem.dtstart && spec.collection_dt <= elem.dtend) ;
                     }) ;
@@ -698,17 +640,29 @@ export default {
                     _self.log("error in ingredient constructions :" + err) ;
                 }            
             }) ;
-    
+
+            // sort the dates for each ing
+            ingredients.forEach(ing => {
+                ing.data.sort(function(a, b) { return a.x - b.x }) ;
+            }) ;
+            
+            // sort the ing based on the last date in the dates list
+            ingredients.sort((x, y) => {
+                return x.data[x.data.length - 1].x - y.data[y.data.length - 1].x ;
+            }) ;
+
             _self.notes = "Antimicrobial History:\n"
                         + "----------------------\n\n" ;
 
+            var futureSectionCreated = false ;
+            
             ingredients.forEach(ing => {
                 var dates = "" ;
                 var enddt ;
                 console.log("Processign ing :" + ing.name) ;
 
-                ing.data.sort(function(a, b) { return a.x - b.x }) ;
-                
+                //ing.data.sort(function(a, b) { return a.x - b.x }) ;
+
                 for (var i=0; i<ing.data.length; i++) {
                     var dt = ing.data[i] ;
 
@@ -742,7 +696,12 @@ export default {
                     dates += "-" + enddt.format("MM/DD/YY") + " ";
 
                 ing.dates = dates ;
-                _self.notes += ing.name + " " + ing.dates + "\n";
+                if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
+                    _self.notes += "\n\n" + ing.name + " " + ing.dates + "\n";    
+                    futureSectionCreated = true ;
+                } else {
+                    _self.notes += ing.name + " " + ing.dates + "\n";
+                }
             }) ;
 
             console.log("Antibiotics Orders") ;
@@ -767,4 +726,14 @@ Highcharts.setOptions({
 
 </script>
 
-
+<style scoped>
+    .scroll-table {
+        height: 80vh;
+        overflow-y:scroll;        
+    }
+</style>
+<style>
+    .specimen-css {
+        background-color: #E0E0E0;
+    }
+</style>

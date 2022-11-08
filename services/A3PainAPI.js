@@ -136,8 +136,8 @@ export default class A3PainAPI {
             if (ma.Action == "Not Given" || ma.Action == 'Canceled Entry') {
                 continue ;
             }
-            var stdt = this.$moment(new Date(ma.AdministrationInstant)) ;
-            var enddt = this.$moment(new Date(ma.AdministrationInstant)) ;
+            var stdt = this.moment(new Date(ma.AdministrationInstant)) ;
+            var enddt = this.moment(new Date(ma.AdministrationInstant)) ;
             if (form.toLowerCase().indexOf("weekly") >= 0) {
                 enddt.add(7, 'days') ;
             } else if (form.toLowerCase().indexOf("72 hr") >= 0) {
@@ -167,6 +167,66 @@ export default class A3PainAPI {
         return logMesg ;
     }
 
+    processEpiduralInfusions(order) {
+        // order them in chronologic order asc 
+        order.MedicationAdministrations.sort((x, y) => 
+            new Date(x.AdministrationInstant).getTime() - new Date(y.AdministrationInstant).getTime()
+        ) ;
+        console.log(order.MedicationAdministrations) ;
+        var stTime, endTime ;
+        var newMarArr = [] ;
+        var strength, unit ;
+        var newBagStarted = false ;
+
+        order.MedicationAdministrations.forEach(ma => {            
+            if (!newBagStarted && (ma.Action == 'New Bag' || ma.Action == 'Restarted')) {
+                console.log("In New Bag " + JSON.stringify(ma)) ;
+                stTime = ma.AdministrationInstant ;
+                strength = ma.Dose.Value ;
+                unit = ma.Dose.Unit ;
+                newBagStarted = true ;
+                return ;                
+            }
+            if (ma.Action == 'Stopped' || ma.Action == 'HighAlert RateChange') {
+                newBagStarted = false ;
+                endTime = this.moment(new Date(ma.AdministrationInstant)) ;
+                
+                if (ma.Action == 'HighAlert RateChange') 
+                    endTime.add(-1, 'minutes') ;
+
+                var newAdminDt = this.moment(new Date(stTime)) ;
+                newAdminDt.add(1, 'hour') ;
+                while (true) {
+                    if (newAdminDt.isAfter(endTime)) {
+                        var maNew = {
+                            Action: "Given", 
+                            AdministrationInstant: endTime.utc().format(), 
+                            Dose: { Value: strength, Unit: unit } 
+                        } ;
+                        newMarArr.push(maNew) ;
+                        break ;
+                    } else {                        
+                        var maNew = {
+                            Action: "Given", 
+                            AdministrationInstant: newAdminDt.utc().format(), 
+                            Dose: { Value: strength, Unit: unit } 
+                        } ;
+                        newMarArr.push(maNew) ;
+                        newAdminDt.add(1, 'hour') ;
+                    }
+                }
+                if (ma.Action == 'HighAlert RateChange')  {
+                    stTime = ma.AdministrationInstant ;
+                    strength = ma.Dose.Value ;
+                    unit = ma.Dose.Unit ;
+                    newBagStarted = true ;
+                }
+            }
+        }) ;
+        order.MedicationAdministrations = newMarArr ;
+        console.log("New MAR Array") ;
+        console.log(newMarArr) ;
+    }
     /**
      * 
      * @param {start date in yyyy-mm-dd format } startdt 

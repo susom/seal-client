@@ -48,7 +48,7 @@
                         <b-card-text>
                             <b-card>
                                 <b-card-text>
-                                    <highchart :options="lChartOptions" />
+                                    <highchart :options="lChartOptions" ref="leftChart"/>
                                 </b-card-text>
                             </b-card>
                             <b-card title="Procedures">
@@ -68,7 +68,7 @@
                         <b-card-text>
                             <b-card>
                                 <b-card-text>
-                                    <highchart :options="rChartOptions" />
+                                    <highchart :options="rChartOptions" ref="rightChart"/>
                                 </b-card-text>
                             </b-card>
                             <b-card title="Procedures">
@@ -209,9 +209,13 @@ export default {
             this.logMesg += "\n" + this.$moment().format("LTS") + ": " + mesg ;
         },
         tabClicked(tabName) {
-            Highcharts.charts.forEach(function(chart, idx) {  
-                    if (chart) chart.reflow() ;
-            }) ;
+            var _self = this ;
+            this.$nextTick(() => {
+                if (tabName == 'left')
+                    _self.$refs.leftChart.chart.reflow() ;
+                else
+                    _self.$refs.rightChart.chart.reflow() ;
+            }) ; 
         },
         async populateData() {
             try {

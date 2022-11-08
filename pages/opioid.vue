@@ -541,6 +541,8 @@ export default {
 
         this.road.distributionStartDate = this.$moment().add(1, 'days').format("MM/DD/YYYY") ; 
         
+        //this.$services.a3pain.processEpiduralInfusions(order) ;
+
     },
     watch: {
         'road.distributionStartDate': function (newVal, oldVal) { 
@@ -553,9 +555,14 @@ export default {
             this.$services.a3pain.dblog("A3PainOpenMMEPopup", "Clicked to open up MME Conversion factor popup") ;
         },
         toggleMarChart() {
+            var _self = this ;
             this.marChartOpen = !this.marChartOpen ;
-            if (this.marChartOpen)
+            if (this.marChartOpen) {
+                this.$nextTick(() => {
+                    _self.$refs.medChart.chart.reflow() ;
+                }) ;                
                 this.$services.a3pain.dblog("A3PainOpenMARChart", "Clicked to open MAR Chart") ;
+            }
         },
         togglePainScores() {
             var idx = this.$refs.mmeChart.chart.series.findIndex(series => series.name == "Pain Score") ;            
@@ -729,7 +736,7 @@ export default {
                 this.log(JSON.stringify(pca_mars)) ;
 
                 this.log("---- MAR Data Webservice Request--------------") ;
-                //this.resultText += JSON.stringify(wsjson) ;
+                this.resultText += JSON.stringify(wsjson) ;
 
                 this.$services.a3pain.mardata(wsjson).then(responses => {
 
@@ -792,6 +799,14 @@ export default {
                                 var logMesg = this.$services.a3pain.explodePatchMARRecords(medstats.cats[cIdx], order) ;
                                 this.resultText += "\n " + logMesg ;
                             }
+                            // deal with epidural infusions - and not pca and pcea
+                            if (order.Name.toLowerCase().indexOf("epidural") > 0 && order.Name.toLowerCase().indexOf("infusion") > 0
+                                  && order.Name.toLowerCase().indexOf(" pca") < 0 && order.Name.toLowerCase().indexOf(" pcea") < 0  ) {
+                                isOpioid = true ;
+                                medstats.cats[cIdx].routes = "Epidural" ;
+                                this.$services.a3pain.processEpiduralInfusions(order) ;
+                            }
+
                             var ma = {} ; 
                             for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
                                 ma = order.MedicationAdministrations[mIdx] ;
@@ -800,7 +815,7 @@ export default {
                                     continue ;
                                 }
                                 if (ma.Action != "Not Given" && ma.Action != 'Canceled Entry') {
-                                    if (!ma.Dose["Value"] || ma.Dose.Value == "null") continue ;
+                                    if (!ma.Dose["Value"] || ma.Dose.Value == null || ma.Dose.Value == "null") continue ;
                                     if (!ma.Dose.Unit) ma.Dose.Unit = "" ;
                                     ma.Dose.Unit = ma.Dose.Unit.toLowerCase() ;
                                     // Initializing here instead of before loop - so only cats added if there is data to be added
@@ -850,10 +865,10 @@ export default {
                                     cdataIdx = cdata.findIndex(function(point) { return point.x == marTime && point.y == catIdx }) ;
                                     if (cdataIdx >= 0) {
                                         cdata[cdataIdx].mme = cdata[cdataIdx].mme + ma.mme ;
-                                        cdata[cdataIdx].meds.push({name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID })
+                                        cdata[cdataIdx].meds.push({name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID, route: medstats.cats[cIdx].routes })
                                     } else {
                                         cdata.push({ x: marTime, y: catIdx, mme: ma.mme, color: medColor, name: genericName, routes: medstats.cats[cIdx].routes,
-                                            meds: [ {name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID} ] } ) ;
+                                            meds: [ {name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID, route: medstats.cats[cIdx].routes} ] } ) ;
                                     }
                                 }
                             }
@@ -902,10 +917,10 @@ export default {
                                 var cdataIdx = cdata.findIndex(function(point1) { return point1.x == marTime && point1.y == catIdx }) ;                            
                                 if (cdataIdx >= 0) {
                                     cdata[cdataIdx].mme = cdata[cdataIdx].mme + point.mme ;
-                                    cdata[cdataIdx].meds.push({name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme })
+                                    cdata[cdataIdx].meds.push({name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme, route: pcaRoute })
                                 } else {
                                     cdata.push({ x: marTime, y: catIdx, mme: point.mme, color: medColor, name: genericName, routes: pcaRoute,
-                                        meds: [ {name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme } ] } ) ;
+                                        meds: [ {name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme, route: pcaRoute } ] } ) ;
                                 }    
                                 } catch (err) {
                                     this.resultText += " Error in PCA Mar inside point loop " + err ;
@@ -1161,18 +1176,24 @@ export default {
                     if (chartDataIdx > -1) {
                         chartPoint = mmeChartData[chartDataIdx] ;
                         chartPoint.y = chartPoint.y + marPoint.mme ;                        
-                       marPoint.meds.forEach(med => {
+                        marPoint.meds.forEach(med => {
                             var idx = chartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
                             if (idx >= 0) {
                                 chartPoint.meds[idx].mme = chartPoint.meds[idx].mme + marPoint.mme ;
+                                if (chartPoint.routes.toLowerCase() == "oral") {
+                                    if (chartPoint.meds[idx].dose_qty) 
+                                        chartPoint.meds[idx].dose_qty = chartPoint.meds[idx].dose_qty + 1 ;
+                                    else
+                                        chartPoint.meds[idx].dose_qty = 2 ;
+                                }
                             } else {
                                 chartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // cloning and addding
                             }
-                       }) ;
+                        }) ;
 
                     } else {
                         //chartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, start: dateChunks[chunkIdx].start, meds: [ { name: marPoint.name, mme: marPoint.mme } ] } ;
-                        chartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, start: dateChunks[chunkIdx].start, meds: JSON.parse(JSON.stringify(marPoint.meds)) } ;
+                        chartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, start: dateChunks[chunkIdx].start, routes: marPoint.routes, meds: JSON.parse(JSON.stringify(marPoint.meds)) } ;
                         mmeChartData.push( chartPoint ) ;
                     }
 
@@ -1186,6 +1207,7 @@ export default {
                     }
 
                     var catIdx = categories.findIndex(function(cat) { return cat.name == catName }) ;
+                    _self.log(" Category: " + catName + " index :" + catIdx) ;
                     var dtIdx = categories[catIdx].data.findIndex(function(row) { return (row.x == dateChunks[chunkIdx].end) }) ;
                     if (dtIdx > -1) {
                         var catChartPoint = categories[catIdx].data[dtIdx] ;
@@ -1195,13 +1217,19 @@ export default {
                             var idx = catChartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
                             if (idx >= 0) {
                                 catChartPoint.meds[idx].mme = catChartPoint.meds[idx].mme + marPoint.mme ;
+                                if (catChartPoint.routes.toLowerCase() == "oral") {
+                                    if (catChartPoint.meds[idx].dose_qty)
+                                        catChartPoint.meds[idx].dose_qty = catChartPoint.meds[idx].dose_qty + 1 ;
+                                    else
+                                        catChartPoint.meds[idx].dose_qty = 2 ;
+                                }
                             } else {
                                 catChartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // clone and add
                             }
                         }) ;
                         //_self.log("After merging chartPoit: " + JSON.stringify(catChartPoint)) ;
                     } else {
-                        var catChartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, name: catName, start: dateChunks[chunkIdx].start, meds: JSON.parse(JSON.stringify(marPoint.meds))} ;
+                        var catChartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, name: catName, start: dateChunks[chunkIdx].start, routes: marPoint.routes, meds: JSON.parse(JSON.stringify(marPoint.meds))} ;
                         categories[catIdx].data.push(catChartPoint) ;
                         //_self.log("New one - so pushing it to categories: " + JSON.stringify(catChartPoint)) ;                        
                     }   
@@ -1566,14 +1594,13 @@ export default {
                 else 
                     tip += "<BR> Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
                 
-                //var tip =  this.point.series.name + ": " + this.point.y  ;
-                //tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
-
                 if (this.point.meds) {
-                    tip += "<br><br><table cellspacing=2 cellpadding=2>" ;
-                    tip += "<tr><th>Medication</th><th>MME</th></tr>"; 
+                    tip += "<br><br><table cellspacing=2 cellpadding=2 border=1>" ;
+                    tip += "<tr><th>Medication</th><th>Dose</th><th>MME</th></tr>"; 
                     this.point.meds.forEach(function(med) {
-                        tip += "<tr><td>" + med.name + "</td><td style='text-align:center'>" + med.mme + "</td></tr>"; 
+                        tip += "<tr><td>" + med.name + "</td>" + 
+                            "<td style='text-align:center'>" + med.dose + " " + med.unit + (med.dose_qty?" x" + med.dose_qty:"") + "</td>" + 
+                            "<td style='text-align:center'>" + med.mme + "</td></tr>"; 
                     }) ; 
                     tip += "</table>" ;
                 }
