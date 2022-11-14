@@ -146,11 +146,11 @@ export default class SealAPI {
     encounters(start_date, end_date, nextUrl, appId) {    
 
         var url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId +
-            "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=inpatient";
+            "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=inpatient,observation,op surgery/procedure";
 
         if (nextUrl && nextUrl !== '') {
             url = "/fhir-app/medreview/api/v2/enc?pid=" + this.store.state.patientId + "&aid=" + appId + 
-                    "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=inpatient" + "&next=" + encodeURIComponent(nextUrl) ;
+                    "&start_date=" + start_date + "&end_date=" + end_date + "&enc_type=inpatient,observation,op surgery/procedure" + "&next=" + encodeURIComponent(nextUrl) ;
         }
 
         return this.axios({

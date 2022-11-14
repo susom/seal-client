@@ -237,9 +237,9 @@ export default {
             } else if (this.exampleApi == 'Patient') {
                 this.exampleInfo = '/Patient?_id=&lt;pid&gt;' ;
             } else if (this.exampleApi == 'Encounter') {
-                this.exampleInfo = '/Encounter??patient=&lt;pid&gt;' ;                                
+                this.exampleInfo = '/Encounter?patient=&lt;pid&gt;' ;                                
             } else if (this.exampleApi == 'Condition') {
-                this.exampleInfo = '/Condition??patient=&lt;pid&gt;' ;                                
+                this.exampleInfo = '/Condition?patient=&lt;pid&gt;' ;                                
             } else if (this.exampleApi == 'MedicationRequest') {
                 this.exampleInfo = '/MedicationRequest?_id=&lt;ids&gt;' ;                
             } else if (this.exampleApi == 'GetMedicationAdministrationHistory') {

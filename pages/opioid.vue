@@ -327,12 +327,14 @@
 
 import Highcharts from 'highcharts' ;
 import offlineExporting from 'highcharts/modules/offline-exporting'
+import exportData from 'highcharts/modules/export-data' ;
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
 import VueTimepicker from 'vue2-timepicker'
 
 import 'vue2-timepicker/dist/VueTimepicker.css';
 
 offlineExporting(Highcharts) ;
+exportData(Highcharts) ;
 
     /**
      * Set the global timezone to PST
@@ -604,12 +606,8 @@ export default {
             this.resultText += "\nOpioid Naive: Getting med data for st dt " + stdt.format("YYYY-MM-DD") + " end dt " + enddt.format("YYYY-MM-DD") ;
             var response = await this.$services.seal.medicationData(stdt.format("YYYY-MM-DD"), enddt.format("YYYY-MM-DD"), "ALL", '', this.$services.a3pain.APP_ID ) ;
             //response = await this.$services.a3pain.medstats(stdt.format("YYYY-MM-DD"), enddt.format("YYYY-MM-DD")) ;                
-            responses.push(response) ;
 
-            this.resultText += "\n MedStat3 Call1 nexturl :" + (response.nextUrl?response.nextUrl:"Doesn't exist") ;
-
-            while (response.nextUrl) {
-                response = await this.$services.seal.medicationData(stdt.format("YYYY-MM-DD"), enddt.format("YYYY-MM-DD"), "ALL", response.nextUrl, this.$services.a3pain.APP_ID ) ;
+            while (true) {
                 for (var cIdx = 0; cIdx < response.cats.length ; cIdx++) {
                     var med = response.cats[cIdx] ;
                     if (!med.pharma_class) med.pharma_class = "" ;
@@ -619,7 +617,11 @@ export default {
                         this.resultText += "\n Returing false for opioidNaive patient check" ;
                         return false ;
                     }                        
-                }                                        
+                }
+                if (response.nextUrl)
+                    response = await this.$services.seal.medicationData(stdt.format("YYYY-MM-DD"), enddt.format("YYYY-MM-DD"), "ALL", response.nextUrl, this.$services.a3pain.APP_ID ) ;
+                else
+                    break ;
             }
             
             this.resultText += "\n Returing true for opioidNaive patient check" ;
@@ -1254,10 +1256,7 @@ export default {
                     cat.selected = true ;
                     mmeChartOptions.series.push(cat) ;
                 }) ;
-                           
-                //mmeChartOptions = 
-                //    {"chart":{"spacingTop":20,"zoomType":"x","displayErrors":true,"height":450},"exporting":{"libURL":"https://www.noidea.com","buttons":{"contextButton":{"menuItems":[{"text":"Print Chart"}]}},"fallbackToExportServer":false},"title":{"text":"","align":"center"},"credits":{"enabled":false},"legend":{"enabled":true},"xAxis":{"crosshair":true,"events":{},"type":"datetime","min":1638604800000,"max":1639209600000,"title":{"text":"Inpatient Time Period","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"tickInterval":86400000},"yAxis":[{"title":{"text":"Opioid Morphine Milliequivalemt (MME)","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0},{"title":{"text":"Pain Scores","margin":15,"style":{"font-size":"1.2em","font-weight":"bold"}},"min":0,"max":10,"opposite":true}],"tooltip":{"shadow":false,"valueDecimals":2,"useHTML":true},"plotOptions":{"series":{"dataLabels":{"allowOverlap":true},"minPointLength":10},"line":{"dataLabels":{"enabled":true}},"column":{"stacking":"normal","dataLabels":{"enabled":false}}},"series":[{"name":"Total MME","yAxis":0,"color":"#999999","data":[{"x":1638691199000,"y":137.5,"start":1638604800000,"meds":[{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"762968730"},{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"762964795"},{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"order_id":"762898923"},{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":40,"order_id":"762916513"},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"order_id":"762916516"}]},{"x":1638777599000,"y":258.84000000000003,"start":1638691200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":75,"order_id":"763001719"},{"name":"remifentaniL (Ultiva) IV injection","dose":".05","unit":"mcg/kg/min","mme":90.84,"order_id":"763002638"},{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":40,"order_id":"762916514"},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":45,"order_id":"762916516"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":8,"order_id":"763030939"}]},{"x":1638863999000,"y":155,"start":1638777600000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":30,"order_id":"762916514"},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":30,"order_id":"762916516"},{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":80,"order_id":"763139159"},{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":15,"order_id":"763139160"}]},{"x":1638950399000,"y":249.5,"start":1638864000000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"order_id":"762916516"},{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":80,"order_id":"763139159"},{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":52.5,"order_id":"763139160"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj 1.2 mg","dose":"1.2","unit":"mg","mme":72,"order_id":"763396940"},{"name":"fentaNYL 50 mcg/mL injection","dose":"100","unit":"mcg","mme":30,"order_id":"763535238"}]},{"x":1639036799000,"y":139.5,"start":1638950400000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"order_id":"763543168"},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":60,"order_id":"763547310"},{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":20,"order_id":"763547312"},{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"763569839"},{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":20,"order_id":"763758134"},{"name":"hydromorphone pca total given (mg)","dose":1,"unit":"mg","mme":20}]},{"x":1639123199000,"y":166,"start":1639036800000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":60,"order_id":"763619585"},{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":20,"order_id":"763769860"},{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj 1.2 mg","dose":"1.2","unit":"mg","mme":48,"order_id":"763854072"},{"name":"oxyCODONE (Roxicodone) tablet 20 mg","dose":"20","unit":"mg","mme":30,"order_id":"763983265"},{"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":8,"order_id":"763983306"}]},{"x":1639209599000,"y":182,"start":1639123200000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 20 mg","dose":"20","unit":"mg","mme":150,"order_id":"763983265"},{"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":32,"order_id":"763983306"}]}],"zIndex":20,"pointPlacement":-0.25,"selected":true},{"name":"Pain Score","yAxis":1,"color":"#00548f","data":[],"zIndex":19,"selected":true},{"name":"fentanyl citrate/pf","type":"column","data":[{"x":1638950399000,"y":30,"name":"fentanyl citrate/pf","start":1638864000000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"100","unit":"mcg","mme":30,"order_id":"763535238"}]},{"x":1638777599000,"y":75,"name":"fentanyl citrate/pf","start":1638691200000,"meds":[{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":75,"order_id":"763001719"}]},{"x":1638691199000,"y":75,"name":"fentanyl citrate/pf","start":1638604800000,"meds":[{"name":"fentaNYL 50 mcg/mL injection 50 mcg","dose":"50","unit":"mcg","mme":30,"order_id":"762968730"},{"name":"fentaNYL 50 mcg/mL injection","dose":"50","unit":"mcg","mme":45,"order_id":"762964795"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"remifentanil hcl","type":"column","data":[{"x":1638777599000,"y":90.84,"name":"remifentanil hcl","start":1638691200000,"meds":[{"name":"remifentaniL (Ultiva) IV injection","dose":".05","unit":"mcg/kg/min","mme":90.84,"order_id":"763002638"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"oxycodone hcl","type":"column","data":[{"x":1639209599000,"y":150,"name":"oxycodone hcl","start":1639123200000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 20 mg","dose":"20","unit":"mg","mme":150,"order_id":"763983265"}]},{"x":1639123199000,"y":90,"name":"oxycodone hcl","start":1639036800000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":60,"order_id":"763619585"},{"name":"oxyCODONE (Roxicodone) tablet 20 mg","dose":"20","unit":"mg","mme":30,"order_id":"763983265"}]},{"x":1639036799000,"y":67.5,"name":"oxycodone hcl","start":1638950400000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"order_id":"763543168"},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":60,"order_id":"763547310"}]},{"x":1638950399000,"y":67.5,"name":"oxycodone hcl","start":1638864000000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"order_id":"762916516"},{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":52.5,"order_id":"763139160"}]},{"x":1638863999000,"y":45,"name":"oxycodone hcl","start":1638777600000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":30,"order_id":"762916516"},{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":15,"order_id":"763139160"}]},{"x":1638777599000,"y":45,"name":"oxycodone hcl","start":1638691200000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":45,"order_id":"762916516"}]},{"x":1638691199000,"y":22.5,"name":"oxycodone hcl","start":1638604800000,"meds":[{"name":"oxyCODONE (Roxicodone) tablet 5 mg","dose":"5","unit":"mg","mme":7.5,"order_id":"762898923"},{"name":"oxyCODONE (Roxicodone) tablet 10 mg","dose":"10","unit":"mg","mme":15,"order_id":"762916516"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"hydromorphone hcl","type":"column","data":[{"x":1639209599000,"y":32,"name":"hydromorphone hcl","start":1639123200000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":32,"order_id":"763983306"}]},{"x":1639123199000,"y":28,"name":"hydromorphone hcl","start":1639036800000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":20,"order_id":"763769860"},{"name":"HYDROmorphone (Dilaudid) syringe 0.4 mg","dose":"0.4","unit":"mg","mme":8,"order_id":"763983306"}]},{"x":1639036799000,"y":52,"name":"hydromorphone hcl","start":1638950400000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":20,"order_id":"763547312"},{"name":"HYDROmorphone (Dilaudid) syringe 0.2 mg","dose":"0.2","unit":"mg","mme":12,"order_id":"763569839"},{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":20,"order_id":"763758134"}]},{"x":1638950399000,"y":80,"name":"hydromorphone hcl","start":1638864000000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":80,"order_id":"763139159"}]},{"x":1638863999000,"y":110,"name":"hydromorphone hcl","start":1638777600000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":30,"order_id":"762916514"},{"name":"HYDROmorphone (Dilaudid) syringe 1 mg","dose":"1","unit":"mg","mme":80,"order_id":"763139159"}]},{"x":1638777599000,"y":40,"name":"hydromorphone hcl","start":1638691200000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":40,"order_id":"762916514"}]},{"x":1638691199000,"y":40,"name":"hydromorphone hcl","start":1638604800000,"meds":[{"name":"HYDROmorphone (Dilaudid) syringe 0.5 mg","dose":"0.5","unit":"mg","mme":40,"order_id":"762916513"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"hydromorphone hcl/pf","type":"column","data":[{"x":1639123199000,"y":48,"name":"hydromorphone hcl/pf","start":1639036800000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj 1.2 mg","dose":"1.2","unit":"mg","mme":48,"order_id":"763854072"}]},{"x":1638950399000,"y":72,"name":"hydromorphone hcl/pf","start":1638864000000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj 1.2 mg","dose":"1.2","unit":"mg","mme":72,"order_id":"763396940"}]},{"x":1638777599000,"y":8,"name":"hydromorphone hcl/pf","start":1638691200000,"meds":[{"name":"HYDROmorphone (Dilaudid) 2 mg/mL ampule inj","dose":".4","unit":"mg","mme":8,"order_id":"763030939"}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true},{"name":"hydromorphone","type":"column","data":[{"x":1639036799000,"y":20,"name":"hydromorphone","start":1638950400000,"meds":[{"name":"hydromorphone pca total given (mg)","dose":1,"unit":"mg","mme":20}]}],"isOpioid":true,"pointPlacement":-0.25,"pointInterval":86400000,"pointRange":168480000,"selected":true}]} ;
-
+                
                 mmeChartOptions.xAxis.plotBands = [] ;
                 var fromTime = mmeChartOptions.xAxis.min ;
                 var toTime = 0 ;
@@ -1595,7 +1594,7 @@ export default {
                     tip += "<BR> Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
                 
                 if (this.point.meds) {
-                    tip += "<br><br><table cellspacing=2 cellpadding=2 border=1>" ;
+                    tip += "<br><br><table cellspacing=2 cellpadding=2 border=1 class='tooltip-table'>" ;
                     tip += "<tr><th>Medication</th><th>Dose</th><th>MME</th></tr>"; 
                     this.point.meds.forEach(function(med) {
                         tip += "<tr><td>" + med.name + "</td>" + 
@@ -1751,6 +1750,15 @@ export default {
                                     onclick: function() {
                                         this.print();
                                     }
+                                },
+                                {
+                                    text: 'Download CSV',
+                                    onclick: function() {
+                                        console.log("you clicked on download CSV") ;
+                                        //console.log(this) ;
+                                        //console.log(this.getCSV()) ;
+                                        this.downloadCSV() ;
+                                    }
                                 }]
                             }
                         }, 
@@ -1902,6 +1910,10 @@ export default {
 </style>
 
 <style>
+    .tooltip-table, .tooltip-table tr, .tooltip-table th, .tooltip-table td {
+        border: 1px solid black;
+        border-collapse: collapse;
+    }    
     .custom-calendar.vc-container {
         --day-border: 1px solid #b8c2cc;
         --day-border-highlight: 1px solid #b8c2cc;

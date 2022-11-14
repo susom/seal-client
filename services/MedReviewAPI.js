@@ -161,7 +161,8 @@ export default class MedReviewAPI {
                                 onclick: function() {
                                     this.print();
                                 },
-                            } /*,
+                            }                            
+                            /*,
                             {
                                 text: 'Download JPG',
                                 onclick: function() {

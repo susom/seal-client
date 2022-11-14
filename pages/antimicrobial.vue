@@ -597,7 +597,6 @@ export default {
 
             console.log("med orders done") ;
             console.log(responses) ;
-            this.log("Got med order responses") ;
             
             var medNames = [] ;
             var meds = [] ;  
@@ -605,7 +604,7 @@ export default {
                 response.cats.forEach((med) => {
                     try {
                         // Only antibiotics
-                        if (med.thera_class && med.thera_class.toLowerCase() == 'antibiotics') {
+                        if (med.thera_class && med.thera_class.toLowerCase().indexOf('antibiotics') >= 0) {
                             var medIdx = medNames.indexOf(med.name) ;
                             if (medIdx === -1) {
                                 medNames.push(med.name) ;
@@ -640,16 +639,34 @@ export default {
                     _self.log("error in ingredient constructions :" + err) ;
                 }            
             }) ;
-
+            
+            _self.log("ABX Ingredients: " + JSON.stringify(ingredients)) ;                
             // sort the dates for each ing
             ingredients.forEach(ing => {
                 ing.data.sort(function(a, b) { return a.x - b.x }) ;
             }) ;
-            
-            // sort the ing based on the last date in the dates list
-            ingredients.sort((x, y) => {
-                return x.data[x.data.length - 1].x - y.data[y.data.length - 1].x ;
+ 
+            // sort by name first
+            ingredients.sort((ing_a, ing_b) => {
+                return ing_a.name.localeCompare(ing_b.name) ;
             }) ;
+            
+            // truncate timestamp to date
+            ingredients.forEach(ing => {
+                ing.data.forEach(dt => { dt.x = _self.$moment(dt.x).startOf('day').valueOf() ; dt.x2 = _self.$moment(dt.x2).startOf('day').valueOf() ; }) ;
+            }) ;
+
+
+            // sort the ing based on the last date in the dates list
+            ingredients.sort((ing_a, ing_b) => {
+                // if end date is same, use the start date for sorting
+                if (ing_a.data[ing_a.data.length - 1].x2 == ing_b.data[ing_b.data.length - 1].x2)
+                    return ing_a.data[ing_a.data.length - 1].x - ing_b.data[ing_b.data.length - 1].x ;
+                else
+                    return ing_a.data[ing_a.data.length - 1].x2 - ing_b.data[ing_b.data.length - 1].x2 ;
+            }) ;
+
+            _self.log("ABX Ingredients after ordering: " + JSON.stringify(ingredients)) ;
 
             _self.notes = "Antimicrobial History:\n"
                         + "----------------------\n\n" ;
@@ -659,16 +676,14 @@ export default {
             ingredients.forEach(ing => {
                 var dates = "" ;
                 var enddt ;
-                console.log("Processign ing :" + ing.name) ;
-
-                //ing.data.sort(function(a, b) { return a.x - b.x }) ;
+                _self.log("Processign ing :" + ing.name) ;
 
                 for (var i=0; i<ing.data.length; i++) {
                     var dt = ing.data[i] ;
 
                     dt.x = _self.$moment(dt.x).startOf("day") ;
                     dt.x2 = _self.$moment(dt.x2).startOf("day") ;
-                    console.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY")) ;
+                    _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY")) ;
                     if (dates == "") {
                         dates += dt.x.format("MM/DD/YY") ;                        
                         enddt = dt.x2 ;
@@ -697,15 +712,15 @@ export default {
 
                 ing.dates = dates ;
                 if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
-                    _self.notes += "\n\n" + ing.name + " " + ing.dates + "\n";    
+                    if (_self.notes.endsWith("\n\n"))
+                        _self.notes += ing.name + " " + ing.dates + "\n";    
+                    else
+                        _self.notes += "\n" + ing.name + " " + ing.dates + "\n";    
                     futureSectionCreated = true ;
                 } else {
                     _self.notes += ing.name + " " + ing.dates + "\n";
                 }
             }) ;
-
-            console.log("Antibiotics Orders") ;
-            console.log(ingredients) ;
 
             this.launchModal.loading = false ;
             this.$bvModal.hide("launch-modal") ;

@@ -306,10 +306,12 @@ import 'splitpanes/dist/splitpanes.css'
 import MedReviewTable from '~/components/MedReviewTable.vue'
 import Highcharts from 'highcharts' ;
 import offlineExporting from 'highcharts/modules/offline-exporting' ;
+import exportData from 'highcharts/modules/export-data' ;
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
 import OutsideMeds from '~/components/OutsideMeds.vue';
 
 offlineExporting(Highcharts) ;
+exportData(Highcharts) ;
 
 export default {
     components: { Splitpanes, Pane, MedReviewTable, EditableDatePicker, OutsideMeds },
@@ -833,25 +835,25 @@ export default {
             var medNames = [] ;
             var meds = [] ;  
             try {
-            responses.forEach((response) => {
-                response.cats.forEach((med) => {
-                    try {
-                    var medIdx = medNames.indexOf(med.name) ;
-                    if (medIdx === -1) {
-                        medNames.push(med.name) ;
-                        meds.push(med) ;
-                    } else {
-                        meds[medIdx].data = [].concat(meds[medIdx].data, med.data) ;
-                        meds[medIdx].routes = this.merge(meds[medIdx].routes, med.routes) ;
-                        meds[medIdx].pcat = this.merge(meds[medIdx].pcat, med.pcat) ;
-                        meds[medIdx].med_order_ids = [].concat(meds[medIdx].med_order_ids, med.med_order_ids) ;
-                    }
-                    } catch (err) {
-                        this.debugLog += "Error in merging medstat response for " + JSON.stringify(med) + "\n" ;
-                        this.debugLog += err + "\n" ;
-                    }
-                });              
-            }) ;
+                responses.forEach((response) => {
+                    response.cats.forEach((med) => {
+                        try {
+                        var medIdx = medNames.indexOf(med.name) ;
+                        if (medIdx === -1) {
+                            medNames.push(med.name) ;
+                            meds.push(med) ;
+                        } else {
+                            meds[medIdx].data = [].concat(meds[medIdx].data, med.data) ;
+                            meds[medIdx].routes = this.merge(meds[medIdx].routes, med.routes) ;
+                            meds[medIdx].pcat = this.merge(meds[medIdx].pcat, med.pcat) ;
+                            meds[medIdx].med_order_ids = [].concat(meds[medIdx].med_order_ids, med.med_order_ids) ;
+                        }
+                        } catch (err) {
+                            this.debugLog += "Error in merging medstat response for " + JSON.stringify(med) + "\n" ;
+                            this.debugLog += err + "\n" ;
+                        }
+                    });              
+                }) ;
             } catch (err) {
                 this.debugLog += "Error in merging medstat responses " + err + "\n" ;
             }

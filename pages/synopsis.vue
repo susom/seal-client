@@ -59,7 +59,31 @@
                             </b-card>                            
                             <b-card title="Medications">
                                 <b-card-text>
-
+                                    <b-row class="mt-3 ml-1 mr-1">
+                                        <b-col cols="12">
+                                            <b-card class="shadow-lg rounded-lg">
+                                                <b-card-title class="chart-title">
+                                                    <b-row>
+                                                        <b-col>Medications</b-col>
+                                                        <b-col style="text-align:right" class="mr-3">
+                                                            <span>Group By:</span> 
+                                                            <b-select :options="['None', 'Ingredient']" 
+                                                            v-model="leftMeds.groupBy" size="sm"
+                                                            @change="groupByChange"                                         
+                                                            class="ml-2" style="width:50%"/>
+                                                        </b-col>
+                                                    </b-row>                                        
+                                                </b-card-title>
+                                                <b-card-text>                                
+                                                    <b-row>
+                                                        <b-col>
+                                                            <highchart :modules="['xrange']" :options="leftMeds.medChartOptions" ref="leftMedChart"/>
+                                                        </b-col>
+                                                    </b-row>
+                                                </b-card-text>
+                                            </b-card>                                
+                                        </b-col>
+                                    </b-row>                        
                                 </b-card-text>
                             </b-card>                            
                         </b-card-text>
@@ -181,7 +205,15 @@ export default {
                 loading: false
             },
             showDebug: false,
-            logText: ""
+            logText: "", 
+            encounters: [],           
+            leftMeds : {
+                data: [],                
+                ingredients: [],
+                list: [],
+                medChartOptions: {},
+                groupBy: "None"
+            }
         }
     },
     async fetch() {
@@ -282,10 +314,253 @@ export default {
                     _self.$bvModal.hide("launch-modal") ;
                 }) ;
 
+                var responses = [] ;
+                var meds = [] ;
+
+                var response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.synopsis.APP_ID ) ;
+                responses.push(response) ;
+                
+                while (response.nextUrl) {
+                    response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.synopsis.APP_ID ) ;
+                    responses.push(response) ;
+                }
+
+                responses.forEach((response) => {                    
+                    response.cats.forEach((med) => {                                                                
+                        _self.log("Processing MedStat : " + JSON.stringify(med)) ;
+                        if (!med.pharma_class) med.pharma_class = "" ;
+                        if (!med.routes) med.routes = "" ;
+                        //_self.log("MedStat Processing Med :" + med.name + " oids :" + med.med_order_ids + " pharma clasas:" + med.pharma_class.toLowerCase() + " routes: " + med.routes + " dosageRoutes: " + med.dosageRoutes) ;
+                        if (med.pharma_class.toLowerCase().indexOf('ophth') >= 0 || med.pharma_class.toLowerCase().indexOf('eye ') == 0 
+                                || med.routes.toLowerCase().indexOf('ophth') >= 0) {
+                            _self.log("Inside Oph Processing Med :" + med.name + " oids :" + med.med_order_ids + " dose routes: " + med.dosageRoutes) ;
+                            try {
+                            var medIdx = meds.findIndex(cat => cat.name == med.name) ;
+                            if (medIdx === -1) {
+                                meds.push(med) ;
+                            } else {
+                                meds[medIdx].data = [].concat(meds[medIdx].data, med.data) ;
+                                meds[medIdx].mme = Object.assign({}, meds[medIdx].mme, med.mme) ;                        
+                                meds[medIdx].routes = this.merge(meds[medIdx].routes, med.routes) ;
+                                meds[medIdx].dosageRoutes = this.merge(meds[medIdx].dosageRoutes, med.dosageRoutes) ;
+                                meds[medIdx].med_order_ids = [].concat(meds[medIdx].med_order_ids, med.med_order_ids) ;
+                            }
+                            } catch (err) {
+                                _self.log("Error in merging medstat response for " + JSON.stringify(med)) ;
+                                _self.log(err) ;
+                            }
+                        }
+                    });              
+                }) ;
+
+                _self.log("Meds data: " + JSON.stringify(meds)) ;
+
+                var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.synopsis.APP_ID) ;
+
+                var wsjson = {} ;
+                var csnids = [] ;
+
+                encounters.forEach(enc => {
+                    csnids.push(enc.pat_enc_csn_id) ;
+
+                    wsjson[enc.pat_enc_csn_id] = {
+                        "PatientID": _self.patient.epicPatientId,
+                        "PatientIDType": "External", 
+                        "ContactID": enc.pat_enc_csn_id,
+                        "ContactIDType": "CSN",
+                        "OrderIDs": []
+                    } ;
+                    
+                });
+
+                meds.forEach(cat => {
+                    _self.log("MedStats Med Name:" + cat.name + " MedOrderIds: " + cat.med_order_ids + ": dosageRoute :" + cat.dosageRoutes) ;
+                    cat.data.forEach(med => {
+                        for (var i=0; i<encounters.length; i++) {
+                            if ((med.x >= encounters[i].start && med.x <= encounters[i].end) || 
+                                (med.x2 >= encounters[i].start && med.x2 <= encounters[i].end)) {
+                                if (med.med_order_id) {   // for some reason row is created with empty ID
+                                    wsjson[encounters[i].pat_enc_csn_id].OrderIDs.push({ "ID": med.med_order_id, "Type" : "External"}) ;
+                                }
+                            }
+                        }
+                    }) ;
+                }) ;
+            
+                console.log("Final ws call json : {}", wsjson) ;
+
+                this.$services.seal.mardata(wsjson, this.$services.synopsis.APP_ID).then(responses => {
+                    console.log("responses length " + responses.length) ;
+                    _self.log("Got MAR data responses " + responses.length) ;
+
+                    responses.forEach(response => {                    
+                        response.data.Orders.forEach(order => {
+                            _self.log("Processing MAR Data for order " + order.Name) ;
+                            var medIdx = meds.findIndex(function (med) { return (med.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
+                            var med = {} ;
+                            if (medIdx >= 0) {
+                                med = meds[medIdx] ;
+                                med.name = order.Name ;
+                            } else {
+                                console.log("********* This should NOT happen - can't match order id for " + order.Name) ;
+                                return ;
+                            }
+                            var last_used = "" ;
+                            var last_used_long = 0 ;
+
+                            for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
+                                var ma = order.MedicationAdministrations[mIdx] ;
+                                if (ma.Action != "Not Given") {
+                                    var adminTime = new Date(ma.AdministrationInstant).getTime() ;
+                                    if (adminTime >= rpt_start_date_long && adminTime <= rpt_end_date_long) {
+                                        if (last_used_long < adminTime) {
+                                            last_used = this.$moment(new Date(adminTime)).format("MM/DD/YYYY") ;
+                                            last_used_long = adminTime ;
+                                        }
+                                        if (ma.Dose) {
+                                            med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
+                                                name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, action: ma.Action, pcat: "inpatient"  }) ;
+                                        } else if (ma.Rate) {
+                                            med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
+                                                name: order.Name, dose: ma.Rate.Value, unit: ma.Rate.Unit, action: ma.Action, pcat: "inpatient"  }) ;                                            
+                                        }
+                                    }
+                                }
+                            }
+                            med.last_used_long = last_used_long ;
+                            med.last_used = last_used ;
+                            med.total_rows = med.data.length ;
+                        }) ;
+                    }) ;
+                    // meds only with data is used
+                    meds = meds.filter(med => {return med.data.length > 0}) ;
+
+                    this.leftMeds.data = meds ;
+                    this.encounters = encounters ;                
+                    
+                    this.redrawMedChart() ;
+
+                    console.log("final result of generate report call") ;
+                    //console.log(this.medications) ;
+
+                    //this.$bvModal.hide("launch-modal") ;
+                }) ;
+
             } catch (err) {
-                this.log("Error in populateData Method :" + err) ;
+                _self.log("Error in populateData Method :" + err) ;
             }                
         },
+        redrawMedChart() {
+            console.log("Inside redrawMedChart method") ;
+            this.log("Inside redrawMedChart method " + this.leftMeds.groupBy) ;
+            var medChartOptions = this.getMedsChart() ;
+
+            var filteredMeds = [] ;
+
+            if (this.leftMeds.groupBy == "None") {
+                filteredMeds = this.leftMeds.data.filter(med => true) ;
+            } else if (this.leftMeds.groupBy == "Ingredient") {
+                this.log("Inside group by Ingredients section") ;
+                try {
+                if (!this.leftMeds.ingredients || this.leftMeds.ingredients.length == 0 ) {
+                    this.log("Got inside to loop thru each med for ingradients") ;
+                    var ingredients = [] ;
+                    this.leftMeds.data.forEach(med => {
+                        var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
+                        this.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
+                        if (ingIdx > -1) {
+                            ingredients[ingIdx] = this.$services.medreview.merge_meds(ingredients[ingIdx], med) ;
+                        } else {
+                            var ingObj = JSON.parse(JSON.stringify(med))  ;
+                            ingObj.name = (med.ingredient?med.ingredient:med.name) ;
+                            ingredients.push(ingObj) ;
+                        }                
+                    }) ;
+                    this.log("Setting ingredients first time {}" + ingredients.map(ing => ing.name)) ;
+                    this.$set(this.leftMeds, 'ingredients', ingredients) ;
+                }
+                filteredMeds = this.leftMeds.ingredients.filter(med => med.selected) ;
+                } catch (err) {
+                    this.log("Error in group by ingredients :" + err) ;
+                }
+            }
+            try {
+            // alpha sort on names
+            filteredMeds.sort(function (a, b) {
+                if (a.name > b.name) {
+                    return -1;
+                }
+                if (a.name < b.name) {
+                    return 1;
+                }                
+            }) ;
+
+            for (var i=0;i<filteredMeds.length;i++) {
+                filteredMeds[i].data.forEach(point => {point.y = i}) ;
+            }
+            
+            var cdata = filteredMeds.flatMap(med => med.data) ;
+            cdata  = JSON.parse(JSON.stringify(cdata)) ;  // basic simple deep clone
+
+            medChartOptions.yAxis[0].categories = filteredMeds.map(med => med.name) ;
+            medChartOptions.series[0].data = cdata ;
+
+            var chartHeight = medChartOptions.yAxis[0].categories.length * 30 ;
+            if (chartHeight < 300)
+                chartHeight = 300;
+
+            medChartOptions.chart.height = chartHeight ;
+
+            var plotBands = [] ;
+            this.encounters.forEach(enc => {                
+                plotBands.push({
+                    color : "lightgrey" ,
+                    borderwidth: 5 ,
+                    borderColor: "lightgrey",
+                    from : enc.start ,
+                    to : enc.end,
+                    zIndex : 1
+                }) ;                
+            }) ;
+
+            medChartOptions.xAxis.plotBands = plotBands ;
+
+            console.log(medChartOptions) ;
+                        
+            this.leftMeds.medChartOptions = medChartOptions ;
+            this.log("****** MedChartOptions*****") ;
+            this.log(JSON.stringify(this.leftMeds.medChartOptions)) ;
+
+            if (this.leftMeds.groupBy == "None")
+                this.leftMeds.data.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;
+            else
+                this.leftMeds.ingredients.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;            
+
+            if (this.leftMeds.groupBy == "None") {
+                this.leftMeds.list = this.leftMeds.data ;
+            } else {
+                this.leftMeds.list = this.leftMeds.ingredients ;
+            }
+            this.log("********Medication List***********") ;
+            this.log(JSON.stringify(this.leftMeds.list.map(med => med.name))) ;
+            } catch (err) {
+                this.log("Error in redrawchart 2 " + err) ;
+            }
+
+        },
+        getMedsChart() {
+            var chartOptions = this.$services.medreview.getDefaultChartConfig({
+                start_time: this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime(),
+                end_time: this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime(),
+                min: 0,
+                //max: 10,
+                //name: 'Medications Chart',
+                type: 'xrange',
+                title: '',
+                height: 400
+            }) ;
+            return chartOptions ;
+        },                
         getChart(VAdata, IOPdata) {
             try {
                 var chartOptions = this.$services.medreview.getDefaultChartConfig({
