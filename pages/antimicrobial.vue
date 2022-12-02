@@ -55,21 +55,7 @@
                                     class="ml-3"
                                 />
                                 <div style="font-size:small" class="mb-2">Hint: Please enter "Abnormal" to search for abnormal results. Enter "View" to get all results with susceptability report.</div>
-                                <!--
-                                <b-btn variant="primary" size="sm" class="float-right ml-2" @click="selectAll">Select Results in All Pages</b-btn>
-                                <b-btn variant="primary" size="sm" class="float-right ml-2" @click="clearAll">Clear Selection in All Pages</b-btn>
-                                -->
-                                <!-- :total-rows="totalRows"
-                                    :current-page="currentPage"
-                                    :sticky-header="tableHeight()"
-                                    :per-page="rowsPerPage"
-                                    striped 
-                                    hover
-                                    selectable
-                                    select-mode="multi" 
-                                    @row-clicked="onRowClicked"
-                                -->
-                                <!--<div class="scroll-table2">-->
+
                                 <b-table :items="cultureData" :fields="cultureFields" 
                                     small bordered        
                                     :sticky-header="tableHeight()"                            
@@ -103,18 +89,11 @@
                                     </template>
 
                                 </b-table>
-                                <!--</div>-->
-                                <!-- hide-ellipsis -->
-                                <!--
-                                <b-pagination                                 
-                                    :total-rows="totalRows" 
-                                    :per-page="rowsPerPage" 
-                                    align="right"                                    
-                                    v-model="currentPage"  />
-                                -->
+
                                 <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2 mt-2">Generate Notes</b-btn>                        
                                 <b-btn @click="copyToClipboard('cultureNotes')" variant="primary" size="sm" class="mb-2 mt-2">Copy Notes to Clipboard</b-btn>
                                 <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>
+                                <b-btn @click="compareSusceptabilityReports" variant="primary" size="sm" class="mb-2 mt-2 mr-2" style="float:right">Compare Susceptability</b-btn>                        
                                 
                                 <b-form-textarea max-rows="20" plaintext size="sm" v-model="cultureNotes" class="box"/>                                                              
                             </b-card-text>
@@ -139,6 +118,7 @@
         <b-modal id="susp-modal" button-size="sm" 
             centered hide-footer no-close-on-backdrop  scrollable
             title="Susceptability Report" title-class="mx-auto" size="lg">
+            <h5>{{susceptability_data_row.specimen_test}} collected at {{susceptability_data_row.collection_dttm}}</h5>
             <b-table-simple>
                 <b-tr>
                     <b-th> Test </b-th>
@@ -153,6 +133,12 @@
                     <b-td> {{ sdata.note }} </b-td>
                 </b-tr>
             </b-table-simple>
+        </b-modal>
+
+        <b-modal id="susp-compare-modal" button-size="sm" 
+            centered hide-footer no-close-on-backdrop  scrollable
+            title="Susceptability Comparison Report" title-class="mx-auto" size="lg">
+            <b-table :items="suscepComparisonRows" striped small thead-class="d-none" />
         </b-modal>
 
         <b-modal id="launch-modal" button-size="sm" 
@@ -258,8 +244,10 @@ export default {
             inpatient_start_date: "" ,
             inpatient_end_date : "",
             susceptability_data: [],
+            susceptability_data_row : {},
             copyBtnInfo: "",
-            loadingMessage: ""
+            loadingMessage: "",
+            suscepComparisonRows: []
         }
     },
     async fetch() {
@@ -342,19 +330,53 @@ export default {
         log(mesg) {
             this.resultText += "\n" + this.$moment().format("LTS") + ": " + mesg ;
         },
-        /*
-        selectAll() {
-            if (this.filteredRows.length > 0)
-                this.filteredRows.forEach(cresult => { cresult.rowSelected = true } ) ;
-            else
-                this.cultureData.forEach(cresult => { cresult.rowSelected = true } ) ;
-            this.$refs.cultureResultsTable.selectAllRows() ;
+        compareSusceptabilityReports() {
+            var susRows = [] ;
+
+            this.cultureData.forEach(cresult => {
+                if (!cresult.rowSelected) return ;                
+                if (cresult.memberId.length > 0) {                    
+                    susRows.push(cresult) ;
+                }                
+            }) ;
+
+            if (susRows.length <= 0) {
+                alert("Please select rows with Susceptability results for comparison") ;
+                return ;
+            }
+            
+            // generate unique sus tests
+            var susTests = [] ;
+            susRows.forEach(row => {
+                row.susObj = {} ;
+                row.susceptability_data.forEach(sd => {
+                    row.susObj[sd.test] = sd.result + (sd.value?" (" + sd.value + ")":"") ;
+                    if (susTests.indexOf(sd.test) < 0)
+                        susTests.push(sd.test) ;
+                })
+            }) ;
+
+            var susTableRows = [] ;
+            var headerRow = {test: ""} ;
+            for (var i=0;i<susRows.length;i++) {
+                headerRow["col" + i] = susRows[i].specimen_test + " collected at " + susRows[i].collection_dttm ;
+            }
+            susTableRows.push(headerRow) ;
+
+            susTests.forEach(st => {
+                var row = { test: st } ;
+                for (var i=0;i<susRows.length;i++)
+                    row["col" + i] = susRows[i].susObj[st] ;
+                susTableRows.push(row) ;
+            }) ;
+            
+            this.suscepComparisonRows = susTableRows ;
+
+            this.log("suscep comp rows :" + JSON.stringify(susTableRows)) ;
+            
+            this.$bvModal.show("susp-compare-modal") ;
+
         },
-        clearAll() {
-            this.cultureData.forEach(cresult => { cresult.rowSelected = false } ) ;
-            this.$refs.cultureResultsTable.clearSelected() ;
-        },
-        */
         tableHeight() {
             console.log((window.innerHeight * 75/100) + "px") ;
             return (window.innerHeight * 75/100) + "px" ;
@@ -404,6 +426,8 @@ export default {
         showSucepModal(cultureResult) {
             console.log("In show Modal Link {}", cultureResult) ;
             this.susceptability_data = cultureResult.susceptability_data ;
+            this.susceptability_data_row = cultureResult ;
+
             this.$bvModal.show("susp-modal") ;
         },
         onFiltered(filteredItems) {

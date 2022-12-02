@@ -7,104 +7,170 @@
             </b-col>
             <b-col sm="9" xl="10" class="text-left">
                 <p class="pt-2">
-                    Opthamology Synopsis+ is app developed by SEAL. 
-                <p>
+                    Ophthalmology Synopsis+ is an app developed by SEAL, designed to summarize key elements of a patient’s ophthalmologic history
+                </p>
+                <!--    
                 <p>
                     The app uses a simplified methodology to calculate a risk score and the corresponding 5-year risk of progression to 
                     advanced age-related macular degeneration (AMD).
                 </p>
+                -->
             </b-col>
         </b-row>
 
-        <b-row class="ml-2">
-            <b-col cols="11">
-                <b-card class="shadow-lg rounded-lg"  bg-variant="secondary">
-                    <b-card-text>
-                        <b-row>
-                            <b-col cols="12" style="text-align:center">
-                                <span class="h5">Synopsis Time Period</span>
-                            </b-col>
-                        </b-row>
-                        <b-row>
-                            <b-col cols="3">
-                                Start Date: {{startDateFormatted}}
-                            </b-col>
-                            <b-col cols="3">
-                                End Date: {{endDateFormatted}}
-                            </b-col>        
-                            <b-col cols="3" style="text-align:right">
-                                <b-btn variant="primary" pill @click="$bvModal.show('launch-modal')">Modify Report</b-btn>
-                            </b-col>                    
-                        </b-row>
-                    </b-card-text>
-                </b-card>
+        <b-row align-content="center" class="ml-2 mr-2 rounded-lg">
+            <b-col cols="11" class="text-center h5 pb-2 pt-2 bg-secondary rounded-lg">
+                Synopsis Time Period between {{startDateFormatted}} and {{endDateFormatted}}      
+                <b-button class="ml-4" size="sm" pill variant="primary" @click="$bvModal.show('launch-modal')">Modify Period</b-button>
             </b-col>
-        </b-row>        
+        </b-row>
+
         <b-row>
             <b-col cols="11" class="ml-2 pr-4">
                 <b-tabs card content-class="ml-2 mr-2 mb-3" fill nav-wrapper-class="bg-white" 
                     active-nav-item-class="bg-primary">
                     <b-tab no-body title="Left Eye" @click="tabClicked('left')">
                         <b-card-text>
-                            <b-card>
+                            <b-card class="shadow-lg rounded-lg mt-1">
                                 <b-card-text>
                                     <highchart :options="lChartOptions" ref="leftChart"/>
                                 </b-card-text>
                             </b-card>
-                            <b-card title="Procedures">
+                            <b-card class="shadow-lg rounded-lg mt-2">
+                                <b-card-title class="chart-title">Procedures</b-card-title>
                                 <b-card-text>
-                                    <b-table :items="eyeSurgeries" small>
+                                    
+                                    <highchart :options="leftSurgChartOptions" ref="leftSurgChart"/>
+
+                                    <b-table :items="leftEyeSurgeries" :fields="eyeSurgeryFields" 
+                                        small striped show-empty class="mt-3 ml-1">
+                                        <template #empty>
+                                            <h5 style="text-align:center;height:80px;" class="mt-5">
+                                                No Eye Surgeries performed during the selected time period.
+                                            </h5>
+                                        </template>                                     
                                     </b-table>
                                 </b-card-text>
                             </b-card>                            
-                            <b-card title="Medications">
-                                <b-card-text>
-                                    <b-row class="mt-3 ml-1 mr-1">
-                                        <b-col cols="12">
-                                            <b-card class="shadow-lg rounded-lg">
-                                                <b-card-title class="chart-title">
-                                                    <b-row>
-                                                        <b-col>Medications</b-col>
-                                                        <b-col style="text-align:right" class="mr-3">
-                                                            <span>Group By:</span> 
-                                                            <b-select :options="['None', 'Ingredient']" 
-                                                            v-model="leftMeds.groupBy" size="sm"
-                                                            @change="groupByChange"                                         
-                                                            class="ml-2" style="width:50%"/>
-                                                        </b-col>
-                                                    </b-row>                                        
-                                                </b-card-title>
-                                                <b-card-text>                                
-                                                    <b-row>
-                                                        <b-col>
-                                                            <highchart :modules="['xrange']" :options="leftMeds.medChartOptions" ref="leftMedChart"/>
-                                                        </b-col>
-                                                    </b-row>
-                                                </b-card-text>
-                                            </b-card>                                
+                            <b-card  class="shadow-lg rounded-lg mt-2">
+                                <b-card-title class="chart-title">
+                                    <b-row>
+                                        <b-col>Medications</b-col>
+                                        <b-col style="text-align:right" class="mr-3">
+                                            <span>Group By:</span> 
+                                            <b-select :options="['None', 'Ingredient']" 
+                                            v-model="leftMeds.groupBy" size="sm"
+                                            @change="redrawMedChart('left')"                                         
+                                            class="ml-2" style="width:50%"/>
                                         </b-col>
-                                    </b-row>                        
+                                    </b-row>                                        
+                                </b-card-title>
+                                <b-card-text>                                
+                                    <b-row>
+                                        <b-col>
+                                            <highchart :modules="['xrange']" :options="leftMeds.medChartOptions" ref="leftMedChart"/>
+                                        </b-col>
+                                    </b-row>
+                                    <b-row class="mt-5">
+                                        <b-col>
+                                            <b-table striped 
+                                                :items="leftMeds.list" :fields="medicationFields"
+                                                small :busy="leftMeds.loading"                                                                
+                                                hover 
+                                                show-empty                                                               
+                                                ref="leftMedicationsTable"                                                                
+                                                :sticky-header="tableHeight()">
+                                                <template #table-busy>
+                                                    <div class="text-center text-primary my-2">
+                                                        <b-spinner class="align-middle"></b-spinner>
+                                                        <strong>Loading...</strong>
+                                                    </div>
+                                                </template>
+                                                <template #empty>
+                                                    <h5 style="text-align:center;height:80px;" class="mt-5">
+                                                        No Eye Medications ordered during the selected time period.
+                                                    </h5>
+                                                </template>                                                                                     
+                                                <template #cell(total_doses)="data">
+                                                    {{data.item.data.length}}
+                                                </template>                                        
+                                            </b-table>
+                                        </b-col>
+                                    </b-row>
                                 </b-card-text>
                             </b-card>                            
                         </b-card-text>
                     </b-tab>
                     <b-tab no-body title="Right Eye" @click="tabClicked('right')">
                         <b-card-text>
-                            <b-card>
+                            <b-card class="shadow-lg rounded-lg mt-1">
                                 <b-card-text>
                                     <highchart :options="rChartOptions" ref="rightChart"/>
                                 </b-card-text>
                             </b-card>
-                            <b-card title="Procedures">
+                            <b-card class="shadow-lg rounded-lg mt-2">
+                                <b-card-title class="chart-title">Procedures</b-card-title>
                                 <b-card-text>
+                                    
+                                    <highchart :options="rightSurgChartOptions" ref="rightSurgChart"/>
 
+                                    <b-table :items="rightEyeSurgeries" :fields="eyeSurgeryFields" 
+                                        small striped show-empty class="mt-3 ml-1">
+                                        <template #empty>
+                                            <h5 style="text-align:center;height:80px;" class="mt-5">
+                                                No Eye Surgeries performed during the selected time period.
+                                            </h5>
+                                        </template>                                     
+                                    </b-table>
                                 </b-card-text>
                             </b-card>                            
-                            <b-card title="Medications">
-                                <b-card-text>
-
+                            <b-card  class="shadow-lg rounded-lg mt-2">
+                                <b-card-title class="chart-title">
+                                    <b-row>
+                                        <b-col>Medications</b-col>
+                                        <b-col style="text-align:right" class="mr-3">
+                                            <span>Group By:</span> 
+                                            <b-select :options="['None', 'Ingredient']" 
+                                            v-model="rightMeds.groupBy" size="sm"
+                                            @change="redrawMedChart('right')"                                         
+                                            class="ml-2" style="width:50%"/>
+                                        </b-col>
+                                    </b-row>                                        
+                                </b-card-title>
+                                <b-card-text>                                
+                                    <b-row>
+                                        <b-col>
+                                            <highchart :modules="['xrange']" :options="rightMeds.medChartOptions" ref="rightMedChart"/>
+                                        </b-col>
+                                    </b-row>
+                                    <b-row class="mt-5">
+                                        <b-col>
+                                            <b-table striped 
+                                                :items="rightMeds.list" :fields="medicationFields"
+                                                small :busy="rightMeds.loading"                                                                
+                                                hover 
+                                                show-empty                                                               
+                                                ref="rightMedicationsTable"                                                                
+                                                :sticky-header="tableHeight()">
+                                                <template #table-busy>
+                                                    <div class="text-center text-primary my-2">
+                                                        <b-spinner class="align-middle"></b-spinner>
+                                                        <strong>Loading...</strong>
+                                                    </div>
+                                                </template>
+                                                <template #empty>
+                                                    <h5 style="text-align:center;height:80px;" class="mt-5">
+                                                        No Eye Medications ordered during the selected time period.
+                                                    </h5>
+                                                </template>                                                                                     
+                                                <template #cell(total_doses)="data">
+                                                    {{data.item.data.length}}
+                                                </template>                                        
+                                            </b-table>
+                                        </b-col>
+                                    </b-row>
                                 </b-card-text>
-                            </b-card>                            
+                            </b-card>         
                         </b-card-text>
                     </b-tab>                    
                 </b-tabs>
@@ -125,7 +191,7 @@
 
         <b-modal id="launch-modal" button-size="sm" size="md" 
             centered hide-footer no-close-on-backdrop 
-            title="Inpatient Time Period" title-class="mx-auto">
+            title="Synopsis Time Period" title-class="mx-auto">
             <b-row>
                 <b-col class="text-right" cols="4">
                     <label for="startDate">Start Date</label>
@@ -179,9 +245,22 @@
         </b-modal>
     </b-container>
 </template>
+
 <script>
+
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
 import Highcharts from 'highcharts' ;
+
+    /**
+     * Set the global timezone to PST
+     */
+    Highcharts.setOptions({
+        time: {
+            //timezone: 'America/Los_Angeles',
+            timezoneOffset: new Date().getTimezoneOffset(),
+            useUTC: false
+        }
+    });
 
 export default {
     components: { EditableDatePicker },
@@ -190,7 +269,15 @@ export default {
             patient: {},
             rChartOptions: {},
             lChartOptions: {},
-            eyeSurgeries: [],
+            leftSurgChartOptions: {},
+            rightSurgChartOptions: {},
+            leftEyeSurgeries: [],
+            rightEyeSurgeries: [],
+            eyeSurgeryFields: [
+                {label: 'Surgery', key: 'surgery', sortable: false},
+                {label: 'Side', key: 'side', sortable: false},
+                {label: 'Date', key: 'date', sortable: false},
+            ],
             launchModal : {              
                 start_date: '',
                 end_date: '',
@@ -212,22 +299,44 @@ export default {
                 ingredients: [],
                 list: [],
                 medChartOptions: {},
-                groupBy: "None"
-            }
+                groupBy: "Ingredient",
+                loading: false
+            },
+            rightMeds : {
+                data: [],                
+                ingredients: [],
+                list: [],
+                medChartOptions: {},
+                groupBy: "Ingredient",
+                loading: false
+            },            
+            medicationFields: [
+                {label: 'Medication', key: 'name', sortable: false},
+                {label: 'Tags', key: 'dosageRoutes', sortable: false},
+                {label: 'Last MAR', key: 'last_used', sortable: false},
+                {label: 'Total Doses', key: 'total_doses', sortable: false}
+            ]
         }
     },
     async fetch() {
 
         this.$store.commit('setAppId', this.$services.synopsis.APP_ID) ;
         this.$services.synopsis.dblog("SynopsisHome", "In Ophthamology Synopsis+ Home Page") ;
-        this.$store.commit('setPageTitle', "Ophthamology Synopsis+") ;        
-    },
-    mounted() {
-        this.launchModal.start_date = this.$moment().add(-1, 'year').format("MM/DD/YYYY") ;
-        this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;
-        this.$bvModal.show("launch-modal") ;
+        this.$store.commit('setPageTitle', "Ophthamology Synopsis+") ;  
+        
+        this.patient = await this.$services.seal.patient(this.$services.synopsis.APP_ID) ;
 
     },
+    mounted() {
+
+        this.launchModal.start_date = this.$moment().add(-1, 'year').format("MM/DD/YYYY") ;
+        this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;        
+        this.$bvModal.show("launch-modal") ;
+
+        this.leftSurgChartOptions = this.getSurgChart([]) ;
+        this.rightSurgChartOptions = this.getSurgChart([]) ;
+
+    },  
     computed : {
         startDateFormatted () {
             return this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;            
@@ -243,19 +352,35 @@ export default {
         tabClicked(tabName) {
             var _self = this ;
             this.$nextTick(() => {
-                if (tabName == 'left')
+                if (tabName == 'left') {
                     _self.$refs.leftChart.chart.reflow() ;
-                else
+                    _self.$refs.leftMedChart.chart.reflow() ;                    
+                    _self.$refs.leftSurgChart.chart.reflow() ;                    
+                } else {
                     _self.$refs.rightChart.chart.reflow() ;
+                    _self.$refs.rightMedChart.chart.reflow() ;
+                    _self.$refs.rightSurgChart.chart.reflow() ;
+                }
             }) ; 
         },
+        tableHeight() {
+            return "400px" ;
+            // return (window.innerHeight * 75/100) + "px" ;
+        },
         async populateData() {
+            
+            var _self = this ; 
+
             try {
                 this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
                 this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
 
                 this.launchModal.rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date + "T00:00:00").toDate().getTime() ; //"YYYY-MM-DDT00:00:01"
                 this.launchModal.rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date + "T00:00:00").add(1, 'days').toDate().getTime() ;            
+
+                this.leftMeds.loading = true ;
+                this.rightMeds.loading = true ;
+                this.launchModal.loading = true ;
 
                 var evisits = await this.$services.synopsis.eyevisits(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
                 this.log("Eye Visits") ;
@@ -264,23 +389,40 @@ export default {
                 var rVAdata = [] ;
                 var lVAdata = [] ;
                 var rIOPdata = [] ;
-                var lIOPdata = [] ;                
-                var _self = this ; 
-
+                var lIOPdata = [] ;                               
+                
                 var surgicalHistory = await this.$services.synopsis.surgicalhistory(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
                 this.log("Surgical History Response") ;
                 this.log(JSON.stringify(surgicalHistory)) ;
                 
-                this.eyeSurgeries = surgicalHistory.map(surg => {
-                    return {
-                        "surgery" : surg.surgery,
-                        "side" : surg.side,
-                        "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY")                        
-                    }
-                }) ;
+                this.leftEyeSurgeries = surgicalHistory
+                            .filter(s => s.side.toLowerCase().indexOf("left") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
+                            .map(surg => {
+                                return {
+                                    "surgery" : surg.surgery,
+                                    "side" : surg.side,
+                                    "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY"),
+                                    "timestamp": surg.dtstart                        
+                                }
+                            }) ;
+
+                this.rightEyeSurgeries = surgicalHistory
+                            .filter(s => s.side.toLowerCase().indexOf("right") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
+                            .map(surg => {
+                                return {
+                                    "surgery" : surg.surgery,
+                                    "side" : surg.side,
+                                    "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY"),
+                                    "timestamp": surg.dtstart
+                                }
+                            }) ;
+
+                this.leftSurgChartOptions = this.getSurgChart(this.leftEyeSurgeries) ;
+                this.rightSurgChartOptions = this.getSurgChart(this.rightEyeSurgeries) ;
 
                 this.log("Surgical History Map") ;
-                this.log(JSON.stringify(this.eyeSurgeries)) ;
+                this.log("Left: " + JSON.stringify(this.leftEyeSurgeries)) ;
+                this.log("Right: " + JSON.stringify(this.rightEyeSurgeries)) ;
 
                 this.$services.synopsis.getresults(evisits).then(responses => {
                     _self.log("Got responses for smartdata results :" + responses.length) ;
@@ -307,11 +449,8 @@ export default {
                     _self.rChartOptions = this.getChart(rVAdata, rIOPdata) ;
                     _self.lChartOptions = this.getChart(lVAdata, lIOPdata) ;
 
-                    _self.$bvModal.hide("launch-modal") ;
-
                 }).catch((error) => {
                     _self.log("Error in Getting SmartData Ajax Call :" + error) ;                    
-                    _self.$bvModal.hide("launch-modal") ;
                 }) ;
 
                 var responses = [] ;
@@ -330,7 +469,6 @@ export default {
                         _self.log("Processing MedStat : " + JSON.stringify(med)) ;
                         if (!med.pharma_class) med.pharma_class = "" ;
                         if (!med.routes) med.routes = "" ;
-                        //_self.log("MedStat Processing Med :" + med.name + " oids :" + med.med_order_ids + " pharma clasas:" + med.pharma_class.toLowerCase() + " routes: " + med.routes + " dosageRoutes: " + med.dosageRoutes) ;
                         if (med.pharma_class.toLowerCase().indexOf('ophth') >= 0 || med.pharma_class.toLowerCase().indexOf('eye ') == 0 
                                 || med.routes.toLowerCase().indexOf('ophth') >= 0) {
                             _self.log("Inside Oph Processing Med :" + med.name + " oids :" + med.med_order_ids + " dose routes: " + med.dosageRoutes) ;
@@ -356,6 +494,7 @@ export default {
                 _self.log("Meds data: " + JSON.stringify(meds)) ;
 
                 var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.synopsis.APP_ID) ;
+                _self.log("Encounter data: " + JSON.stringify(encounters)) ;
 
                 var wsjson = {} ;
                 var csnids = [] ;
@@ -387,7 +526,7 @@ export default {
                     }) ;
                 }) ;
             
-                console.log("Final ws call json : {}", wsjson) ;
+                _self.log("Final ws call json: " + JSON.stringify(wsjson)) ;
 
                 this.$services.seal.mardata(wsjson, this.$services.synopsis.APP_ID).then(responses => {
                     console.log("responses length " + responses.length) ;
@@ -395,6 +534,7 @@ export default {
 
                     responses.forEach(response => {                    
                         response.data.Orders.forEach(order => {
+                            try {
                             _self.log("Processing MAR Data for order " + order.Name) ;
                             var medIdx = meds.findIndex(function (med) { return (med.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
                             var med = {} ;
@@ -402,7 +542,7 @@ export default {
                                 med = meds[medIdx] ;
                                 med.name = order.Name ;
                             } else {
-                                console.log("********* This should NOT happen - can't match order id for " + order.Name) ;
+                                _self.log("********* This should NOT happen - can't match order id for " + order.Name) ;
                                 return ;
                             }
                             var last_used = "" ;
@@ -412,7 +552,7 @@ export default {
                                 var ma = order.MedicationAdministrations[mIdx] ;
                                 if (ma.Action != "Not Given") {
                                     var adminTime = new Date(ma.AdministrationInstant).getTime() ;
-                                    if (adminTime >= rpt_start_date_long && adminTime <= rpt_end_date_long) {
+                                    if (adminTime >= _self.launchModal.rpt_start_date_long && adminTime <= _self.launchModal.rpt_end_date_long) {
                                         if (last_used_long < adminTime) {
                                             last_used = this.$moment(new Date(adminTime)).format("MM/DD/YYYY") ;
                                             last_used_long = adminTime ;
@@ -430,42 +570,60 @@ export default {
                             med.last_used_long = last_used_long ;
                             med.last_used = last_used ;
                             med.total_rows = med.data.length ;
+                            } catch (err) {
+                                _self.log("Error in processing MAR data :" + err) ;
+                            }
                         }) ;
                     }) ;
+
+                    _self.log("Before filtering meds with no data :" + JSON.stringify(meds)) ;
+                    
                     // meds only with data is used
                     meds = meds.filter(med => {return med.data.length > 0}) ;
-
-                    this.leftMeds.data = meds ;
-                    this.encounters = encounters ;                
                     
-                    this.redrawMedChart() ;
+                    meds.forEach(med => med.dosageRoutes = ((med.dosageRoutes && med.dosageRoutes.length > 0)?med.dosageRoutes:"Both Eyes")) ;
+
+                    _self.log("After filtering meds with no data :" + JSON.stringify(meds)) ;
+
+                    this.leftMeds.data = meds.filter(med => (med.dosageRoutes.toLowerCase().indexOf("left") >= 0 || med.dosageRoutes.toLowerCase().indexOf("both") >= 0) ) ;
+                    this.rightMeds.data = meds.filter(med => (med.dosageRoutes.toLowerCase().indexOf("right") >= 0 || med.dosageRoutes.toLowerCase().indexOf("both") >= 0) ) ;
+
+                    this.encounters = encounters ;                
+
+                    this.redrawMedChart("left") ;
+                    this.redrawMedChart("right") ;
+
+                    this.leftMeds.loading = false ;
+                    this.rightMeds.loading = false ;
+                    this.launchModal.loading = false ;
 
                     console.log("final result of generate report call") ;
-                    //console.log(this.medications) ;
-
-                    //this.$bvModal.hide("launch-modal") ;
+                    
+                    _self.$bvModal.hide("launch-modal") ;                    
                 }) ;
 
             } catch (err) {
                 _self.log("Error in populateData Method :" + err) ;
             }                
         },
-        redrawMedChart() {
-            console.log("Inside redrawMedChart method") ;
-            this.log("Inside redrawMedChart method " + this.leftMeds.groupBy) ;
+        redrawMedChart(side) {
+            console.log("Inside redrawMedChart method for side: " + side) ;            
+
             var medChartOptions = this.getMedsChart() ;
 
             var filteredMeds = [] ;
+            var groupBy = (side == "left"?this.leftMeds.groupBy:this.rightMeds.groupBy) ;
+            var meds = (side == "left"?this.leftMeds:this.rightMeds);
 
-            if (this.leftMeds.groupBy == "None") {
-                filteredMeds = this.leftMeds.data.filter(med => true) ;
-            } else if (this.leftMeds.groupBy == "Ingredient") {
+            if (groupBy == "None") {
+                filteredMeds = meds.data.filter(med => true) ;
+            } else if (groupBy == "Ingredient") {
                 this.log("Inside group by Ingredients section") ;
                 try {
-                if (!this.leftMeds.ingredients || this.leftMeds.ingredients.length == 0 ) {
+                if (!meds.ingredients || meds.ingredients.length == 0 ) {
                     this.log("Got inside to loop thru each med for ingradients") ;
                     var ingredients = [] ;
-                    this.leftMeds.data.forEach(med => {
+                    meds.data.forEach(med => {
                         var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
                         this.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
                         if (ingIdx > -1) {
@@ -477,9 +635,9 @@ export default {
                         }                
                     }) ;
                     this.log("Setting ingredients first time {}" + ingredients.map(ing => ing.name)) ;
-                    this.$set(this.leftMeds, 'ingredients', ingredients) ;
+                    this.$set(meds, 'ingredients', ingredients) ;
                 }
-                filteredMeds = this.leftMeds.ingredients.filter(med => med.selected) ;
+                filteredMeds = meds.ingredients.filter(med => true) ;
                 } catch (err) {
                     this.log("Error in group by ingredients :" + err) ;
                 }
@@ -527,22 +685,22 @@ export default {
 
             console.log(medChartOptions) ;
                         
-            this.leftMeds.medChartOptions = medChartOptions ;
+            meds.medChartOptions = medChartOptions ;
             this.log("****** MedChartOptions*****") ;
-            this.log(JSON.stringify(this.leftMeds.medChartOptions)) ;
+            this.log(JSON.stringify(meds.medChartOptions)) ;
 
-            if (this.leftMeds.groupBy == "None")
-                this.leftMeds.data.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;
+            if (groupBy == "None")
+                meds.data.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;
             else
-                this.leftMeds.ingredients.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;            
+                meds.ingredients.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;            
 
-            if (this.leftMeds.groupBy == "None") {
-                this.leftMeds.list = this.leftMeds.data ;
+            if (groupBy == "None") {
+                meds.list = meds.data ;
             } else {
-                this.leftMeds.list = this.leftMeds.ingredients ;
+                meds.list = meds.ingredients ;
             }
             this.log("********Medication List***********") ;
-            this.log(JSON.stringify(this.leftMeds.list.map(med => med.name))) ;
+            this.log(JSON.stringify(meds.list.map(med => med.name))) ;
             } catch (err) {
                 this.log("Error in redrawchart 2 " + err) ;
             }
@@ -559,8 +717,61 @@ export default {
                 title: '',
                 height: 400
             }) ;
+            
+            chartOptions.chart.marginLeft = 150 ;
+            //chartOptions.yAxis[0].labels = { overflow: "allow" } ;
+
             return chartOptions ;
-        },                
+        },
+        getSurgChart(surgeryData) {
+                var _self = this ;
+
+                var chartOptions = this.$services.medreview.getDefaultChartConfig({
+                    name: "Procedures",
+                    height: 50,
+                    min: this.rpt_start_date_long,
+                    max: this.rpt_end_date_long                    
+                }) ;
+                chartOptions.title = { text: "" } ;
+                chartOptions.chart.marginTop = 20 ;
+                chartOptions.chart.marginLeft = 80 ;
+                chartOptions.xAxis.min = this.rpt_start_date_long ;
+                chartOptions.xAxis.max = this.rpt_end_date_long ;
+                chartOptions.yAxis[0] = {
+                        "title": {
+                            "text": "",
+                            style: {
+                                color: "red",
+                                "font-size": "1.5em"
+                            }                                                
+                        }
+                    } ;
+                var surgeryChartData = surgeryData.map(surg => {
+                    return { x: _self.$moment(surg.timestamp).startOf("day").valueOf(), y: 0, name: surg.surgery, ts: surg.timestamp }
+                }) ;
+
+                chartOptions.series[0] = {
+                    name : "Surgeries",
+                    yAxis: 0,
+                    type: "line",
+                    color: "red",
+                    marker: {
+                        symbol: "diamond",
+                        radius: 8
+                    },
+                    data: surgeryChartData
+                } ;                
+                
+                chartOptions.tooltip.formatter = function () {
+                    var tip =  "Surgery: " + this.point.name ; 
+                    tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.ts) ;
+                    return tip ;
+                }
+
+                this.log("In getChart Method") ;
+                this.log(JSON.stringify(chartOptions)) ;
+                return chartOptions ;
+        },
         getChart(VAdata, IOPdata) {
             try {
                 var chartOptions = this.$services.medreview.getDefaultChartConfig({
@@ -625,3 +836,10 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+    .chart-title {
+        color: rgb(54,38, 115) ;
+        font-size: 1.1em ;
+    }
+</style>
