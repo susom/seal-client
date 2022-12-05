@@ -90,7 +90,7 @@
 
                                 </b-table>
 
-                                <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2 mt-2">Generate Notes</b-btn>                        
+                                <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2 mt-2">Generate & Copy Notes to Clipboard</b-btn>                        
                                 <b-btn @click="copyToClipboard('cultureNotes')" variant="primary" size="sm" class="mb-2 mt-2">Copy Notes to Clipboard</b-btn>
                                 <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>
                                 <b-btn @click="compareSusceptabilityReports" variant="primary" size="sm" class="mb-2 mt-2 mr-2" style="float:right">Compare Susceptability</b-btn>                        
@@ -488,6 +488,8 @@ export default {
             _self.log("Culture Notes constructed") ;
             _self.log(cultureNotes) ;
             _self.cultureNotes = cultureNotes ;
+
+            copyToClipboard('cultureNotes') ;
 
         },
         async generateCharts() {
