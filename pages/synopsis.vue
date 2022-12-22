@@ -45,13 +45,29 @@
                                     <b-table :items="leftEyeSurgeries" :fields="eyeSurgeryFields" 
                                         small striped show-empty class="mt-3 ml-1">
                                         <template #empty>
-                                            <h5 style="text-align:center;height:80px;" class="mt-5">
+                                            <h5 style="text-align:center;" class="mt-1 mb-1">
                                                 No Eye Surgeries performed during the selected time period.
                                             </h5>
                                         </template>                                     
                                     </b-table>
                                 </b-card-text>
-                            </b-card>                            
+                            </b-card>   
+                            <b-card class="shadow-lg rounded-lg mt-2">
+                                <b-card-title class="chart-title">Exam/Tests</b-card-title>
+                                <b-card-text>
+                                    
+                                    <highchart :options="leftTestChartOptions" ref="leftTestChart"/>
+
+                                    <b-table :items="leftEyeTests" :fields="eyeTestFields" 
+                                        small striped show-empty class="mt-3 ml-1">
+                                        <template #empty>
+                                            <h5 style="text-align:center;" class="mt-1 mb-1">
+                                                No Eye Exams performed during the selected time period.
+                                            </h5>
+                                        </template>                                     
+                                    </b-table>
+                                </b-card-text>
+                            </b-card>                                                                                                             
                             <b-card  class="shadow-lg rounded-lg mt-2">
                                 <b-card-title class="chart-title">
                                     <b-row>
@@ -87,7 +103,7 @@
                                                     </div>
                                                 </template>
                                                 <template #empty>
-                                                    <h5 style="text-align:center;height:80px;" class="mt-5">
+                                                    <h5 style="text-align:center;" class="mt-1 mb-1">
                                                         No Eye Medications ordered during the selected time period.
                                                     </h5>
                                                 </template>                                                                                     
@@ -117,13 +133,29 @@
                                     <b-table :items="rightEyeSurgeries" :fields="eyeSurgeryFields" 
                                         small striped show-empty class="mt-3 ml-1">
                                         <template #empty>
-                                            <h5 style="text-align:center;height:80px;" class="mt-5">
+                                            <h5 style="text-align:center;" class="mt-1 mb-1">
                                                 No Eye Surgeries performed during the selected time period.
                                             </h5>
                                         </template>                                     
                                     </b-table>
                                 </b-card-text>
                             </b-card>                            
+                            <b-card class="shadow-lg rounded-lg mt-2">
+                                <b-card-title class="chart-title">Exam/Tests</b-card-title>
+                                <b-card-text>
+                                    
+                                    <highchart :options="rightTestChartOptions" ref="rightTestChart"/>
+
+                                    <b-table :items="rightEyeTests" :fields="eyeTestFields" 
+                                        small striped show-empty class="mt-3 ml-1">
+                                        <template #empty>
+                                            <h5 style="text-align:center" class="mt-1 mb-1">
+                                                No Eye Exams performed during the selected time period.
+                                            </h5>
+                                        </template>                                     
+                                    </b-table>
+                                </b-card-text>
+                            </b-card>                                                        
                             <b-card  class="shadow-lg rounded-lg mt-2">
                                 <b-card-title class="chart-title">
                                     <b-row>
@@ -159,7 +191,7 @@
                                                     </div>
                                                 </template>
                                                 <template #empty>
-                                                    <h5 style="text-align:center;height:80px;" class="mt-5">
+                                                    <h5 style="text-align:center;" class="mt-1 mb-1">
                                                         No Eye Medications ordered during the selected time period.
                                                     </h5>
                                                 </template>                                                                                     
@@ -274,10 +306,19 @@ export default {
             leftEyeSurgeries: [],
             rightEyeSurgeries: [],
             eyeSurgeryFields: [
-                {label: 'Surgery', key: 'surgery', sortable: false},
+                {label: 'Surgery', key: 'name', sortable: false},
                 {label: 'Side', key: 'side', sortable: false},
                 {label: 'Date', key: 'date', sortable: false},
             ],
+            eyeTestFields: [
+                {label: 'Test', key: 'name', sortable: false},
+                {label: 'Side', key: 'side', sortable: false},
+                {label: 'Date', key: 'date', sortable: false},
+            ],            
+            leftTestChartOptions: {},
+            rightTestChartOptions: {},
+            leftEyeTests: [],
+            rightEyeTests: [],            
             launchModal : {              
                 start_date: '',
                 end_date: '',
@@ -355,11 +396,13 @@ export default {
                 if (tabName == 'left') {
                     _self.$refs.leftChart.chart.reflow() ;
                     _self.$refs.leftMedChart.chart.reflow() ;                    
-                    _self.$refs.leftSurgChart.chart.reflow() ;                    
+                    _self.$refs.leftSurgChart.chart.reflow() ;  
+                    _self.$refs.leftTestChart.chart.reflow() ;
                 } else {
                     _self.$refs.rightChart.chart.reflow() ;
                     _self.$refs.rightMedChart.chart.reflow() ;
                     _self.$refs.rightSurgChart.chart.reflow() ;
+                    _self.$refs.rightTestChart.chart.reflow() ;
                 }
             }) ; 
         },
@@ -390,8 +433,9 @@ export default {
                 var lVAdata = [] ;
                 var rIOPdata = [] ;
                 var lIOPdata = [] ;                               
-                
-                var surgicalHistory = await this.$services.synopsis.surgicalhistory(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
+                                
+                var patient = await this.$services.seal.patient(this.$services.synopsis.APP_ID) ;
+                var surgicalHistory = await this.$services.synopsis.surgicalhistory(patient.epicPatientId, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
                 this.log("Surgical History Response") ;
                 this.log(JSON.stringify(surgicalHistory)) ;
                 
@@ -399,10 +443,10 @@ export default {
                             .filter(s => s.side.toLowerCase().indexOf("left") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
                             .map(surg => {
                                 return {
-                                    "surgery" : surg.surgery,
+                                    "name" : surg.surgery,
                                     "side" : surg.side,
                                     "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY"),
-                                    "timestamp": surg.dtstart                        
+                                    "timestamp": this.$moment(surg.dtstart).valueOf()
                                 }
                             }) ;
 
@@ -410,10 +454,10 @@ export default {
                             .filter(s => s.side.toLowerCase().indexOf("right") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
                             .map(surg => {
                                 return {
-                                    "surgery" : surg.surgery,
+                                    "name" : surg.surgery,
                                     "side" : surg.side,
                                     "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY"),
-                                    "timestamp": surg.dtstart
+                                    "timestamp": this.$moment(surg.dtstart).valueOf()
                                 }
                             }) ;
 
@@ -423,6 +467,40 @@ export default {
                 this.log("Surgical History Map") ;
                 this.log("Left: " + JSON.stringify(this.leftEyeSurgeries)) ;
                 this.log("Right: " + JSON.stringify(this.rightEyeSurgeries)) ;
+
+                var ophTests = await this.$services.synopsis.ophtests(patient.epicPatientId, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
+                this.log("Oph Tests Response") ;
+                this.log(JSON.stringify(ophTests)) ;
+                
+                this.leftEyeTests = ophTests
+                            .filter(s => s.side.toLowerCase().indexOf("left") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
+                            .map(surg => {
+                                return {
+                                    "name" : surg.proc_name,
+                                    "side" : surg.side,
+                                    "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY"),
+                                    "timestamp": this.$moment(surg.dtstart).valueOf()                       
+                                }
+                            }) ;
+
+                this.rightEyeTests = ophTests
+                            .filter(s => s.side.toLowerCase().indexOf("right") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
+                            .map(surg => {
+                                return {
+                                    "name" : surg.proc_name,
+                                    "side" : surg.side,
+                                    "date" : this.$moment(surg.dtstart).format("MM/DD/YYYY"),
+                                    "timestamp": this.$moment(surg.dtstart).valueOf()
+                                }
+                            }) ;
+
+                this.leftTestChartOptions = this.getSurgChart(this.leftEyeTests) ;
+                this.rightTestChartOptions = this.getSurgChart(this.rightEyeTests) ;
+
+                this.log("Oph Tests Map") ;
+                this.log("Left: " + JSON.stringify(this.leftEyeTests)) ;
+                this.log("Right: " + JSON.stringify(this.rightEyeTests)) ;
+
 
                 this.$services.synopsis.getresults(evisits).then(responses => {
                     _self.log("Got responses for smartdata results :" + responses.length) ;
@@ -729,14 +807,14 @@ export default {
                 var chartOptions = this.$services.medreview.getDefaultChartConfig({
                     name: "Procedures",
                     height: 50,
-                    min: this.rpt_start_date_long,
-                    max: this.rpt_end_date_long                    
+                    min: this.launchModal.rpt_start_date_long,
+                    max: this.launchModal.rpt_end_date_long                    
                 }) ;
                 chartOptions.title = { text: "" } ;
                 chartOptions.chart.marginTop = 20 ;
                 chartOptions.chart.marginLeft = 80 ;
-                chartOptions.xAxis.min = this.rpt_start_date_long ;
-                chartOptions.xAxis.max = this.rpt_end_date_long ;
+                chartOptions.xAxis.min = this.launchModal.rpt_start_date_long ;
+                chartOptions.xAxis.max = this.launchModal.rpt_end_date_long ;
                 chartOptions.yAxis[0] = {
                         "title": {
                             "text": "",
@@ -747,13 +825,13 @@ export default {
                         }
                     } ;
                 var surgeryChartData = surgeryData.map(surg => {
-                    return { x: _self.$moment(surg.timestamp).startOf("day").valueOf(), y: 0, name: surg.surgery, ts: surg.timestamp }
+                    return { x: _self.$moment(surg.timestamp).startOf("day").valueOf(), y: 0, name: surg.name, timestamp: surg.timestamp }
                 }) ;
 
                 chartOptions.series[0] = {
                     name : "Surgeries",
                     yAxis: 0,
-                    type: "line",
+                    type: "scatter",
                     color: "red",
                     marker: {
                         symbol: "diamond",
@@ -763,8 +841,9 @@ export default {
                 } ;                
                 
                 chartOptions.tooltip.formatter = function () {
-                    var tip =  "Surgery: " + this.point.name ; 
-                    tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.ts) ;
+                    var tip =  this.point.name ; 
+                    // removed  %I:%M %p as the input is date only
+                    tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y', this.point.timestamp) ;
                     return tip ;
                 }
 

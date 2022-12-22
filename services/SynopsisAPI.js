@@ -46,10 +46,19 @@ export default class SynopsisAPI {
       }) ;                      
     }
 
-    surgicalhistory(stdt, enddt) {
+    surgicalhistory(epicPatientId, stdt, enddt) {
       return this.axios({
         method: 'get',
-        url: "/fhir-app/synopsis/api/v1/surgicalhistory?start_date=" + stdt + "&end_date=" + enddt + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+        url: "/fhir-app/synopsis/api/v1/surgicalhistory?epicPatientId=" + epicPatientId + "&start_date=" + stdt + "&end_date=" + enddt + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+      }).then((response) => {            
+          return response.data ;
+      }) ;                      
+    }
+
+    ophtests(epicPatientId, stdt, enddt) {
+      return this.axios({
+        method: 'get',
+        url: "/fhir-app/synopsis/api/v1/ophtests?epicPatientId=" + epicPatientId + "&start_date=" + stdt + "&end_date=" + enddt + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
       }).then((response) => {            
           return response.data ;
       }) ;                      

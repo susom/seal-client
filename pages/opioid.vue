@@ -1182,12 +1182,12 @@ export default {
                             var idx = chartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
                             if (idx >= 0) {
                                 chartPoint.meds[idx].mme = chartPoint.meds[idx].mme + marPoint.mme ;
-                                if (chartPoint.routes.toLowerCase() == "oral") {
+                                //if (chartPoint.routes.toLowerCase() == "oral") {
                                     if (chartPoint.meds[idx].dose_qty) 
                                         chartPoint.meds[idx].dose_qty = chartPoint.meds[idx].dose_qty + 1 ;
                                     else
                                         chartPoint.meds[idx].dose_qty = 2 ;
-                                }
+                                //}
                             } else {
                                 chartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // cloning and addding
                             }
@@ -1219,12 +1219,12 @@ export default {
                             var idx = catChartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
                             if (idx >= 0) {
                                 catChartPoint.meds[idx].mme = catChartPoint.meds[idx].mme + marPoint.mme ;
-                                if (catChartPoint.routes.toLowerCase() == "oral") {
+                                //if (catChartPoint.routes.toLowerCase() == "oral") {
                                     if (catChartPoint.meds[idx].dose_qty)
                                         catChartPoint.meds[idx].dose_qty = catChartPoint.meds[idx].dose_qty + 1 ;
                                     else
                                         catChartPoint.meds[idx].dose_qty = 2 ;
-                                }
+                                //}
                             } else {
                                 catChartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // clone and add
                             }
