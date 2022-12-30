@@ -856,14 +856,14 @@ export default {
                 var chartOptions = this.$services.medreview.getDefaultChartConfig({
                     name: "Visual Acuity",
                     height: 400,
-                    min: this.rpt_start_date_long,
-                    max: this.rpt_end_date_long                    
+                    min: this.launchModal.rpt_start_date_long,
+                    max: this.launchModal.rpt_end_date_long                    
                 }) ;
                 chartOptions.title = { text: "" } ;
                 chartOptions.chart.marginTop = 20 ;
                 chartOptions.chart.marginLeft = 80 ;
-                chartOptions.xAxis.min = this.rpt_start_date_long ;
-                chartOptions.xAxis.max = this.rpt_end_date_long ;
+                chartOptions.xAxis.min = this.launchModal.rpt_start_date_long ;
+                chartOptions.xAxis.max = this.launchModal.rpt_end_date_long ;
                 chartOptions.yAxis[0] = {
                         "title": {
                             "text": "Visual Acuity",

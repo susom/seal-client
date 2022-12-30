@@ -49,44 +49,6 @@ export default class SealAPI {
      * @returns 
      */
     patient(appId) {
-        /*
-        var patient = 
-        {
-          "firstName" : "Casey C",
-          "lastName" : "Willow",
-          "fullName" : "Casey C Willow",
-          "gender" : "Male",
-          "birthDate" : "1950-10-30",
-          "street" : "134 Elm Street",
-          "city" : "Madison",
-          "stateCode" : "WI",
-          "postalCode" : "53706",
-          "countryCode" : "US",
-          "epicPatientId" : "Z5089",
-          "mrn" : "203139",
-          "cmeds" : [ {
-            "seal_medication_id" : 2,
-            "med_name" : "srini: test med",
-            "syndromes" : "",
-            "med_periods" : [ {
-              "ptype" : "Inpatient",
-              "end_date" : "07/06/2021",
-              "start_date" : "07/14/2021"
-            } ],
-            "med_note" : "sajkhjkashdkaj\nlkhklhkhkhkj",
-            "created_by_name" : "User, SHC",
-            "updated_by_name" : "User, SHC",
-            "created_dttm_str" : "07/02/2021 03:46:27 PM",
-            "updated_dttm_str" : "07/02/2021 04:24:28 PM"
-          } ],
-          "seal_conditions" : [ ]
-        } ;
-        var sc = {} ;
-        sc.epic_conditions = patient.seal_conditions.filter(cond => cond.condition_source == 'EPIC') ;
-        sc.user_conditions = patient.seal_conditions.filter(cond => cond.condition_source == 'USER') ;
-        patient.seal_conditions = sc ;
-        return patient ;
-        */
         return this.axios({
             method: 'get',
             url: "/fhir-app/medreview/api/v2/patient?pid=" + this.store.state.patientId + "&aid=" + appId

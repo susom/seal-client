@@ -112,17 +112,15 @@ export default class A3PainAPI {
     explodePatchMARRecords(med, order) {
         var ma = {} ; 
         var logMesg = "" ;
-                        
+        var _self = this ;
+
         var strength = med.strength ;
         var unitStr = med.unit ;
         var form = med.form ;
-        logMesg += "\n This is transdermal med " + medstats.cats[cIdx].name + " strength: " +  strength + " unit: " + unitStr ;                               
+        logMesg += "\n This is transdermal med " + med.name + " strength: " +  strength + " unit: " + unitStr ;                               
         var unit = unitStr.split("/")[0] ;
-        
-        if (unit.trim() == "mcg")  // mme conv factor in the excel sheet is for mg 
-            mmeFactor = mmeFactor / 1000 ;
-
         var duration = unitStr.split("/")[1] ;                                
+
         if (duration == "hour" || duration == "hr")
             duration = "hours" ;
         if (duration == "24" || duration == "24hr")
@@ -130,30 +128,47 @@ export default class A3PainAPI {
         
         logMesg += "\n         duration " + duration + " form " + form ;
 
+        console.log(logMesg) ;
+
+        order.MedicationAdministrations.forEach(ma => { ma.timestamp = _self.moment(new Date(ma.AdministrationInstant)); } ) ;
+        // sort in asc order
+        order.MedicationAdministrations.sort((a, b) => a.timestamp.valueOf() - b.timestamp.valueOf()) ;
+
+        //console.log("after sorting") ;
+        //console.log(order.MedicationAdministrations) ;
+        
+        // MAR records have 'Patch Applied' and possibly 'Patch Removed' actions for transdermal meds
+        // if the patch is on and not removed yet, there won't be patch removed action. In those cases, 
+        // we extend the opioid to the full duration specified by the form.
+
         var newMarArr = [] ;
         for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
             var ma = order.MedicationAdministrations[mIdx] ;
-            if (ma.Action == "Not Given" || ma.Action == 'Canceled Entry') {
-                continue ;
-            }
-            var stdt = this.moment(new Date(ma.AdministrationInstant)) ;
-            var enddt = this.moment(new Date(ma.AdministrationInstant)) ;
-            if (form.toLowerCase().indexOf("weekly") >= 0) {
-                enddt.add(7, 'days') ;
-            } else if (form.toLowerCase().indexOf("72 hr") >= 0) {
-                enddt.add(3, 'days') ;
-            }
-            logMesg += "\n       Looping for stdt " + stdt.format() + " end dt " + enddt.format() ;
-            var newAdminDt = stdt ;
-            while (true) {
-                if (newAdminDt.isAfter(enddt)) break ;
-                var maNew = {
-                    Action: "Given", 
-                    AdministrationInstant: newAdminDt.format(), 
-                    Dose: { Value: strength, Unit: unit } 
-                } ;
-                newMarArr.push(maNew) ;
-                newAdminDt.add(1, duration) ;
+            if (ma.Action == 'Patch Applied') {
+                var stdt = ma.timestamp ;
+                var enddt = ma.timestamp.clone() ;
+                var tmp = order.MedicationAdministrations.filter(a => a.Action == 'Patch Removed' && a.timestamp.isAfter(ma.timestamp)) ;
+                if (tmp.length > 0) {
+                    enddt = tmp[0].timestamp ;
+                } else {
+                    if (form.toLowerCase().indexOf("weekly") >= 0) {
+                        enddt.add(7, 'days') ;
+                    } else if (form.toLowerCase().indexOf("72 hr") >= 0) {
+                        enddt.add(3, 'days') ;
+                    }
+                }
+                logMesg += "\n       Looping for stdt " + stdt.format() + " end dt " + enddt.format() ;
+                var newAdminDt = stdt ;
+                while (true) {
+                    if (newAdminDt.isAfter(enddt)) break ;
+                    var maNew = {
+                        Action: "Given", 
+                        AdministrationInstant: newAdminDt.format(), 
+                        Dose: { Value: strength, Unit: unit } 
+                    } ;
+                    newMarArr.push(maNew) ;
+                    newAdminDt.add(1, duration) ;
+                }
             }
         }
         console.log("New MAR array") ;
@@ -161,8 +176,9 @@ export default class A3PainAPI {
         
         logMesg += "\n NEW MAR ARRAY: " + JSON.stringify(newMarArr);
         
-        if (newMarArr.length > 0)
-            order.MedicationAdministrations = [].concat(order.MedicationAdministrations, newMarArr) ;
+        //if (newMarArr.length > 0)
+        order.MedicationAdministrations = newMarArr ;
+        //order.MedicationAdministrations = [].concat(order.MedicationAdministrations, newMarArr) ;
         
         return logMesg ;
     }
