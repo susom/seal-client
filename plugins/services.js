@@ -9,6 +9,7 @@ import StandingOrdersAPI from "~/services/StandingOrdersAPI";
 import AredsCalcAPI from "~/services/AredsCalcAPI";
 import AntiMicrobialAPI from "~/services/AntiMicrobialAPI";
 import SynopsisAPI from "~/services/SynopsisAPI";
+import VisitSummaryAPI from "~/services/VisitSummaryAPI";
 
 export default (ctx, inject) => {
 
@@ -26,7 +27,8 @@ export default (ctx, inject) => {
       standingorders: new StandingOrdersAPI(ctx.$axios, ctx.store),
       aredscalc: new AredsCalcAPI(ctx.$axios, ctx.store),
       antimicrobial: new AntiMicrobialAPI(ctx.$axios, ctx.store),
-      synopsis: new SynopsisAPI(ctx.$axios, ctx.store)
+      synopsis: new SynopsisAPI(ctx.$axios, ctx.store),
+      visitsummary: new VisitSummaryAPI(ctx.$axios, ctx.store)
     }
   
     inject('services', services)
