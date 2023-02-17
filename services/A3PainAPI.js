@@ -270,7 +270,7 @@ export default class A3PainAPI {
             return totalMME ;
         }
 
-        var encounters = await this.encounters(start_date, end_date) ;                
+        var encounters = await this.seal.encounters(start_date, end_date, '', this.APP_ID) ;                
         log("Encounters :" + JSON.stringify(encounters)) ;
 
         var responses = [] ;

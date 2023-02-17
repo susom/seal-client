@@ -117,18 +117,10 @@
                         </b-row>
                         <b-row>
                             <b-col class="text-right" cols="6">
-                                <b-button pill pressed variant="primary" class="mr-3 smallfont" size="sm" style="width:200px;" @click="copyCalcPatient">Copy Results for Patient</b-button>
+                                <copy-to-clipboard-btn label="Copy Results for Patient" :content="patientNotes" key="patientNotes"/>
                             </b-col>
-                            <b-col class="text-left" cols="6">
-                                <b-button pill pressed variant="primary" class="mr-3 smallfont" size="sm" style="width:200px;" @click="copyCalcEHR">Copy Results for EHR</b-button>
-                            </b-col>
-                        </b-row>
-                        <b-row>
-                            <b-col class="text-right" cols="6">
-                                <span class="pl-3" style="font-size:small">{{copyPatientBtnInfo}}</span>
-                            </b-col>
-                            <b-col class="text-left" cols="6">
-                                <span class="pl-3" style="font-size:small">{{copyEhrBtnInfo}}</span>
+                            <b-col class="text-left" cols="6">                                
+                                <copy-to-clipboard-btn label="Copy Results for ER" :content="ehrNotes" key="ehrNotes"/>
                             </b-col>
                         </b-row>
                     </b-card-text>
@@ -199,8 +191,6 @@ export default {
                 { text: "", value: -1, buttons : [ { text: "No", points: 0}, {text: "Yes", points: 1} ] },
                 { text: "", value: -1, buttons : [ { text: "No", points: 0}, {text: "Yes", points: 1} ] },
             ],            
-            copyEhrBtnInfo: "",
-            copyPatientBtnInfo: "",
             patient: {
                 seal_conditions: {
                     user_conditions: [],
@@ -300,8 +290,32 @@ export default {
         },
         handleDefaultOnValue(val) {
             return (val == -1 ? 0 : val) ;
+        }
+    },
+    computed : {
+        showRiskScore() {
+            return !(this.leftRows[0].value == 2 && this.rightRows[0].value == 2) ;
         },
-        copyCalcEHR () {
+        patientNotes() {
+            var result = "AREDS Simplified Severity Score Calculation \n" ;
+            result +=    "------------------------------------------- \n\n" ;
+            result += this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n";
+            result += "Date: " + this.$moment(new Date()).format("MM/DD/YYYY hh:mm:ss A") + "\n\n" ; 
+
+            if (this.rightRows[0].value <= 0 && this.leftRows[0].value <= 0) {
+                result += "Based on today’s eye examination, you currently have a Simplified Severity Score of " + this.handleDefaultOnValue(this.totalPoints) ;
+                result += " based on your current stage of age-related macular degeneration (AMD). \n\n" ;
+                result += "This score indicates that you have a " + this.aredsPercent + " % likelihood of developing advanced AMD over the next five years." ;
+            } else if ((this.rightRows[0].value == -1?0:this.rightRows[0].value) + this.leftRows[0].value == 2) {
+                result += "Based on today’s eye examination, you currently have a Simplified Severity Score of " + this.handleDefaultOnValue(this.totalPoints) ;
+                result += " based on your current stage of age-related macular degeneration (AMD). \n\n" ;
+                result += "This score indicates that you have a " + this.aredsPercent + "% likelihood of developing advanced AMD in your other eye over the next five years." ;
+            } else if (this.rightRows[0].value == 2 && this.leftRows[0].value == 2) {
+                result += "You currently have advanced AMD in both eyes." ;
+            }
+            return result ;
+        },
+        ehrNotes() {
             var result = "AREDS Simplified Severity Score Calculation \n" ;
             result +=    "------------------------------------------- \n\n" ;
             result += this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n";
@@ -331,52 +345,7 @@ export default {
             if (this.rightRows[0].value != 2 || this.leftRows[0].value != 2) {
                 result += "5-Year Risk of Advanced AMD: " + this.aredsPercent + "%\n" ;
             }
-
-            console.log(result) ;
-
-            if (window.clipboardData) {
-                window.clipboardData.setData('Text', result);
-                this.copyEhrBtnInfo = "Results copied to clipboard." ;
-                setTimeout(function() { this.copyEhrBtnInfo = "" ; }, 2000) ;
-            } else {
-                this.copyEhrBtnInfo = "windows.clipboarddata doesn't exist" ;
-                setTimeout(function() { this.copyEhrBtnInfo = "" ; }, 2000) ;
-            }
-        },
-        copyCalcPatient () {
-            
-            var result = "AREDS Simplified Severity Score Calculation \n" ;
-            result +=    "------------------------------------------- \n\n" ;
-            result += this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n";
-            result += "Date: " + this.$moment(new Date()).format("MM/DD/YYYY hh:mm:ss A") + "\n\n" ; 
-
-            if (this.rightRows[0].value <= 0 && this.leftRows[0].value <= 0) {
-                result += "Based on today’s eye examination, you currently have a Simplified Severity Score of " + this.handleDefaultOnValue(this.totalPoints) ;
-                result += " based on your current stage of age-related macular degeneration (AMD). \n\n" ;
-                result += "This score indicates that you have a " + this.aredsPercent + " % likelihood of developing advanced AMD over the next five years." ;
-            } else if ((this.rightRows[0].value == -1?0:this.rightRows[0].value) + this.leftRows[0].value == 2) {
-                result += "Based on today’s eye examination, you currently have a Simplified Severity Score of " + this.handleDefaultOnValue(this.totalPoints) ;
-                result += " based on your current stage of age-related macular degeneration (AMD). \n\n" ;
-                result += "This score indicates that you have a " + this.aredsPercent + "% likelihood of developing advanced AMD in your other eye over the next five years." ;
-            } else if (this.rightRows[0].value == 2 && this.leftRows[0].value == 2) {
-                result += "You currently have advanced AMD in both eyes." ;
-            }
-
-            console.log(result) ;
-
-            if (window.clipboardData) {
-                window.clipboardData.setData('Text', result);
-                this.copyPatientBtnInfo = "Results copied to clipboard." ;
-                setTimeout(function() { this.copyPatientBtnInfo = "" ; }, 2000) ;
-            } else {
-                this.copyPatientBtnInfo = "windows.clipboarddata doesn't exist" ;
-                setTimeout(function() { this.copyPatientBtnInfo = "" ; }, 2000) ;
-            }
-        }
-    },
-    computed : {
-        showRiskScore() {
-            return !(this.leftRows[0].value == 2 && this.rightRows[0].value == 2) ;
+            return result ;
         },
         chartOptions() {
             var plotLineValue = 0 ;

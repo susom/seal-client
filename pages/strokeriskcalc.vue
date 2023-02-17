@@ -50,8 +50,7 @@
                             </p>
                         </div>
                         <div id="copyBtnDiv"  v-if="totalPoints > -1" class="mt-2 mb-3">
-                            <b-button @click="copyCalc" variant="primary">Copy Result</b-button>
-                            <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>
+                            <copy-to-clipboard-btn label="Copy Result" :content="result"/>
                         </div>
                     </b-card-text>
                 </b-card>
@@ -320,8 +319,7 @@ export default {
                 { label: "Risk Category", key: "risk_category", sortable: true },
                 { label: "Status", key: "status_desc", sortable: true }                
             ],
-            userCondSearch: "",
-            copyBtnInfo: "",
+            userCondSearch: "",            
             patient: {
                 seal_conditions: {
                     user_conditions: [],
@@ -469,6 +467,19 @@ export default {
                     list.push(row.text) ;                
             }) ;
             return list ;
+        },
+        result () {
+            var result = "CHA2DS2-VASc score for " + this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n\n";
+            result += "Date: " + this.$moment(new Date()).format("MM/DD/YYYY hh:mm:ss A") + "\n" ; 
+            this.rows.forEach(row => {
+                result = result + row.text + ": " + row.value + "\n" ;
+            }) ;
+            result += 'Result:' + '\n' ;
+            result += "Total Score: " + this.totalPoints + "\n" ;
+            //result += "Annual Risk of Ischemic Stroke: " + this.strokeRisk + "\n" ;
+            //result += "Annual Risk of Stroke or Systemic Thromboembolism1: " + this.tiaRisk + "\n" ;
+            //result += "Risk Category: " + this.riskCategory + "\n" ;
+            return result ;
         }
     },
     methods : {
@@ -639,29 +650,6 @@ export default {
             }) ;
             
             console.log("after the dialog box value") ;
-        },
-        copyCalc () {
-            var result = "CHA2DS2-VASc score for " + this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n\n";
-            result += "Date: " + this.$moment(new Date()).format("MM/DD/YYYY hh:mm:ss A") + "\n" ; 
-            this.rows.forEach(row => {
-                result = result + row.text + ": " + row.value + "\n" ;
-            }) ;
-            result += 'Result:' + '\n' ;
-            result += "Total Score: " + this.totalPoints + "\n" ;
-            //result += "Annual Risk of Ischemic Stroke: " + this.strokeRisk + "\n" ;
-            //result += "Annual Risk of Stroke or Systemic Thromboembolism1: " + this.tiaRisk + "\n" ;
-            //result += "Risk Category: " + this.riskCategory + "\n" ;
-
-            console.log(result) ;
-
-            if (window.clipboardData) {
-                window.clipboardData.setData('Text', result);
-                this.copyBtnInfo = "Result copied to clipboard." ;
-                setTimeout(function() { this.copyBtnInfo = "" ; }, 2000) ;
-            } else {
-                this.copyBtnInfo = "windows.clipboarddata doesn't exist" ;
-                setTimeout(function() { this.copyBtnInfo = "" ; }, 2000) ;
-            }
         },
         getAge(dateString) {
             var today = new Date();

@@ -44,7 +44,7 @@
             <b-col class="text-danger mb-3">Sorry! We have encountered problem in submitting your request. Please try again later.</b-col>
           </b-row>
           <b-button variant="primary" @click="submitForm()">Submit Feedback</b-button>
-          <b-button variant="primary" @click="$bvModal.hide('feedback-modal')">Close</b-button>
+          <b-button variant="primary" @click="$bvModal.hide('feedback-modal'); resetFeedback() ;">Close</b-button>
       </b-form>
     </b-modal>
   </b-container>
@@ -100,8 +100,14 @@ export default {
                   _self.$store.state.patientId,
                   _self.$store.state.appId
               ).then( response => {
-                 _self.resetFeedback() ;
-                _self.$bvModal.hide('feedback-modal') ;
+                console.log("response from feedback :") ;
+                console.log(response) ;
+                if (response.result && response.result != "success") {
+                  _self.error = true ;
+                } else {
+                  _self.resetFeedback() ;
+                  _self.$bvModal.hide('feedback-modal') ;
+                }
               }).catch(err => {
                 console.log("Error in feedback submission with screenshot") ;
                 console.log(err) ;
@@ -115,8 +121,12 @@ export default {
             this.$store.state.patientId,
             this.$store.state.appId
         ).then( response =>{
-           _self.resetFeedback() ;
-          _self.$bvModal.hide('feedback-modal') ;
+            if (response.result && response.result != "success") {
+              _self.error = true ;
+            } else {
+              _self.resetFeedback() ;
+              _self.$bvModal.hide('feedback-modal') ;
+            }          
         }).catch (err => {
             console.log("Error in feedback submission without screenshot") ;
             console.log(err) ;

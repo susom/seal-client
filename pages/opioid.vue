@@ -379,8 +379,7 @@ exportData(Highcharts) ;
 
         if (e.trigger !== 'syncExtremes') { // Prevent feedback loop            
             Highcharts.charts.forEach(function(chart, idx) {
-            //$.each(Highcharts.charts, function(idx, chart) {
-                if (chart !== thisChart && chart.index != 3) {
+                if (chart && chart !== thisChart) {
                     try {
                         if (chart.xAxis[0].setExtremes) { // It is null while updating
                             setTimeout(function() {
@@ -668,9 +667,8 @@ export default {
 
             try {
             responses.forEach((response) => {
-
                 response.cats.forEach((med) => {                                        
-                    this.resultText += "\n MedStat Processing Med :" + med.name + " oids :" + med.med_order_ids + " routes: " + med.routes ;
+                    //this.resultText += "\n MedStat Processing Med :" + med.name + " oids :" + med.med_order_ids + " routes: " + med.routes ;
 
                     try {
                     var medIdx = medstats.cats.findIndex(cat => cat.name == med.name) ;
@@ -768,8 +766,7 @@ export default {
                             var isOral = false ;
                             var genericName = "" ;
 
-                            this.resultText += ": med order name :" + medstats.cats[cIdx].name + ": MME: " ;
-                            this.resultText += JSON.stringify(medstats.cats[cIdx].mme) + ": ";
+                            this.resultText += ": med order name :" + medstats.cats[cIdx].name + ": Cat :" + JSON.stringify(medstats.cats[cIdx]) ;                            
 
                             if (medstats.cats[cIdx].pharma_class)
                                 isOpioid = (medstats.cats[cIdx].pharma_class.toLowerCase().indexOf("opioid") >= 0) ;
@@ -779,6 +776,9 @@ export default {
                             if (medstats.cats[cIdx].mme[order.OrderID.ID]) {
                                 mmeJSON = medstats.cats[cIdx].mme[order.OrderID.ID] ;
                                 mmeFactor = mmeJSON.conv_factor ;
+                                if (mmeFactor > 0) {
+                                    isOpioid = true ;  // If there is a MME Conv Factor, then mark it as Opioid
+                                }
                                 this.resultText += " found mme data :" + mmeFactor + " json: " + JSON.stringify(mmeJSON) ;
                             } else {
                                 this.resultText += " - no matching mme data ";
@@ -830,7 +830,6 @@ export default {
                                             medColor = (medColorIdx < sealColors.length?sealColors[medColorIdx]:"") ;
                                             this.medColors[genericName] = medColor ;
                                         }
-                                        
                                         categories.push({ name: genericName , pointWidth: 30, data: [], isOpioid: isOpioid, isOral: isOral, color: medColor, routes: medstats.cats[cIdx].routes } ) ;
                                     } else {
                                         medColor = categories[catIdx].color ;
@@ -867,7 +866,7 @@ export default {
                                         cdata[cdataIdx].mme = cdata[cdataIdx].mme + ma.mme ;
                                         cdata[cdataIdx].meds.push({name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID, route: medstats.cats[cIdx].routes })
                                     } else {
-                                        cdata.push({ x: marTime, y: catIdx, mme: ma.mme, color: medColor, name: genericName, routes: medstats.cats[cIdx].routes,
+                                        cdata.push({ x: marTime, y: catIdx, mme: ma.mme, color: medColor, name: genericName, routes: medstats.cats[cIdx].routes, isOpioid: isOpioid, 
                                             meds: [ {name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, mme: ma.mme, order_id: order.OrderID.ID, route: medstats.cats[cIdx].routes} ] } ) ;
                                     }
                                 }
@@ -934,6 +933,8 @@ export default {
                     try {
                     this.medCategories = JSON.parse(JSON.stringify(categories)) ;
                     
+                    this.resultText += "\n Categories :" + JSON.stringify(this.medCategories) ;
+
                     // Sort the categories based on name - reverse
                     categories.sort(function(a, b) {
                         return b.name.localeCompare(a.name) ;
@@ -1096,7 +1097,7 @@ export default {
 
                 this.log(" in refreshMarChart: medchartoptions updated ") ;
 
-                this.log("MEDCHARTOPTIONS " + JSON.stringify(_self.medChartOptions)) ;            
+                //this.log("MEDCHARTOPTIONS " + JSON.stringify(_self.medChartOptions)) ;            
             
             } catch (err) {
                 console.log("Error {}", err) ;
@@ -1129,12 +1130,14 @@ export default {
                 
                 var categories = [] ;
                 if (_self.divideOpioidsBy == "opioids") {
+                    this.log("Categories before filtering: " + JSON.stringify(this.medCategories)) ;
                     categories = this.medCategories.filter(cat => cat.isOpioid).map(function(cat) { 
                         return {
                                 name: cat.name, type: 'column', data: [], isOpioid: cat.isOpioid, color: cat.medColor, 
                                 pointPlacement: -0.25, pointInterval: (_self.mmeDuration * 60 * 1000), pointRange: ((_self.mmeDuration * 60 * 1000) * 1.95) 
                             } 
-                    }) ;                    
+                    }) ;  
+                    this.log("Categories after filtering: " + JSON.stringify(categories)) ;
                 } else {
                     var fixedRoutes = ['Sublingual', 'Transdermal', 'Intravenous', 'Epidural', 'Oral', 'PCA', 'PCEA'] ; // 'Injection', 
 
@@ -1160,6 +1163,7 @@ export default {
                 this.marData.forEach(function (marPoint) {
                     
                     if (!marPoint.mme || marPoint.mme == 0) return ;
+                    if (!marPoint.isOpioid) return ;
 
                     var chunkIdx = dateChunks.findIndex(period => { return (marPoint.x > period.start && marPoint.x <= period.end) }) ;
                     
@@ -1213,32 +1217,34 @@ export default {
                     }
 
                     var catIdx = categories.findIndex(function(cat) { return cat.name == catName }) ;
-                    if (catIdx < 0)
-                        _self.log(" Category :" + catName + ": index :" + catIdx + " Catgories: " + JSON.stringify(categories)) ;
-                    var dtIdx = categories[catIdx].data.findIndex(function(row) { return (row.x == dateChunks[chunkIdx].end) }) ;
-                    if (dtIdx > -1) {
-                        var catChartPoint = categories[catIdx].data[dtIdx] ;
-                        _self.log("Existing data :" + JSON.stringify(catChartPoint)) ;                        
-                        catChartPoint.y = catChartPoint.y + marPoint.mme ;
-                        marPoint.meds.forEach(med => {
-                            var idx = catChartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
-                            if (idx >= 0) {
-                                catChartPoint.meds[idx].mme = catChartPoint.meds[idx].mme + med.mme ;
-                                //if (catChartPoint.routes.toLowerCase() == "oral") {
-                                    if (catChartPoint.meds[idx].dose_qty)
-                                        catChartPoint.meds[idx].dose_qty = catChartPoint.meds[idx].dose_qty + 1 ;
-                                    else
-                                        catChartPoint.meds[idx].dose_qty = 2 ;
-                                //}
-                            } else {
-                                catChartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // clone and add
-                            }
-                        }) ;
-                        _self.log("After merging chartPoit: " + JSON.stringify(catChartPoint)) ;
+                    if (catIdx < 0) {
+                        _self.log(" SHOULD NOT HAPPEN: Category :" + catName + ": index :" + catIdx + " Catgories: " + JSON.stringify(categories)) ;                        
                     } else {
-                        var catChartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, name: catName, start: dateChunks[chunkIdx].start, routes: marPoint.routes, meds: JSON.parse(JSON.stringify(marPoint.meds))} ;
-                        categories[catIdx].data.push(catChartPoint) ;
-                        _self.log("New one - so pushing it to categories: " + JSON.stringify(catChartPoint)) ;                        
+                        var dtIdx = categories[catIdx].data.findIndex(function(row) { return (row.x == dateChunks[chunkIdx].end) }) ;
+                        if (dtIdx > -1) {
+                            var catChartPoint = categories[catIdx].data[dtIdx] ;
+                            //_self.log("Existing data :" + JSON.stringify(catChartPoint)) ;                        
+                            catChartPoint.y = catChartPoint.y + marPoint.mme ;
+                            marPoint.meds.forEach(med => {
+                                var idx = catChartPoint.meds.findIndex(function(point) { return point.name == med.name }) ;
+                                if (idx >= 0) {
+                                    catChartPoint.meds[idx].mme = catChartPoint.meds[idx].mme + med.mme ;
+                                    //if (catChartPoint.routes.toLowerCase() == "oral") {
+                                        if (catChartPoint.meds[idx].dose_qty)
+                                            catChartPoint.meds[idx].dose_qty = catChartPoint.meds[idx].dose_qty + 1 ;
+                                        else
+                                            catChartPoint.meds[idx].dose_qty = 2 ;
+                                    //}
+                                } else {
+                                    catChartPoint.meds.push(JSON.parse(JSON.stringify(med))) ;  // clone and add
+                                }
+                            }) ;
+                            //_self.log("After merging chartPoit: " + JSON.stringify(catChartPoint)) ;
+                        } else {
+                            var catChartPoint = { x: dateChunks[chunkIdx].end, y: marPoint.mme, name: catName, start: dateChunks[chunkIdx].start, routes: marPoint.routes, meds: JSON.parse(JSON.stringify(marPoint.meds))} ;
+                            categories[catIdx].data.push(catChartPoint) ;
+                            //_self.log("New one - so pushing it to categories: " + JSON.stringify(catChartPoint)) ;                        
+                        }
                     }   
                 }) ;
                             

@@ -390,7 +390,7 @@ offlineExporting(Highcharts) ;
         if (e.trigger !== 'syncExtremes') { // Prevent feedback loop            
             Highcharts.charts.forEach(function(chart, idx) {
             //$.each(Highcharts.charts, function(idx, chart) {
-                if (chart !== thisChart && chart.index != 3) {
+                if (chart && chart !== thisChart && chart.index != 3) {
                     try {
                         if (chart.xAxis[0].setExtremes) { // It is null while updating
                             setTimeout(function() {

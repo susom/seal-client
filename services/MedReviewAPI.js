@@ -203,7 +203,7 @@ export default class MedReviewAPI {
                           var thisChart = this.chart;
                           if (e.trigger !== 'syncExtremes') { // Prevent feedback loop                              
                               Highcharts.charts.forEach(function(chart, idx) {                                                              
-                                  if (chart !== thisChart) {
+                                  if (chart && chart !== thisChart) {
                                       try {
                                           if (chart.xAxis[0].setExtremes) { // It is null while updating
                                               setTimeout(function() {

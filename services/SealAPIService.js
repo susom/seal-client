@@ -203,4 +203,17 @@ export default class SealAPI {
             return response.data ;            
         })        
     }
+
+    copyToClipboard(text, btnInfo) {
+        var mesg = 'Result copied to clipboard.' ;
+        if (window.clipboardData) {
+            window.clipboardData.setData('Text', text);            
+        } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(text) ;            
+        } else {
+            mesg = "windows.clipboarddata or navigator.clipboard doesn't exist." ;
+        }
+        btnInfo = mesg ;
+        window.setTimeout(function() { btnInfo = "" ; }, 2000) ;
+    }
 }

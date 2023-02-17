@@ -50,8 +50,7 @@
                             </p>
                         </div>
                         <div id="copyBtnDiv"  v-if="totalPoints > -1" class="mt-2 mb-3">
-                            <b-button @click="copyCalc" variant="primary">Copy Result</b-button>
-                            <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>
+                            <copy-to-clipboard-btn label="Copy Result" :content="result"/>
                         </div>                                            
                     </b-card-text>
                 </b-card>                
@@ -201,8 +200,7 @@ export default {
                 { label: "Comments", key: "Comment", sortable: true } 
             ],            
             meanRate: 0,
-            search: "",
-            copyBtnInfo: "",
+            search: "",            
             patient: {},
             resultRows : [
                 { text: "Total Score", value: "" },
@@ -292,9 +290,8 @@ export default {
             this.resultRows[2].value = this.wellsRisk ;
         }
     },
-    methods : {
-        copyCalc() {
-
+    computed : {
+        result() {
             var result = "Wells' Criteria for Pulmonary Embolism for " + this.patient.fullName + " (MRN: " + this.patient.mrn + ") \n\n";
             result += "Date: " + this.$moment(new Date()).format("MM/DD/YYYY hh:mm:ss A") + "\n" ; 
             this.rows.forEach(row => {
@@ -305,18 +302,11 @@ export default {
             result += "Risk Level: " + this.riskCategory + "\n" ;
             result += "Calculated risk of PE: " + this.wellsRisk + "\n" ;
 
-            console.log(result) ;
-
-            if (window.clipboardData) {
-                window.clipboardData.setData('Text', result);
-                this.copyBtnInfo = "Result copied to clipboard." ;
-                setTimeout(function() { this.copyBtnInfo = "" ; }, 2000) ;
-            } else {
-                this.copyBtnInfo = "windows.clipboarddata doesn't exist" ;
-                setTimeout(function() { this.copyBtnInfo = "" ; }, 2000) ;
-            }
-
+            return result ;
         }
+    },
+    methods : {
+
     },
     head() {
         return {

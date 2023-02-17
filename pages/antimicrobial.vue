@@ -28,8 +28,7 @@
                             <b-card-text>                                           
                                 <h5>Summary:</h5>
                                 <b-form-textarea max-rows="20" plaintext size="sm" v-model="notes" id="result" class="mt-3"/>
-                                <b-btn @click="copyToClipboard('notes')" variant="primary" size="sm" class="mb-2">Copy Notes to Clipboard</b-btn>
-                                <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>                                
+                                <copy-to-clipboard-btn label="Copy Notes to Clipboard" :content="abxSummary" key="abxSummary"/>
                             </b-card-text>
                         </b-card>
                     </b-tab>
@@ -76,6 +75,10 @@
                                         <b-form-checkbox v-model="row.item.rowSelected" size="sm" @change="checkboxClicked(row.item)"/>
                                     </template>
 
+                                    <template #cell(collection_dttm_long)="row">
+                                        {{row.item.collection_dttm}}
+                                    </template>
+
                                     <template #cell(specimen_test)="row">
                                         {{row.value}}
                                         <div v-if="row.item.surgery_name">
@@ -90,9 +93,12 @@
 
                                 </b-table>
 
+                                <copy-to-clipboard-btn label="Copy Notes to Clipboard" :content="cultureSummary" key="cultureSummary"/>
+                                <!--
                                 <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2 mt-2">Generate & Copy Notes to Clipboard</b-btn>                        
-                                <b-btn @click="copyToClipboard('cultureNotes')" variant="primary" size="sm" class="mb-2 mt-2">Copy Notes to Clipboard</b-btn>
+                                <b-btn @click="copyToClipboard('cultureNotes')" variant="primary" size="sm" class="mb-2 mt-2">Copy Notes to Clipboard</b-btn>                                
                                 <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>
+                                -->
                                 <b-btn @click="compareSusceptabilityReports" variant="primary" size="sm" class="mb-2 mt-2 mr-2" style="float:right">Compare Susceptability</b-btn>                        
                                 
                                 <b-form-textarea max-rows="20" plaintext size="sm" v-model="cultureNotes" class="box"/>                                                              
@@ -201,9 +207,10 @@
 <script>
 import Highcharts from 'highcharts' ;
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
+import CopyToClipboardBtn from '~/components/CopyToClipboardBtn.vue' ;
 
 export default {  
-    components: { EditableDatePicker },
+    components: { EditableDatePicker, CopyToClipboardBtn },
     data() {
         return {
             launchModal : {              
@@ -219,12 +226,13 @@ export default {
                 period_type : 'C'  // Custom
             },
             notes: "Generating Antibiotics Summary...",
+            //abxSummary: '' ,
             cultureNotes: "",
             cultureFilter: "",  
             cultureFilterOn: [],
             cultureFields: [
                 {label: '', key: 'rowSelected'},
-                {label: 'Date/Time Collected', key: 'collection_dttm', sortable: true},
+                {label: 'Date/Time Collected', key: 'collection_dttm_long', sortable: true},
                 {label: 'Specimen ID', key: 'specimen_id', sortable: true},
                 {label: 'Specimen', key: 'specimen_test', sortable: true},
                 {label: 'Specimen Source', key: 'specimen_source', sortable: true},
@@ -275,7 +283,8 @@ export default {
         console.log(this.launchModal) ;
         this.inpatient_end_date = this.$moment().format("MM/DD/YYYY") ;
 
-        this.$bvModal.show("launch-modal") ;                
+        this.$bvModal.show("launch-modal") ;         
+
     },
     watch : {
         toggleAllResults: function(val) {
@@ -325,6 +334,15 @@ export default {
         endDateFormatted() {            
             return this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
         },
+        abxSummary() {
+            return this.notes ;
+        },
+        cultureSummary() {
+            console.log("cultureSummary computed method invoked...") ;
+            this.generateCultureNotes() ;
+            console.log(this.cultureNotes) ;
+            return this.cultureNotes ;
+        }
     },
     methods: {    
         log(mesg) {
@@ -397,24 +415,6 @@ export default {
                 item.rowSelected = false ;
             else 
                 item.rowSelected = true ;
-        },
-        copyToClipboard(copyFrom) {
-            var result = "" ;
-            var _self = this ;
-            if (copyFrom == 'cultureNotes') {
-                result = this.cultureNotes ;                
-            } else {
-                result = this.notes ;
-            }
-
-            if (window.clipboardData) {
-                window.clipboardData.setData('Text', result);
-                this.copyBtnInfo = "Result copied to clipboard." ;
-                window.setTimeout(function() { _self.copyBtnInfo = "" ; }, 2000) ;
-            } else {
-                this.copyBtnInfo = "windows.clipboarddata doesn't exist" ;
-                window.setTimeout(function() { _self.copyBtnInfo = "" ; }, 2000) ;
-            }            
         },
         cultureRowCSS(item) {  
             var rowCss = "" ;
@@ -489,7 +489,7 @@ export default {
             _self.log(cultureNotes) ;
             _self.cultureNotes = cultureNotes ;
 
-            this.copyToClipboard('cultureNotes') ;
+            //this.copyToClipboard('cultureNotes') ;
 
         },
         async generateCharts() {
@@ -519,12 +519,13 @@ export default {
             var response = {} ;
 
             this.log("Fetching Surgical Data") ;
-
+            this.loadingMessage = "Surgical Data" ;
             var surgicalData = await this.$services.antimicrobial.surgicalData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
 
             this.log(JSON.stringify(surgicalData)) ;
 
             this.log("Fetching Culture Data") ;
+            this.loadingMessage = "Culture Data" ;
             var cresponse = await this.$services.antimicrobial.cultureData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
 
             this.log(JSON.stringify(cresponse)) ;  
@@ -533,8 +534,11 @@ export default {
             cresponse.forEach( spec => {
                 rowColor = (rowColor == ""?"specimen-css":"") ;
                 spec.results.forEach(res => {
+                    if (res.value == 'See Test Comment' && spec.narrative) 
+                        res.value = spec.narrative ;
                     var cresult = {
                         id: res.id,
+                        collection_dttm_long: spec.collection_dt,
                         collection_dttm: _self.$moment(spec.collection_dt).format("MM/DD/YYYY HH:mm"),
                         specimen_id: ((res.specimen_id && res.specimen_id != spec.specimen_id) ? spec.specimen_id + '/' + res.specimen_id : spec.specimen_id) ,
                         specimen_test: res.name,
@@ -578,7 +582,8 @@ export default {
                 }) ;
             }) ;
             this.log("Before invoking susceptability call size :" + susp.length) ;
-
+            
+            this.loadingMessage = "Susceptability Data" ;
             this.$services.antimicrobial.susceptability(susp).then(sresponses => {
                 var susceptability = [] ;                      
                 _self.log("After invoking susceptability call size :" + sresponses.length) ;
@@ -609,6 +614,7 @@ export default {
                 _self.log(JSON.stringify(_self.cultureData)) ;  
             }) ;
 
+            this.loadingMessage = "Medication Data" ;
             response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.antimicrobial.APP_ID ) ;            
             responses.push(response) ;
 
@@ -625,16 +631,21 @@ export default {
             responses.forEach((response) => {                
                 response.cats.forEach((med) => {
                     try {
-                        // Only antibiotics
-                        if (med.thera_class && med.thera_class.toLowerCase().indexOf('antibiotics') >= 0) {
+                        // Only antibiotics - added antiviral and antifungal - request from Dr Amy Chang
+                        if (med.thera_class && 
+                                (med.thera_class.toLowerCase().indexOf('antibiotics') >= 0 || 
+                                    med.thera_class.toLowerCase().indexOf('antivirals') >= 0 || 
+                                    med.thera_class.toLowerCase().indexOf('antifungals') >= 0)
+                         ) {
                             var medIdx = medNames.indexOf(med.name) ;
                             if (medIdx === -1) {
                                 medNames.push(med.name) ;
                                 meds.push(med) ;
                             } else {
                                 meds[medIdx].data = [].concat(meds[medIdx].data, med.data) ;
-                                meds[medIdx].routes = this.merge(meds[medIdx].routes, med.routes) ;
-                                meds[medIdx].pcat = this.merge(meds[medIdx].pcat, med.pcat) ;
+                                meds[medIdx].routes = this.$services.medreview.unique_merge(meds[medIdx].routes, med.routes) ;
+                                meds[medIdx].pcat = this.$services.medreview.unique_merge(meds[medIdx].pcat, med.pcat) ;
+                                meds[medIdx].ingredient = this.$services.medreview.unique_merge(meds[medIdx].ingredient, med.ingredient) ;
                                 meds[medIdx].med_order_ids = [].concat(meds[medIdx].med_order_ids, med.med_order_ids) ;                                
                             }
                         }
@@ -693,46 +704,46 @@ export default {
             _self.notes = "Antimicrobial History:\n"
                         + "----------------------\n\n" ;
 
+            this.loadingMessage = "Anitmicrobial Summary" ;
+
             var futureSectionCreated = false ;
             
             ingredients.forEach(ing => {
                 var dates = "" ;
-                var enddt ;
-                _self.log("Processign ing :" + ing.name) ;
-
-                for (var i=0; i<ing.data.length; i++) {
-                    var dt = ing.data[i] ;
-
+                _self.log("Processign ing :" + ing.name) ;                                
+                ing.data.forEach(dt => {
+                    if (!dt.validEndDate) dt.validEndDate = "Y" ;
                     dt.x = _self.$moment(dt.x).startOf("day") ;
                     dt.x2 = _self.$moment(dt.x2).startOf("day") ;
-                    _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY")) ;
-                    if (dates == "") {
-                        dates += dt.x.format("MM/DD/YY") ;                        
-                        enddt = dt.x2 ;
-                        if (enddt.isAfter(_self.$moment())) {
-                            dates += "-Present";
-                            enddt = null ;
-                            break ;                            
-                        }
+                }) ;
+
+                var idx = 0 ;
+                while (true) {
+                    var dt = ing.data[idx] ;
+
+                    _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
+                    _self.log(dt) ;
+                    
+                    if (dt.pcat != "Inpatient") {
+                        dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
+                        idx++ ;
                     } else {
-                        if (dt.x.diff(enddt, 'days') > 1) {
-                            if (enddt.isAfter(_self.$moment())) {
-                                dates += "-Present";
-                                enddt = null ;
+                        dates += dt.x.format("MM/DD/YY") ;
+                        while (true) {
+                            idx++ ;                            
+                            if (idx >= ing.data.length || ing.data[idx].pcat != 'Inpatient' || dt.x2.diff(ing.data[idx].x, 'days') > 1) {
+                                dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
                                 break ;
                             }
-                            dates += "-" + enddt.format("MM/DD/YY") + ", ";
-                            dates += dt.x.format("MM/DD/YY") ;
-                            enddt = dt.x2 ;
-                        } else {
-                            enddt = (dt.x2.valueOf() > enddt.valueOf() ? dt.x2 : enddt) ;
+                            dt = ing.data[idx] ;
                         }
-                    }
+                    }                    
+                    if (idx >= ing.data.length) break ;
                 }
-                if (enddt)
-                    dates += "-" + enddt.format("MM/DD/YY") + " ";
-
+                dates = dates.trim() ;
+                if (dates.endsWith(",")) dates = dates.slice(0, -1) ;
                 ing.dates = dates ;
+                _self.log(dates) ;                
                 if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
                     if (_self.notes.endsWith("\n\n"))
                         _self.notes += ing.name + " " + ing.dates + "\n";    
@@ -746,8 +757,27 @@ export default {
 
             this.launchModal.loading = false ;
             this.$bvModal.hide("launch-modal") ;
+        },
+        copyToClipboard(copyFrom) {
+            /*
+            console.log("inside copytoclipboard abx app") ;            
+            var result = "" ;
+            var _self = this ;
+            if (copyFrom == 'cultureNotes') {
+                result = this.cultureNotes ;                
+            } else {
+                result = this.notes ;
+            }                        
+            if (window.clipboardData) {
+                window.clipboardData.setData('Text', result);
+                this.copyBtnInfo = "Result copied to clipboard." ;
+                window.setTimeout(function() { _self.copyBtnInfo = "" ; }, 2000) ;
+            } else {
+                this.copyBtnInfo = "windows.clipboarddata doesn't exist" ;
+                window.setTimeout(function() { _self.copyBtnInfo = "" ; }, 2000) ;
+            } 
+            */
         }
-
     }
 }
 
