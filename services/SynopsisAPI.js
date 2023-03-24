@@ -64,6 +64,20 @@ export default class SynopsisAPI {
       }) ;                      
     }
 
+    includeInApp(med) {
+      var pharma_class = med.pharma_class.toLowerCase() ;
+      if (med.routes.toLowerCase().indexOf('ophth') >= 0) {
+        return true ;
+      } else if (pharma_class.indexOf('ophth') >= 0 || pharma_class.indexOf('eye ') == 0) {
+          pharma_class = pharma_class.toUpperCase() ;
+          var exclPharmCls = ['CONTACT LENS PREPARATIONS(GAS,HARD,SOFT)', 'EAR PREPARATIONS, MISC. ANTI-INFECTIVES', 'EYE DIAGNOSTIC AGENTS',
+                            'EYE IRRIGATIONS', 'EYE PREPARATIONS, MISCELLANEOUS (OTC)', 'MEDICAL SUPPLIES,MISCELLANEOUS(GROUP 2)', 
+                          'OPHTHALMIC ANTIFIBROTIC AGENTS', 'OPHTHALMIC PREPARATIONS, MISCELLANEOUS', 'OPHTHALMIC SURGICAL AIDS'] ;
+          return exclPharmCls.indexOf(pharma_class) < 0 ;
+
+      }
+    }
+
     dblog(act, msg) {
         this.seal.dblog(act, msg, this.APP_ID) ;
     }

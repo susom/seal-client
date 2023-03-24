@@ -106,9 +106,12 @@
                                                     <h5 style="text-align:center;" class="mt-1 mb-1">
                                                         No Eye Medications ordered during the selected time period.
                                                     </h5>
-                                                </template>                                                                                     
+                                                </template>     
+                                                <template #cell(last_used)="data">
+                                                    {{ data.item.has_mardata ? data.item.last_used : data.item.pcat }}
+                                                </template>                                                                                
                                                 <template #cell(total_doses)="data">
-                                                    {{data.item.data.length}}
+                                                    {{ data.item.has_mardata ? data.item.data.length: data.item.pcat }}
                                                 </template>                                        
                                             </b-table>
                                         </b-col>
@@ -195,8 +198,11 @@
                                                         No Eye Medications ordered during the selected time period.
                                                     </h5>
                                                 </template>                                                                                     
+                                                <template #cell(last_used)="data">
+                                                    {{ data.item.has_mardata ? data.item.last_used : data.item.pcat }}
+                                                </template>                                                                                
                                                 <template #cell(total_doses)="data">
-                                                    {{data.item.data.length}}
+                                                    {{ data.item.has_mardata ? data.item.data.length: data.item.pcat }}
                                                 </template>                                        
                                             </b-table>
                                         </b-col>
@@ -544,11 +550,10 @@ export default {
 
                 responses.forEach((response) => {                    
                     response.cats.forEach((med) => {                                                                
-                        _self.log("Processing MedStat : " + JSON.stringify(med)) ;
+                        //_self.log("Processing MedStat : " + JSON.stringify(med)) ;
                         if (!med.pharma_class) med.pharma_class = "" ;
                         if (!med.routes) med.routes = "" ;
-                        if (med.pharma_class.toLowerCase().indexOf('ophth') >= 0 || med.pharma_class.toLowerCase().indexOf('eye ') == 0 
-                                || med.routes.toLowerCase().indexOf('ophth') >= 0) {
+                        if (this.$services.synopsis.includeInApp(med)) {
                             _self.log("Inside Oph Processing Med :" + med.name + " oids :" + med.med_order_ids + " dose routes: " + med.dosageRoutes) ;
                             try {
                             var medIdx = meds.findIndex(cat => cat.name == med.name) ;
@@ -569,7 +574,7 @@ export default {
                     });              
                 }) ;
 
-                _self.log("Meds data: " + JSON.stringify(meds)) ;
+                //_self.log("Meds data: " + JSON.stringify(meds)) ;
 
                 var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.synopsis.APP_ID) ;
                 _self.log("Encounter data: " + JSON.stringify(encounters)) ;
@@ -605,7 +610,12 @@ export default {
                 }) ;
             
                 _self.log("Final ws call json: " + JSON.stringify(wsjson)) ;
-
+                
+                // remove inpatient data - as that will be populated as part of mardata ws call
+                meds.forEach(function(med) {
+                    med.data = med.data.filter(function(elem) { return elem.pcat.toLowerCase().indexOf("inpatient") < 0 ; } ) ;
+                }) ;
+                                
                 this.$services.seal.mardata(wsjson, this.$services.synopsis.APP_ID).then(responses => {
                     console.log("responses length " + responses.length) ;
                     _self.log("Got MAR data responses " + responses.length) ;
@@ -645,6 +655,7 @@ export default {
                                     }
                                 }
                             }
+                            med.has_mardata = true ;
                             med.last_used_long = last_used_long ;
                             med.last_used = last_used ;
                             med.total_rows = med.data.length ;
@@ -799,6 +810,18 @@ export default {
             chartOptions.chart.marginLeft = 150 ;
             //chartOptions.yAxis[0].labels = { overflow: "allow" } ;
 
+            chartOptions.chart.spacingBottom = 30 ;
+
+            chartOptions.subtitle = {          
+                useHTML: true,
+                text: '<span style="background-color:lightgreen">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> Outpatient Meds <span style="background-color:darkgreen;margin-left:50px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> Inpatient Meds',
+                floating: true,
+                align: 'center',
+                x: 0,
+                verticalAlign: 'bottom',
+                y: 40
+            } ;
+
             return chartOptions ;
         },
         getSurgChart(surgeryData) {
@@ -905,6 +928,16 @@ export default {
                     return tip ;
                 }
 
+                chartOptions.chart.spacingBottom = 30 ;
+                chartOptions.subtitle = {          
+                    text: '20/1000 indicates a non-numerical value such as "LP"',
+                    floating: true,
+                    align: 'center',
+                    x: 0,
+                    verticalAlign: 'bottom',
+                    y: 40
+                } ;                
+                
                 this.log("In getChart Method") ;
                 this.log(JSON.stringify(chartOptions)) ;
                 return chartOptions ;
