@@ -8,7 +8,7 @@
             <b-col sm="9" xl="10" class="text-left ml-2">                
                 <p class="pt-2">
                     Antimicrobial app developed by SEAL. 
-                <p>
+                </p>
                 <p>
                     The app uses real time data to get information about anti microbials, cultures and some data.
                 </p>
@@ -28,6 +28,23 @@
                             <b-card-text>                                           
                                 <h5>Summary:</h5>
                                 <b-form-textarea max-rows="20" plaintext size="sm" v-model="notes" id="result" class="mt-3"/>
+                                <h5>Inpatient Antibiotics</h5>
+                                <b-table :items="inpatient_arr" 
+                                    :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Date', key: 'dates', sortable:false}, {label: 'Most Recent', key: 'recent_date', sortable: true}]" 
+                                    small bordered>
+                                    <template #cell(recent_date)="data">
+                                        {{ $moment(data.value).format("MM/DD/YYYY") }}
+                                    </template>
+                                </b-table>        
+                                <h5>Outpatient Antibiotics</h5>
+                                <b-table :items="outpatient_arr" 
+                                    :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Date', key: 'dates', sortable:false}, 
+                                        {label: 'Most Recent', key: 'recent_date', sortable: true}, {label:'Quantity', key: 'qty'}, {label: 'Refills', key: 'refills'}]" 
+                                    small bordered>
+                                    <template #cell(recent_date)="data">
+                                        {{ $moment(data.value).format("MM/DD/YYYY") }}
+                                    </template>                                    
+                                </b-table>        
                                 <copy-to-clipboard-btn label="Copy Notes to Clipboard" :content="abxSummary" key="abxSummary"/>
                             </b-card-text>
                         </b-card>
@@ -94,11 +111,7 @@
                                 </b-table>
 
                                 <copy-to-clipboard-btn label="Copy Notes to Clipboard" :content="cultureSummary" key="cultureSummary"/>
-                                <!--
-                                <b-btn @click="generateCultureNotes" variant="primary" size="sm" class="mb-2 mt-2">Generate & Copy Notes to Clipboard</b-btn>                        
-                                <b-btn @click="copyToClipboard('cultureNotes')" variant="primary" size="sm" class="mb-2 mt-2">Copy Notes to Clipboard</b-btn>                                
-                                <span class="pl-3" style="font-size:small">{{copyBtnInfo}}</span>
-                                -->
+
                                 <b-btn @click="compareSusceptabilityReports" variant="primary" size="sm" class="mb-2 mt-2 mr-2" style="float:right">Compare Susceptability</b-btn>                        
                                 
                                 <b-form-textarea max-rows="20" plaintext size="sm" v-model="cultureNotes" class="box"/>                                                              
@@ -226,6 +239,8 @@ export default {
                 period_type : 'C'  // Custom
             },
             notes: "Generating Antibiotics Summary...",
+            inpatient_arr: [],
+            outpatient_arr: [],
             //abxSummary: '' ,
             cultureNotes: "",
             cultureFilter: "",  
@@ -284,7 +299,6 @@ export default {
         this.inpatient_end_date = this.$moment().format("MM/DD/YYYY") ;
 
         this.$bvModal.show("launch-modal") ;         
-
     },
     watch : {
         toggleAllResults: function(val) {
@@ -346,7 +360,8 @@ export default {
     },
     methods: {    
         log(mesg) {
-            this.resultText += "\n" + this.$moment().format("LTS") + ": " + mesg ;
+            //console.log(mesg) ;
+            this.resultText += "\n" + this.$moment().format("LTS") + ": " + mesg ;            
         },
         compareSusceptabilityReports() {
             var susRows = [] ;
@@ -529,6 +544,11 @@ export default {
             var cresponse = await this.$services.antimicrobial.cultureData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
 
             this.log(JSON.stringify(cresponse)) ;  
+            
+            // reset arrays
+            this.inpatient_arr.splice(0, this.inpatient_arr.length) ;
+            this.outpatient_arr.splice(0, this.outpatient_arr.length) ;
+            this.cultureData.splice(0, this.cultureData.length) ;
 
             var rowColor = "" ;
             cresponse.forEach( spec => {
@@ -633,9 +653,8 @@ export default {
                     try {
                         // Only antibiotics - added antiviral and antifungal - request from Dr Amy Chang
                         if (med.thera_class && 
-                                (med.thera_class.toLowerCase().indexOf('antibiotics') >= 0 || 
-                                    med.thera_class.toLowerCase().indexOf('antivirals') >= 0 || 
-                                    med.thera_class.toLowerCase().indexOf('antifungals') >= 0)
+                                (["antibiotics", "antivirals", "antifungals", "antiparasitics", "antiinfectives", "antiinfectives/miscellaneous"]
+                                    .indexOf(med.thera_class.toLowerCase()) >= 0)
                          ) {
                             var medIdx = medNames.indexOf(med.name) ;
                             if (medIdx === -1) {
@@ -710,6 +729,58 @@ export default {
             
             ingredients.forEach(ing => {
                 var dates = "" ;
+
+                _self.log("Processign ing :" + ing.name) ;                                
+                ing.data.forEach(dt => {
+                    if (!dt.validEndDate) dt.validEndDate = "Y" ;
+                    dt.x = _self.$moment(dt.x).startOf("day") ;
+                    dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                }) ;
+
+                var idx = 0 ;            
+                while (true) {
+                    var dt = ing.data[idx] ;
+
+                    _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
+                    _self.log(dt) ;
+                                        
+                    if (dt.pcat == "Community") {    // != Inpatient
+                        dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
+                        idx++ ;
+                    } else {
+                        dates += dt.x.format("MM/DD/YY") ;
+                        while (true) {
+                            idx++ ;                            
+                            if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
+                                dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
+                                break ;
+                            }
+                            dt = ing.data[idx] ;
+                        }
+                    }                     
+                    if (idx >= ing.data.length) break ;
+                }
+                dates = dates.trim() ;
+                if (dates.endsWith(",")) dates = dates.slice(0, -1) ;
+                ing.dates = dates ;
+
+                if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
+                    if (_self.notes.endsWith("\n\n"))
+                        _self.notes += ing.name + " " + ing.dates + "\n";    
+                    else
+                        _self.notes += "\n" + ing.name + " " + ing.dates + "\n";    
+                    futureSectionCreated = true ;
+                } else {
+                    _self.notes += ing.name + " " + ing.dates + "\n";
+                }
+            }) ;
+            
+            ingredients.forEach(ing => {
+                var dates = "" ;
+                var inpatient_dates = "" ;
+                var outpatient_dates = "" ;
+                var recentDate = 0 ;
+
                 _self.log("Processign ing :" + ing.name) ;                                
                 ing.data.forEach(dt => {
                     if (!dt.validEndDate) dt.validEndDate = "Y" ;
@@ -724,59 +795,34 @@ export default {
                     _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
                     _self.log(dt) ;
                     
-                    if (dt.pcat != "Inpatient") {
-                        dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
+                    if (dt.pcat == "Community") {
+                        this.outpatient_arr.push({med_name: ing.name, dates: dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") , 
+                                                    qty: dt.quantity + " " + dt.form, refills: dt.numberOfRefills, recent_date: dt.x.valueOf() }) ;
+                        //outpatient_dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
                         idx++ ;
                     } else {
-                        dates += dt.x.format("MM/DD/YY") ;
+                        inpatient_dates += dt.x.format("MM/DD/YY") ;                        
                         while (true) {
                             idx++ ;                            
-                            if (idx >= ing.data.length || ing.data[idx].pcat != 'Inpatient' || dt.x2.diff(ing.data[idx].x, 'days') > 1) {
-                                dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
+                            if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
+                                inpatient_dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
+                                recentDate = dt.x2.valueOf() ;
                                 break ;
                             }
                             dt = ing.data[idx] ;
                         }
-                    }                    
+                    }                                       
                     if (idx >= ing.data.length) break ;
                 }
-                dates = dates.trim() ;
-                if (dates.endsWith(",")) dates = dates.slice(0, -1) ;
-                ing.dates = dates ;
-                _self.log(dates) ;                
-                if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
-                    if (_self.notes.endsWith("\n\n"))
-                        _self.notes += ing.name + " " + ing.dates + "\n";    
-                    else
-                        _self.notes += "\n" + ing.name + " " + ing.dates + "\n";    
-                    futureSectionCreated = true ;
-                } else {
-                    _self.notes += ing.name + " " + ing.dates + "\n";
+                if (inpatient_dates.trim().length > 0) {
+                    inpatient_dates = inpatient_dates.trim() ;
+                    if (inpatient_dates.endsWith(",")) inpatient_dates = inpatient_dates.slice(0, -1) ;
+                    _self.inpatient_arr.push({med_name: ing.name, dates: inpatient_dates, recent_date: recentDate}) ;
                 }
             }) ;
 
             this.launchModal.loading = false ;
             this.$bvModal.hide("launch-modal") ;
-        },
-        copyToClipboard(copyFrom) {
-            /*
-            console.log("inside copytoclipboard abx app") ;            
-            var result = "" ;
-            var _self = this ;
-            if (copyFrom == 'cultureNotes') {
-                result = this.cultureNotes ;                
-            } else {
-                result = this.notes ;
-            }                        
-            if (window.clipboardData) {
-                window.clipboardData.setData('Text', result);
-                this.copyBtnInfo = "Result copied to clipboard." ;
-                window.setTimeout(function() { _self.copyBtnInfo = "" ; }, 2000) ;
-            } else {
-                this.copyBtnInfo = "windows.clipboarddata doesn't exist" ;
-                window.setTimeout(function() { _self.copyBtnInfo = "" ; }, 2000) ;
-            } 
-            */
         }
     }
 }
