@@ -552,6 +552,7 @@ export default {
                     response.cats.forEach((med) => {                                                                
                         //_self.log("Processing MedStat : " + JSON.stringify(med)) ;
                         if (!med.pharma_class) med.pharma_class = "" ;
+                        if (!med.thera_class) med.thera_class = "" ;
                         if (!med.routes) med.routes = "" ;
                         if (this.$services.synopsis.includeInApp(med)) {
                             _self.log("Inside Oph Processing Med :" + med.name + " oids :" + med.med_order_ids + " dose routes: " + med.dosageRoutes) ;
@@ -671,9 +672,11 @@ export default {
                     meds = meds.filter(med => {return med.data.length > 0}) ;
                     
                     meds.forEach(med => med.dosageRoutes = ((med.dosageRoutes && med.dosageRoutes.length > 0)?med.dosageRoutes:"Both Eyes")) ;
+                    // for tablets, there is no left/right eye specified
+                    meds.forEach(med => med.dosageRoutes = (med.dosageRoutes.toLowerCase().indexOf("eye") < 0 ? "Both Eyes" : med.dosageRoutes)) ;
 
                     _self.log("After filtering meds with no data :" + JSON.stringify(meds)) ;
-
+                    
                     this.leftMeds.data = meds.filter(med => (med.dosageRoutes.toLowerCase().indexOf("left") >= 0 || med.dosageRoutes.toLowerCase().indexOf("both") >= 0) ) ;
                     this.rightMeds.data = meds.filter(med => (med.dosageRoutes.toLowerCase().indexOf("right") >= 0 || med.dosageRoutes.toLowerCase().indexOf("both") >= 0) ) ;
 
@@ -782,12 +785,15 @@ export default {
                 meds.data.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;
             else
                 meds.ingredients.sort(function(a,b) { return a.name.localeCompare(b.name) }) ;            
-
+            
             if (groupBy == "None") {
                 meds.list = meds.data ;
             } else {
                 meds.list = meds.ingredients ;
             }
+            // For Oral Meds, dosageRoutes of left/right eye is not valid. So just displaying Oral in those cases
+            meds.list.forEach(med => med.dosageRoutes = (med.routes && med.routes.toLowerCase().indexOf('oral') >= 0?'Oral':med.dosageRoutes)) ;
+
             this.log("********Medication List***********") ;
             this.log(JSON.stringify(meds.list.map(med => med.name))) ;
             } catch (err) {
