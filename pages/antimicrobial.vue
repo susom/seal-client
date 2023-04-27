@@ -30,17 +30,25 @@
                                 <b-form-textarea max-rows="20" plaintext size="sm" v-model="notes" id="result" class="mt-3"/>
                                 <h5>Inpatient Antibiotics</h5>
                                 <b-table :items="inpatient_arr" 
-                                    :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Date', key: 'dates', sortable:false}, {label: 'Most Recent', key: 'recent_date', sortable: true}]" 
+                                    :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Therapeutic Class', key: 'thera_class', sortable: true}, 
+                                              {label: 'Date Range (sort by earliest date)', key: 'earliest_date', sortable:true}, {label: 'Most Recent', key: 'recent_date', sortable: true}]" 
                                     small bordered>
+                                    <template #cell(earliest_date)="data">
+                                        {{ data.item.dates }}
+                                    </template>                                    
                                     <template #cell(recent_date)="data">
                                         {{ $moment(data.value).format("MM/DD/YYYY") }}
                                     </template>
                                 </b-table>        
                                 <h5>Outpatient Antibiotics</h5>
                                 <b-table :items="outpatient_arr" 
-                                    :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Date', key: 'dates', sortable:false}, 
-                                        {label: 'Most Recent', key: 'recent_date', sortable: true}, {label:'Quantity', key: 'qty'}, {label: 'Refills', key: 'refills'}]" 
+                                    :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Therapeutic Class', key: 'thera_class', sortable: true}, 
+                                            {label: 'Date Range (sort by earliest date)', key: 'earliest_date', sortable:true}, {label: 'Most Recent', key: 'recent_date', sortable: true}, 
+                                            {label:'Quantity', key: 'qty'}, {label: 'Refills', key: 'refills'}]" 
                                     small bordered>
+                                    <template #cell(earliest_date)="data">
+                                        {{ data.item.dates }}
+                                    </template>                                                                        
                                     <template #cell(recent_date)="data">
                                         {{ $moment(data.value).format("MM/DD/YYYY") }}
                                     </template>                                    
@@ -775,11 +783,10 @@ export default {
                 }
             }) ;
             
-            ingredients.forEach(ing => {
-                var dates = "" ;
+            ingredients.forEach(ing => {                
                 var inpatient_dates = "" ;
-                var outpatient_dates = "" ;
                 var recentDate = 0 ;
+                var earliestDate = 0 ;
 
                 _self.log("Processign ing :" + ing.name) ;                                
                 ing.data.forEach(dt => {
@@ -791,16 +798,18 @@ export default {
                 var idx = 0 ;
                 while (true) {
                     var dt = ing.data[idx] ;
-
+                    
                     _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
                     _self.log(dt) ;
                     
                     if (dt.pcat == "Community") {
                         this.outpatient_arr.push({med_name: ing.name, dates: dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") , 
-                                                    qty: dt.quantity + " " + dt.form, refills: dt.numberOfRefills, recent_date: dt.x.valueOf() }) ;
-                        //outpatient_dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
+                                                    qty: dt.quantity + " " + dt.form, refills: dt.numberOfRefills, 
+                                                    earliest_date: dt.x.valueOf(), recent_date: dt.x2.valueOf(), thera_class: ing.thera_class }) ;                        
                         idx++ ;
                     } else {
+                        if (earliestDate == 0)
+                            earliestDate = dt.x.valueOf() ;
                         inpatient_dates += dt.x.format("MM/DD/YY") ;                        
                         while (true) {
                             idx++ ;                            
@@ -817,7 +826,7 @@ export default {
                 if (inpatient_dates.trim().length > 0) {
                     inpatient_dates = inpatient_dates.trim() ;
                     if (inpatient_dates.endsWith(",")) inpatient_dates = inpatient_dates.slice(0, -1) ;
-                    _self.inpatient_arr.push({med_name: ing.name, dates: inpatient_dates, recent_date: recentDate}) ;
+                    _self.inpatient_arr.push({med_name: ing.name, dates: inpatient_dates, earliest_date: earliestDate, recent_date: recentDate, thera_class: ing.thera_class}) ;
                 }
             }) ;
 
