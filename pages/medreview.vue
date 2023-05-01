@@ -862,7 +862,6 @@ export default {
             this.loadingMessage = "Encounter Data" ;
 
             var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.medreview.APP_ID) ;
-            //var encounters = this.getLocalEncData().data ;
 
             console.log("encounters....") ;
             console.log(encounters) ;

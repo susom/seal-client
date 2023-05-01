@@ -643,11 +643,11 @@ export default {
             }) ;
 
             this.loadingMessage = "Medication Data" ;
-            response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.antimicrobial.APP_ID ) ;            
+            response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "", '', this.$services.antimicrobial.APP_ID ) ;            
             responses.push(response) ;
 
             while (response.nextUrl) {
-                response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.antimicrobial.APP_ID) ;
+                response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "", response.nextUrl, this.$services.antimicrobial.APP_ID) ;
                 responses.push(response) ;
             }
 
@@ -663,7 +663,7 @@ export default {
                         if (med.thera_class && 
                                 (["antibiotics", "antivirals", "antifungals", "antiparasitics", "antiinfectives", "antiinfectives/miscellaneous"]
                                     .indexOf(med.thera_class.toLowerCase()) >= 0)
-                         ) {
+                         ) {                            
                             var medIdx = medNames.indexOf(med.name) ;
                             if (medIdx === -1) {
                                 medNames.push(med.name) ;
@@ -683,155 +683,258 @@ export default {
                 });              
             }) ;
 
-            var ingredients = [] ;
+            /**************  New Code Starts here  **************/
+            var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.antimicrobial.APP_ID) ;
+
+            console.log("encounters....") ;
+            console.log(encounters) ;
+
+            var wsjson = {} ;
+            
+            _self.log("ABX Meds data :" + JSON.stringify(meds)) ;
+            
+            _self.log("Got encounters: " + JSON.stringify(encounters)) ;
+
+            encounters.forEach(enc => {
+                wsjson[enc.pat_enc_csn_id] = {
+                    "PatientID": _self.patient.epicPatientId,
+                    "PatientIDType": "External", 
+                    "ContactID": enc.pat_enc_csn_id,
+                    "ContactIDType": "CSN",
+                    "OrderIDs": []
+                } ;
+            });
+
             meds.forEach(med => {
-                try {
-                var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
-                _self.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
-                if (ingIdx > -1) {
-                    ingredients[ingIdx] = this.$services.medreview.merge_meds(ingredients[ingIdx], med) ;
-                } else {
-                    var ingObj = JSON.parse(JSON.stringify(med))  ;
-                    ingObj.name = (med.ingredient?med.ingredient:med.name) ;                    
-                    ingredients.push(ingObj) ;
-                }    
-                } catch (err) {
-                    _self.log("error in ingredient constructions :" + err) ;
-                }            
+                console.log(med) ;
+                med.data.forEach(row => {
+                    for (var i=0; i<encounters.length; i++) {
+                        if ((row.x >= encounters[i].start && row.x <= encounters[i].end) || 
+                            (row.x2 >= encounters[i].start && row.x2 <= encounters[i].end)) {
+                            if (row.med_order_id) {   // for some reason row is created with empty ID
+                                wsjson[encounters[i].pat_enc_csn_id].OrderIDs.push({ "ID": row.med_order_id, "Type" : "External"}) ;
+                            }
+                        }
+                    }
+                }) ;
             }) ;
+
+            console.log("Final ws call json") ;
+            console.log(wsjson) ;
+
+            this.loadingMessage = "MAR Data" ;
             
-            _self.log("ABX Ingredients: " + JSON.stringify(ingredients)) ;                
-            // sort the dates for each ing
-            ingredients.forEach(ing => {
-                ing.data.sort(function(a, b) { return a.x - b.x }) ;
-            }) ;
- 
-            // sort by name first
-            ingredients.sort((ing_a, ing_b) => {
-                return ing_a.name.localeCompare(ing_b.name) ;
-            }) ;
-            
-            // truncate timestamp to date
-            ingredients.forEach(ing => {
-                ing.data.forEach(dt => { dt.x = _self.$moment(dt.x).startOf('day').valueOf() ; dt.x2 = _self.$moment(dt.x2).startOf('day').valueOf() ; }) ;
+            _self.log("before calling MAR data") ;
+
+            // remove inpatient data                
+            meds.forEach(function(med) {
+                med.data = med.data.filter(function(elem) { return elem.pcat.toLowerCase().indexOf("inpatient") < 0 ; } ) ;
             }) ;
 
+            this.$services.seal.mardata(wsjson, this.$services.antimicrobial.APP_ID).then(responses => {
+                console.log("responses length " + responses.length) ;
+                _self.log("Got MAR data responses " + responses.length ) ;
 
-            // sort the ing based on the last date in the dates list
-            ingredients.sort((ing_a, ing_b) => {
-                // if end date is same, use the start date for sorting
-                if (ing_a.data[ing_a.data.length - 1].x2 == ing_b.data[ing_b.data.length - 1].x2)
-                    return ing_a.data[ing_a.data.length - 1].x - ing_b.data[ing_b.data.length - 1].x ;
-                else
-                    return ing_a.data[ing_a.data.length - 1].x2 - ing_b.data[ing_b.data.length - 1].x2 ;
-            }) ;
+                responses.forEach(response => {                    
+                    response.data.Orders.forEach(order => {
+                        _self.log("Processing MAR Data for order " + order.Name) ;
+                        var medIdx = meds.findIndex(function (med) { return (med.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
+                        var med = {} ;
+                        if (medIdx >= 0) {
+                            med = meds[medIdx] ;
+                            med.name = order.Name ;
+                        } else {
+                            console.log("********* This should NOT happen - can't match order id for " + order.Name) ;
+                            return ;
+                        }
+                        var last_used = "" ;
+                        var last_used_long = 0 ;
 
-            _self.log("ABX Ingredients after ordering: " + JSON.stringify(ingredients)) ;
+                        for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
+                            var ma = order.MedicationAdministrations[mIdx] ;
+                            if (ma.Action != "Not Given") {
+                                var adminTime = new Date(ma.AdministrationInstant).getTime() ;
+                                if (adminTime >= rpt_start_date_long && adminTime <= rpt_end_date_long) {
+                                    if (last_used_long < adminTime) {
+                                        last_used = this.$moment(new Date(adminTime)).format("MM/DD/YYYY") ;
+                                        last_used_long = adminTime ;
+                                    }
+                                    if (ma.Dose) {
+                                        med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
+                                            name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, action: ma.Action, pcat: "inpatient"  }) ;
+                                    } else if (ma.Rate) {
+                                        med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
+                                            name: order.Name, dose: ma.Rate.Value, unit: ma.Rate.Unit, action: ma.Action, pcat: "inpatient"  }) ;                                            
+                                    }
+                                }
+                            }
+                        }
+                        med.last_used_long = last_used_long ;
+                        med.last_used = last_used ;
+                        med.total_rows = med.data.length ;
+                    }) ;
+                }) ;
+                // meds only with data is used
+                meds = meds.filter(med => {return med.data.length > 0}) ;                
 
-            _self.notes = "Antimicrobial History:\n"
-                        + "----------------------\n\n" ;
-
-            this.loadingMessage = "Anitmicrobial Summary" ;
-
-            var futureSectionCreated = false ;
-            
-            ingredients.forEach(ing => {
-                var dates = "" ;
-
-                _self.log("Processign ing :" + ing.name) ;                                
-                ing.data.forEach(dt => {
-                    if (!dt.validEndDate) dt.validEndDate = "Y" ;
-                    dt.x = _self.$moment(dt.x).startOf("day") ;
-                    dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                var ingredients = [] ;
+                meds.forEach(med => {
+                    try {
+                    var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
+                    _self.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
+                    if (ingIdx > -1) {
+                        ingredients[ingIdx] = this.$services.medreview.merge_meds(ingredients[ingIdx], med) ;
+                    } else {
+                        var ingObj = JSON.parse(JSON.stringify(med))  ;
+                        ingObj.name = (med.ingredient?med.ingredient:med.name) ;                    
+                        ingredients.push(ingObj) ;
+                    }    
+                    } catch (err) {
+                        _self.log("error in ingredient constructions :" + err) ;
+                    }            
+                }) ;
+                
+                _self.log("ABX Ingredients: " + JSON.stringify(ingredients)) ;                
+                // sort the dates for each ing
+                ingredients.forEach(ing => {
+                    ing.data.sort(function(a, b) { return a.x - b.x }) ;
+                }) ;
+    
+                // sort by name first
+                ingredients.sort((ing_a, ing_b) => {
+                    return ing_a.name.localeCompare(ing_b.name) ;
+                }) ;
+                
+                // truncate timestamp to date
+                ingredients.forEach(ing => {
+                    ing.data.forEach(dt => { dt.x = _self.$moment(dt.x).startOf('day').valueOf() ; dt.x2 = _self.$moment(dt.x2).startOf('day').valueOf() ; }) ;
                 }) ;
 
-                var idx = 0 ;            
-                while (true) {
-                    var dt = ing.data[idx] ;
 
-                    _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
-                    _self.log(dt) ;
-                                        
-                    if (dt.pcat == "Community") {    // != Inpatient
-                        dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
-                        idx++ ;
-                    } else {
-                        dates += dt.x.format("MM/DD/YY") ;
-                        while (true) {
-                            idx++ ;                            
-                            if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
-                                dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
-                                break ;
-                            }
-                            dt = ing.data[idx] ;
-                        }
-                    }                     
-                    if (idx >= ing.data.length) break ;
-                }
-                dates = dates.trim() ;
-                if (dates.endsWith(",")) dates = dates.slice(0, -1) ;
-                ing.dates = dates ;
-
-                if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
-                    if (_self.notes.endsWith("\n\n"))
-                        _self.notes += ing.name + " " + ing.dates + "\n";    
+                // sort the ing based on the last date in the dates list
+                ingredients.sort((ing_a, ing_b) => {
+                    // if end date is same, use the start date for sorting
+                    if (ing_a.data[ing_a.data.length - 1].x2 == ing_b.data[ing_b.data.length - 1].x2)
+                        return ing_a.data[ing_a.data.length - 1].x - ing_b.data[ing_b.data.length - 1].x ;
                     else
-                        _self.notes += "\n" + ing.name + " " + ing.dates + "\n";    
-                    futureSectionCreated = true ;
-                } else {
-                    _self.notes += ing.name + " " + ing.dates + "\n";
-                }
-            }) ;
-            
-            ingredients.forEach(ing => {                
-                var inpatient_dates = "" ;
-                var recentDate = 0 ;
-                var earliestDate = 0 ;
-
-                _self.log("Processign ing :" + ing.name) ;                                
-                ing.data.forEach(dt => {
-                    if (!dt.validEndDate) dt.validEndDate = "Y" ;
-                    dt.x = _self.$moment(dt.x).startOf("day") ;
-                    dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                        return ing_a.data[ing_a.data.length - 1].x2 - ing_b.data[ing_b.data.length - 1].x2 ;
                 }) ;
 
-                var idx = 0 ;
-                while (true) {
-                    var dt = ing.data[idx] ;
-                    
-                    _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
-                    _self.log(dt) ;
-                    
-                    if (dt.pcat == "Community") {
-                        this.outpatient_arr.push({med_name: ing.name, dates: dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") , 
-                                                    qty: dt.quantity + " " + dt.form, refills: dt.numberOfRefills, 
-                                                    earliest_date: dt.x.valueOf(), recent_date: dt.x2.valueOf(), thera_class: ing.thera_class }) ;                        
-                        idx++ ;
-                    } else {
-                        if (earliestDate == 0)
-                            earliestDate = dt.x.valueOf() ;
-                        inpatient_dates += dt.x.format("MM/DD/YY") ;                        
-                        while (true) {
-                            idx++ ;                            
-                            if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
-                                inpatient_dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
-                                recentDate = dt.x2.valueOf() ;
-                                break ;
-                            }
-                            dt = ing.data[idx] ;
-                        }
-                    }                                       
-                    if (idx >= ing.data.length) break ;
-                }
-                if (inpatient_dates.trim().length > 0) {
-                    inpatient_dates = inpatient_dates.trim() ;
-                    if (inpatient_dates.endsWith(",")) inpatient_dates = inpatient_dates.slice(0, -1) ;
-                    _self.inpatient_arr.push({med_name: ing.name, dates: inpatient_dates, earliest_date: earliestDate, recent_date: recentDate, thera_class: ing.thera_class}) ;
-                }
-            }) ;
+                _self.log("ABX Ingredients after ordering: " + JSON.stringify(ingredients)) ;
 
-            this.launchModal.loading = false ;
-            this.$bvModal.hide("launch-modal") ;
+                _self.notes = "Antimicrobial History:\n"
+                            + "----------------------\n\n" ;
+
+                this.loadingMessage = "Anitmicrobial Summary" ;
+
+                var futureSectionCreated = false ;
+                
+                ingredients.forEach(ing => {
+                    var dates = "" ;
+
+                    _self.log("Processign ing :" + ing.name) ;                                
+                    ing.data.forEach(dt => {
+                        if (!dt.validEndDate) dt.validEndDate = "Y" ;
+                        dt.x = _self.$moment(dt.x).startOf("day") ;
+                        dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                    }) ;
+
+                    var idx = 0 ;            
+                    while (true) {
+                        var dt = ing.data[idx] ;
+
+                        _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
+                        _self.log(dt) ;
+                                            
+                        if (dt.pcat == "Community") {    // != Inpatient
+                            dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
+                            idx++ ;
+                        } else {
+                            dates += dt.x.format("MM/DD/YY") ;
+                            while (true) {
+                                idx++ ;                            
+                                if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
+                                    dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
+                                    break ;
+                                }
+                                dt = ing.data[idx] ;
+                            }
+                        }                     
+                        if (idx >= ing.data.length) break ;
+                    }
+                    dates = dates.trim() ;
+                    if (dates.endsWith(",")) dates = dates.slice(0, -1) ;
+                    ing.dates = dates ;
+
+                    if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
+                        if (_self.notes.endsWith("\n\n"))
+                            _self.notes += ing.name + " " + ing.dates + "\n";    
+                        else
+                            _self.notes += "\n" + ing.name + " " + ing.dates + "\n";    
+                        futureSectionCreated = true ;
+                    } else {
+                        _self.notes += ing.name + " " + ing.dates + "\n";
+                    }
+                }) ;
+                
+                ingredients.forEach(ing => {                
+                    var inpatient_dates = "" ;
+                    var recentDate = 0 ;
+                    var earliestDate = 0 ;
+
+                    _self.log("Processign ing :" + ing.name) ;                                
+                    ing.data.forEach(dt => {
+                        if (!dt.validEndDate) dt.validEndDate = "Y" ;
+                        dt.x = _self.$moment(dt.x).startOf("day") ;
+                        dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                    }) ;
+
+                    var idx = 0 ;
+                    while (true) {
+                        var dt = ing.data[idx] ;
+                        
+                        _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
+                        _self.log(dt) ;
+                        
+                        if (dt.pcat == "Community") {
+                            this.outpatient_arr.push({med_name: ing.name, dates: dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") , 
+                                                        qty: dt.quantity + " " + dt.form, refills: dt.numberOfRefills, 
+                                                        earliest_date: dt.x.valueOf(), recent_date: dt.x2.valueOf(), thera_class: ing.thera_class }) ;                        
+                            idx++ ;
+                        } else {
+                            if (earliestDate == 0)
+                                earliestDate = dt.x.valueOf() ;
+                            inpatient_dates += dt.x.format("MM/DD/YY") ;                        
+                            while (true) {
+                                idx++ ;                            
+                                if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
+                                    inpatient_dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
+                                    recentDate = dt.x2.valueOf() ;
+                                    break ;
+                                }
+                                dt = ing.data[idx] ;
+                            }
+                        }                                       
+                        if (idx >= ing.data.length) break ;
+                    }
+                    if (inpatient_dates.trim().length > 0) {
+                        inpatient_dates = inpatient_dates.trim() ;
+                        if (inpatient_dates.endsWith(",")) inpatient_dates = inpatient_dates.slice(0, -1) ;
+                        _self.inpatient_arr.push({med_name: ing.name, dates: inpatient_dates, earliest_date: earliestDate, recent_date: recentDate, thera_class: ing.thera_class}) ;
+                    }
+                }) ;
+
+                this.launchModal.loading = false ;
+                this.$bvModal.hide("launch-modal") ;
+
+
+                _self.log("All done") ;
+
+            }) ;            
+
+            /**************  New Code Ends here  **************/
+
+
         }
     }
 }
