@@ -26,26 +26,38 @@
                     <b-tab title="Antibiotics Summary" active>
                         <b-card>                            
                             <b-card-text>                                           
-                                <h5>Summary:</h5>
-                                <b-form-textarea max-rows="20" plaintext size="sm" v-model="notes" id="result" class="mt-3"/>
+                                <h5 class="d-none">Summary:</h5>
+                                <b-form-textarea max-rows="20" plaintext size="sm" v-model="notes" id="result" class="mt-3 d-none"/>
                                 <h5>Inpatient Antibiotics</h5>
-                                <b-table :items="inpatient_arr" 
+                                <b-table :items="inpatient_arr"  @sort-changed="inpatientSortChanged"
                                     :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Therapeutic Class', key: 'thera_class', sortable: true}, 
                                               {label: 'Date Range (sort by earliest date)', key: 'earliest_date', sortable:true}, {label: 'Most Recent', key: 'recent_date', sortable: true}]" 
-                                    small bordered>
+                                    small bordered head-variant="light"
+                                    show-empty>
+                                    <template #empty>
+                                        <h5 style="text-align:center;height:40px;" class="mt-3">
+                                            No antibiotics administered in the given time frame.
+                                        </h5>
+                                    </template>                                    
                                     <template #cell(earliest_date)="data">
                                         {{ data.item.dates }}
                                     </template>                                    
                                     <template #cell(recent_date)="data">
                                         {{ $moment(data.value).format("MM/DD/YYYY") }}
                                     </template>
-                                </b-table>        
-                                <h5>Outpatient Antibiotics</h5>
-                                <b-table :items="outpatient_arr" 
+                                </b-table> 
+                                <copy-to-clipboard-btn label="Copy Inpatient Summary to Clipboard" :content="abxInpatientSummary" key="abxInpatientSummary"/>       
+                                <h5 class="mt-3">Outpatient Antibiotics</h5>
+                                <b-table :items="outpatient_arr"  @sort-changed="outpatientSortChanged"
                                     :fields="[{label: 'Medication', key: 'med_name', sortable: true}, {label: 'Therapeutic Class', key: 'thera_class', sortable: true}, 
                                             {label: 'Date Range (sort by earliest date)', key: 'earliest_date', sortable:true}, {label: 'Most Recent', key: 'recent_date', sortable: true}, 
                                             {label:'Quantity', key: 'qty'}, {label: 'Refills', key: 'refills'}]" 
-                                    small bordered>
+                                    small bordered head-variant="light" show-empty>
+                                    <template #empty>
+                                        <h5 style="text-align:center;height:40px;" class="mt-3">
+                                            No antibiotics ordered in the given time frame.
+                                        </h5>
+                                    </template>                                                                        
                                     <template #cell(earliest_date)="data">
                                         {{ data.item.dates }}
                                     </template>                                                                        
@@ -53,7 +65,8 @@
                                         {{ $moment(data.value).format("MM/DD/YYYY") }}
                                     </template>                                    
                                 </b-table>        
-                                <copy-to-clipboard-btn label="Copy Notes to Clipboard" :content="abxSummary" key="abxSummary"/>
+                                <copy-to-clipboard-btn label="Copy Outpatient Summary to Clipboard" :content="abxOutpatientSummary" key="abxOutpatientSummary"/>       
+                                <!--<copy-to-clipboard-btn label="Copy Notes to Clipboard" :content="abxSummary" key="abxSummary"/>-->
                             </b-card-text>
                         </b-card>
                     </b-tab>
@@ -278,7 +291,11 @@ export default {
             susceptability_data_row : {},
             copyBtnInfo: "",
             loadingMessage: "",
-            suscepComparisonRows: []
+            suscepComparisonRows: [],
+            inpatientSortBy: "",
+            inpatientSortDesc: false,
+            outpatientSortBy: "",
+            outpatientSortDesc: false            
         }
     },
     async fetch() {
@@ -306,7 +323,7 @@ export default {
         console.log(this.launchModal) ;
         this.inpatient_end_date = this.$moment().format("MM/DD/YYYY") ;
 
-        this.$bvModal.show("launch-modal") ;         
+        this.$bvModal.show("launch-modal") ;           
     },
     watch : {
         toggleAllResults: function(val) {
@@ -359,8 +376,69 @@ export default {
         abxSummary() {
             return this.notes ;
         },
-        cultureSummary() {
-            console.log("cultureSummary computed method invoked...") ;
+        abxInpatientSummary() {
+            
+            var summary = "Inpatient Antimicrobial History:\n"
+                        + "----------------------\n\n" ;
+            
+            var litems = this.inpatient_arr.slice() ;
+
+            if (this.inpatientSortBy) {
+                if (this.inpatientSortBy == 'earliest_date' || this.inpatientSortBy == 'recent_date') {
+                    litems.sort((a, b) => {
+                        if (this.inpatientSortDesc)
+                            return b[this.inpatientSortBy] > a[this.inpatientSortBy] ;
+                        else
+                            return a[this.inpatientSortBy] > b[this.inpatientSortBy] ;
+                    })
+                } else {
+                    litems.sort((a, b) => {
+                        if (this.inpatientSortDesc)
+                            return b[this.inpatientSortBy].localeCompare(a[this.inpatientSortBy]) ;
+                        else
+                            return a[this.inpatientSortBy].localeCompare(b[this.inpatientSortBy]) ;                    
+                    })
+                }
+            }
+
+            litems.forEach(ing => {
+                summary += ing.med_name + " " + ing.dates + "\n"
+            }) ;
+
+            return summary ;
+        },
+        abxOutpatientSummary() {
+            var summary = "Outpatient Antimicrobial History:\n"
+                        + "----------------------\n\n" ;
+            
+            var litems = this.outpatient_arr.slice() ;
+
+            if (this.outpatientSortBy) {
+                if (this.outpatientSortBy == 'earliest_date' || this.outpatientSortBy == 'recent_date') {
+                    litems.sort((a, b) => {
+                        if (this.outpatientSortDesc)
+                            return b[this.outpatientSortBy] > a[this.outpatientSortBy] ;
+                        else
+                            return a[this.outpatientSortBy] > b[this.outpatientSortBy] ;
+                    })
+                } else {
+                    litems.sort((a, b) => {
+                        if (this.outpatientSortDesc)
+                            return b[this.outpatientSortBy].localeCompare(a[this.outpatientSortBy]) ;
+                        else
+                            return a[this.outpatientSortBy].localeCompare(b[this.outpatientSortBy]) ;                    
+                    })
+                }
+            }
+
+            litems.forEach(ing => {
+                summary += ing.med_name + " " + ing.dates + " Qty: " + ing.qty + " Refills: " + ing.refills + "\n"
+            }) ;
+            
+            return summary ;
+
+        },        
+        cultureSummary() {            
             this.generateCultureNotes() ;
             console.log(this.cultureNotes) ;
             return this.cultureNotes ;
@@ -370,6 +448,18 @@ export default {
         log(mesg) {
             //console.log(mesg) ;
             this.resultText += "\n" + this.$moment().format("LTS") + ": " + mesg ;            
+        },
+        inpatientSortChanged(ctx) {
+            console.log("Filter Changed") ;
+            console.log(ctx) ; 
+            this.inpatientSortBy = ctx.sortBy
+            this.inpatientSortDesc = ctx.sortDesc
+        },
+        outpatientSortChanged(ctx) {
+            console.log("Filter Changed") ;
+            console.log(ctx) ;            
+            this.outpatientSortBy = ctx.sortBy
+            this.outpatientSortDesc = ctx.sortDesc
         },
         compareSusceptabilityReports() {
             var susRows = [] ;

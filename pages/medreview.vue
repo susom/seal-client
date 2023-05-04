@@ -7,7 +7,7 @@
             <b-col sm="9" xl="10" class="text-left">                 
                 <p class="pt-2">
                     Drug Reaction Diagnostic Assistant is a clinical decision support tool developed by SEAL.
-                <p>
+                </p>
                 <p>
                     This app allows clinicians to rapidly display a synchronized timeline showing the interactions over time between 
                     selected drug administration records and lab results.                    
