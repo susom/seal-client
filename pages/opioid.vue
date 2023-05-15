@@ -918,7 +918,7 @@ export default {
                                     cdata[cdataIdx].mme = cdata[cdataIdx].mme + point.mme ;
                                     cdata[cdataIdx].meds.push({name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme, route: pcaRoute })
                                 } else {
-                                    cdata.push({ x: marTime, y: catIdx, mme: point.mme, color: medColor, name: genericName, routes: pcaRoute,
+                                    cdata.push({ x: marTime, y: catIdx, mme: point.mme, color: medColor, name: genericName, routes: pcaRoute, isOpioid: true,
                                         meds: [ {name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme, route: pcaRoute } ] } ) ;
                                 }    
                                 } catch (err) {

@@ -64,7 +64,10 @@
                                             <h5 style="text-align:center;" class="mt-1 mb-1">
                                                 No Eye Exams performed during the selected time period.
                                             </h5>
-                                        </template>                                     
+                                        </template>              
+                                        <template #cell(timestamp)="data">
+                                            {{ data.item.date }}
+                                        </template>                       
                                     </b-table>
                                 </b-card-text>
                             </b-card>                                                                                                             
@@ -155,7 +158,10 @@
                                             <h5 style="text-align:center" class="mt-1 mb-1">
                                                 No Eye Exams performed during the selected time period.
                                             </h5>
-                                        </template>                                     
+                                        </template>  
+                                        <template #cell(timestamp)="data">
+                                            {{ data.item.date }}
+                                        </template>                                                                                                  
                                     </b-table>
                                 </b-card-text>
                             </b-card>                                                        
@@ -317,9 +323,9 @@ export default {
                 {label: 'Date', key: 'date', sortable: false},
             ],
             eyeTestFields: [
-                {label: 'Test', key: 'name', sortable: false},
-                {label: 'Side', key: 'side', sortable: false},
-                {label: 'Date', key: 'date', sortable: false},
+                {label: 'Test', key: 'name', sortable: true},
+                {label: 'Side', key: 'side', sortable: true},
+                {label: 'Date', key: 'timestamp', sortable: true},
             ],            
             leftTestChartOptions: {},
             rightTestChartOptions: {},
@@ -479,7 +485,7 @@ export default {
                 this.log(JSON.stringify(ophTests)) ;
                 
                 this.leftEyeTests = ophTests
-                            .filter(s => s.side.toLowerCase().indexOf("left") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
+                            .filter(s => s.side.toLowerCase().indexOf("left") >= 0 || s.side.toLowerCase().indexOf("both") >= 0 || s.side.toLowerCase().indexOf("unknown") >= 0)
                             .map(surg => {
                                 return {
                                     "name" : surg.proc_name,
@@ -490,7 +496,7 @@ export default {
                             }) ;
 
                 this.rightEyeTests = ophTests
-                            .filter(s => s.side.toLowerCase().indexOf("right") >= 0 || s.side.toLowerCase().indexOf("both") >= 0)
+                            .filter(s => s.side.toLowerCase().indexOf("right") >= 0 || s.side.toLowerCase().indexOf("both") >= 0 || s.side.toLowerCase().indexOf("unknown") >= 0)
                             .map(surg => {
                                 return {
                                     "name" : surg.proc_name,
