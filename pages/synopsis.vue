@@ -523,9 +523,9 @@ export default {
                         if (response.data.LVA)                        
                             lVAdata.push({ x: response.data.dt , y: response.data.LVA, value: response.data.Lvalue } ) ;
                         if (response.data.RIOP)                        
-                            rIOPdata.push({ x: response.data.dt , y: response.data.RIOP } ) ;                                                        
+                            rIOPdata.push({ x: response.data.dt , y: response.data.RIOP, method: response.data.RIOPMethod } ) ;                                                        
                         if (response.data.LIOP)                        
-                            lIOPdata.push({ x: response.data.dt , y: response.data.LIOP } ) ;                            
+                            lIOPdata.push({ x: response.data.dt , y: response.data.LIOP, method: response.data.LIOPMethod } ) ;                            
                     }) ;
                     
                     _self.log(" Done loading data rdata:" + rVAdata.length + "  ldata:" + lVAdata.length) ;
@@ -935,7 +935,12 @@ export default {
                 } ;
 
                 chartOptions.tooltip.formatter = function () {
-                    var tip =  this.point.series.name + ": " + (this.point.value?this.point.value:this.point.y) ;
+                    var tip =  "" ;
+                    if (this.point.series.name == 'Visual Acuity') {
+                        tip =  this.point.series.name + ": " + (this.point.value?this.point.value:this.point.y) ;
+                    } else {
+                        tip =  "IOP: " + this.point.y + " " + this.point.method ;
+                    }
                     tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
                     return tip ;
                 }
