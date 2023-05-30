@@ -136,6 +136,7 @@ export default {
             top10Fields: [
                 {key: 'user_id', label: 'ID', sortable: false},
                 {key: 'full_name', label: 'Name', sortable: false},
+                {key: 'prov_type', label: 'Provider Type', sortable: false},
                 {key: 'total_login', label: '# of logins', sortable: false, tdClass:'text-center'},
             ],
             showDebug: false,
