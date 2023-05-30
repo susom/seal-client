@@ -43,7 +43,7 @@
           <b-row v-if="error">
             <b-col class="text-danger mb-3">Sorry! We have encountered problem in submitting your request. Please try again later.</b-col>
           </b-row>
-          <b-button variant="primary" @click="submitForm()">Submit Feedback</b-button>
+          <b-button variant="primary" :disabled="formSubmitInProcess" @click="submitForm()"> {{formSubmitInProcess?"Submission in Progress...":"Submit Feedback"}} </b-button>
           <b-button variant="primary" @click="$bvModal.hide('feedback-modal'); resetFeedback() ;">Close</b-button>
       </b-form>
     </b-modal>
@@ -63,7 +63,8 @@ export default {
     comment: "",
     email: "",
     include_screenshot: true,
-    screenshot: ""    
+    screenshot: "",
+    formSubmitInProcess: false    
   }),
   mounted() {
     this.email = this.$store.state.user.email ; 
@@ -78,9 +79,11 @@ export default {
       this.title = "" ;
       this.comment = "" ;
       this.error = false ;
+      this.formSubmitInProcess =  false ;
     },
     submitForm() {
       console.log("submit feedback form called");
+      this.formSubmitInProcess = true ;
       var _self = this ;
 
       var feedback = {
@@ -111,6 +114,7 @@ export default {
               }).catch(err => {
                 console.log("Error in feedback submission with screenshot") ;
                 console.log(err) ;
+                _self.formSubmitInProcess = false ;
                 _self.error = true ;
               }) ;
           });
@@ -130,7 +134,8 @@ export default {
         }).catch (err => {
             console.log("Error in feedback submission without screenshot") ;
             console.log(err) ;
-          _self.error = true ;
+            _self.formSubmitInProcess = false ;
+            _self.error = true ;
         });
       }
     },
