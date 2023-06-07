@@ -79,7 +79,6 @@ export default {
       this.title = "" ;
       this.comment = "" ;
       this.error = false ;
-      this.formSubmitInProcess =  false ;
     },
     submitForm() {
       console.log("submit feedback form called");
@@ -110,6 +109,7 @@ export default {
                 } else {
                   _self.resetFeedback() ;
                   _self.$bvModal.hide('feedback-modal') ;
+                  _self.formSubmitInProcess = false ;
                 }
               }).catch(err => {
                 console.log("Error in feedback submission with screenshot") ;
@@ -130,6 +130,7 @@ export default {
             } else {
               _self.resetFeedback() ;
               _self.$bvModal.hide('feedback-modal') ;
+              _self.formSubmitInProcess = false ;
             }          
         }).catch (err => {
             console.log("Error in feedback submission without screenshot") ;

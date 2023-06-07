@@ -243,6 +243,8 @@
                     <b-button pill variant="primary" class="ml-3 mt-3" @click="populateData" :disabled="!launchModal.errors.start_date || !launchModal.errors.end_date">Run Report</b-button>  
                 </b-col>
             </b-row> 
+            <StatusMessage :loadingMessage="loadingMessage" :systemError="systemError" />
+            <!---
             <b-row v-show="launchModal.loading">
                 <b-col cols="12"  class="text-center">
                     <b-button variant="info" disabled size="sm" class="mt-3" style="width:100%">
@@ -251,6 +253,7 @@
                     </b-button>
                 </b-col>
             </b-row> 
+            -->
         </b-modal>
 
         <!--<b-modal id="common-opioids-modal" size="lg" centered scrollable hide-footer title="Common Opioid MME Conversion Factors">-->
@@ -488,7 +491,9 @@ export default {
             },
             statusMesg: "Init",
             painScoreText: "Hide Pain Score",
-            marChartOpen: false
+            marChartOpen: false,
+            loadingMessage: "",
+            systemError: false
         }
     },
     computed : {
@@ -510,15 +515,21 @@ export default {
     async fetch() {
         this.log("In Fetch method of a3 pain tab page") ;        
 
-        var response = await this.$services.seal.inpatientdate(this.$services.a3pain.APP_ID) ;                          
-        this.log("Inpatient date :" + JSON.stringify(response)) ;
-        if (response.inpatient_start_date) {
-            this.road.hasSurgicalEncounter = await this.surgicalEncounter(response.inpatient_start_date) ;
-            this.resultText += "\nHas Surgical Encounter :" + this.road.hasSurgicalEncounter ;            
-            if (!this.road.hasSurgicalEncounter) return ;
-            this.road.opioidNaivePatient = await this.opioidNaive(response.inpatient_start_date) ;
-            this.resultText += "\nIs Opioid Naive Patient :" + this.road.opioidNaivePatient ;            
-        }        
+        try {
+            var response = await this.$services.seal.inpatientdate(this.$services.a3pain.APP_ID) ;                          
+            this.log("Inpatient date :" + JSON.stringify(response)) ;
+            if (response.inpatient_start_date) {
+                this.road.hasSurgicalEncounter = await this.surgicalEncounter(response.inpatient_start_date) ;
+                this.resultText += "\nHas Surgical Encounter :" + this.road.hasSurgicalEncounter ;            
+                if (!this.road.hasSurgicalEncounter) return ;
+                this.road.opioidNaivePatient = await this.opioidNaive(response.inpatient_start_date) ;
+                this.resultText += "\nIs Opioid Naive Patient :" + this.road.opioidNaivePatient ;            
+            }        
+        } catch (err) {
+            this.systemError = true ;
+            this.$bvModal.show("launch-modal") ;
+            console.log("Error in fetch method :" + err) ;    
+        }            
     },
     mounted () {
         this.log("In mounted method of the a3 pain tab page") ;    
@@ -631,7 +642,9 @@ export default {
             this.resultText = "" ;  // reset the log
 
             this.launchModal.loading = true ;
-            
+            this.systemError = false ;
+            this.loadingMessage = "Generating report data" ;
+
             console.log("In populate data launchModal : {}", this.launchModal) ;
 
             this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
@@ -644,13 +657,17 @@ export default {
             var rpt_end_date_long = this.launchModal.rpt_end_date_long ;
             console.log("in populatedata report end date long :" + rpt_end_date_long) ;
 
+            this.loadingMessage = "Fetching Patient data" ;
             this.patient = await this.$services.a3pain.patient() ;      
 
+            this.loadingMessage = "Fetching Encounter data" ;
             var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.a3pain.APP_ID) ;
 
             var responses = [] ;
             var response = {} ;
             var medstats = {} ;
+
+            this.loadingMessage = "Fetching Medication Data" ;
 
             response = await this.$services.a3pain.medstats(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
             responses.push(response) ;
@@ -683,11 +700,13 @@ export default {
                     } catch (err) {
                         this.resultText += "Error in merging medstat response for " + JSON.stringify(med) + "\n" ;
                         this.resultText += err + "\n" ;
+                        this.systemError = true ;
                     }
                 });              
             }) ;
             } catch (err) {
                 this.resultText += "Error in merging medstat responses " + err + "\n" ;
+                this.systemError = true ;
             }
 
             var wsjson = {} ;
@@ -725,17 +744,21 @@ export default {
             } catch (err) {
                 console.log("no idea what this error is...{} " , err) ;
                 this.resultText += "\n" + "Error in JS Call 1 :" + err ;
+                this.systemError = true ;
             }
             try {
 
                 //MAR data for Patient Controlled Analgesics
                 this.log("---- PCA MAR Data Request --------------") ;
+                this.loadingMessage = "Processing PCA/PCEA data" ;
+
                 var pca_mars = await this.$services.a3pain.pca_mars(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
                 this.log(JSON.stringify(pca_mars)) ;
 
                 this.log("---- MAR Data Webservice Request--------------") ;
                 this.resultText += JSON.stringify(wsjson) ;
 
+                this.loadingMessage = "Fetching MAR data" ;
                 this.$services.a3pain.mardata(wsjson).then(responses => {
 
                     console.log("responses length " + responses.length) ;
@@ -748,7 +771,8 @@ export default {
                     var categories = [] ;
                     var cdata = [] ;
                     var catIdx = -1 ;         
-                    
+                    this.loadingMessage = "Processing MAR data" ;
+
                     responses.forEach(response => {
                         response.data.Orders.forEach(order => {                                                        
                             this.resultText += "\n----------------------------------Processing Order :" + order.Name + ": ID: " + order.OrderID.ID ;
@@ -788,7 +812,8 @@ export default {
                                 genericName = medstats.cats[cIdx].name ;
 
                             } catch (err) {
-                                this.resultText += "\n" + "Error in JS Call 2" + err ;    
+                                this.resultText += "\n" + "Error in JS Call 2" + err ; 
+                                this.systemError = true ;   
                             }                            
                             //catIdx = categories.findIndex(function(cat) { return cat.name == order.Name }) ;
                             catIdx = categories.findIndex(function(cat) { return cat.name == genericName }) ;
@@ -874,6 +899,7 @@ export default {
                             } catch (err) {
                                 this.log("Error in MME aggregation :" + err) ;
                                 this.log(JSON.stringify(ma));
+                                this.systemError = true ;
                             }                            
                         }) ; 
                     }) ;
@@ -906,6 +932,7 @@ export default {
                             }
                             } catch (err) {
                                 this.resultText += "\n Error in PCA Mar outer loop " + err ;
+                                this.systemError = true ;
                             }
                             med.data.forEach(point => {
                                 try {                            
@@ -923,6 +950,7 @@ export default {
                                 }    
                                 } catch (err) {
                                     this.resultText += " Error in PCA Mar inside point loop " + err ;
+                                    this.systemError = true ;
                                 }                        
                             }); 
                         }) ;
@@ -952,7 +980,9 @@ export default {
 
                     this.marData = JSON.parse(JSON.stringify(cdata)) ;
 
-                    this.log("Before calling refreshMarChart method....") ;
+                    this.loadingMessage = "Generating Charts" ;
+
+                    this.log("Before calling refreshMarChart method....") ;                    
                     this.refreshMarChart() ;
                     this.log("Before calling refreshMMEChart method....") ;
                     this.refreshMMEChart() ;
@@ -964,15 +994,18 @@ export default {
                     this.log("Done creating road chart") ;
 
                     } catch (err) {
-                        this.log("Error in no idea 1 :" + err) ;                        
+                        this.log("Error in no idea 1 :" + err) ;    
+                        this.systemError = true ;                    
                     }
 
                     this.log(" Before Invoking pain data in BQ") ;
                     
-                    // getting pain data                    
+                    // getting pain data        
+                    this.loadingMessage = "Fetching Pain data" ;            
                     this.$services.a3pain.pain(_self.launchModal.rpt_start_date, _self.launchModal.rpt_end_date, _self.patient.epicPatientId)
                         .then(response => {
                             try {
+                                this.loadingMessage = "Processing Pain data" ;
                             this.log("response from pain call " + response.length) ;
                             console.log(response) ;
                             
@@ -997,16 +1030,19 @@ export default {
                                                         
                             } catch (err) {
                                 this.log("Error in pain handler code :" + err) ;
+                                this.systemError = true ;
                             }
                         }) ; 
                     
                     this.launchModal.loading = false ;
+                    this.loadingMessage = "" ;
                     this.$bvModal.hide("launch-modal") ;
 
                 }) ;
                 
             } catch (err) {
                 this.log("Error in JS Call : " + err) ;
+                this.systemError = true ;
             }
 
         },

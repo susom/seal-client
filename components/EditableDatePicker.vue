@@ -43,8 +43,6 @@ export default {
     },
     mounted () {
         
-        console.log("In EditableDatePicker - mounted") ;
-        console.log(this.value) ;        
         this.inp_start_date = this.value ;
         if (this.inp_start_date && this.inp_start_date != '') 
             this.start_date = this.$moment(this.inp_start_date, "MM/DD/YYYY").format("YYYY-MM-DD") ;
@@ -52,7 +50,6 @@ export default {
     },
     watch: {
         value: function(newValue) {
-            console.log("**********In watch EditableDatePicker newvalue {}", newValue) ;
             this.inp_start_date = newValue ;
             if (this.inp_start_date && this.inp_start_date != '') 
                 this.start_date = this.$moment(this.inp_start_date, "MM/DD/YYYY").format("YYYY-MM-DD") ;                         
@@ -60,15 +57,13 @@ export default {
     },    
     methods: {
         startDateChange() {
-            console.log("In startdatechange " + this.inp_start_date) ;
             if (this.inp_start_date == '') {
                 this.error = !this.required ; //true ;
                 this.$emit('input', this.inp_start_date) ;
                 this.$emit('error', this.error) ;                
                 return ;
             }
-            var noidea = this.$moment(this.inp_start_date, "MM/DD/YYYY") ;            
-            console.log("valid date :" + noidea.isValid()) ;
+            var noidea = this.$moment(this.inp_start_date, "MM/DD/YYYY") ;                        
 
             if (noidea.isValid()) {
                 this.start_date = noidea.format("YYYY-MM-DD") ;
@@ -83,8 +78,7 @@ export default {
             }
             this.$emit('error', this.error) ;
         },
-        startDatePickerChange() {
-            console.log("In startdatepickerchange method... " + this.start_date) ;
+        startDatePickerChange() {            
             if (this.start_date && this.start_date != '') {
                 this.inp_start_date = this.$moment(this.start_date, "YYYY-MM-DD").format("MM/DD/YYYY") ;
                 this.error = true ;

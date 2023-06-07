@@ -50,10 +50,11 @@ export default class A3PainAPI {
                 "&start_date=" + start_date + "&end_date=" + end_date + "&epicPatientId=" + epic_patient_id
         }).then((response) => {            
             return response.data ;
-        }).catch((error) => {
-            console.log("Error in PCA Ajax Call :" + error) ;
-            return [] ;
-        })        
+        })
+        //.catch((error) => {
+        //    console.log("Error in PCA Ajax Call :" + error) ;
+        //    return [] ;
+        //})        
     }
 
     pca_mars(start_date, end_date) {
@@ -63,10 +64,11 @@ export default class A3PainAPI {
                 "&start_date=" + start_date + "&end_date=" + end_date 
         }).then((response) => {            
             return response.data ;
-        }).catch((error) => {
-            console.log("Error in PCA Ajax Call :" + error) ;
-            return [] ;
-        })        
+        })
+        //.catch((error) => {
+        //    console.log("Error in PCA Ajax Call :" + error) ;
+        //    return [] ;
+        //})        
     }
 
     mardata(wsjson) {

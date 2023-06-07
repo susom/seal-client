@@ -217,6 +217,8 @@
                     </b-button>  
                 </b-col>
             </b-row> 
+            <StatusMessage :loadingMessage="loadingMessage" :systemError="systemError" />
+            <!--
             <b-row v-show="launchModal.loading">
                 <b-col cols="12"  class="text-center">
                     <b-button variant="info" disabled size="sm" class="mt-3" style="width:100%">
@@ -225,6 +227,7 @@
                     </b-button>
                 </b-col>
             </b-row> 
+            -->
         </b-modal>
 
         <b-modal id="antimicrobial-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
@@ -295,26 +298,29 @@ export default {
             inpatientSortBy: "",
             inpatientSortDesc: false,
             outpatientSortBy: "",
-            outpatientSortDesc: false            
+            outpatientSortDesc: false ,
+            systemError: false           
         }
     },
     async fetch() {
-        console.log("In fetch method of the anti microbial page") ;
-
         this.$store.commit('setAppId', this.$services.antimicrobial.APP_ID) ;
         this.$store.commit('setPageTitle', "Antimicrobial Dashboard") ;
         this.$store.commit('setCurrentApp', { help : "antimicrobial-help-modal" }) ;
         this.$services.antimicrobial.dblog("AntiMicrobialHome", "In AntiMicrobial Apps Home Page") ;
-        
-        this.patient = await this.$services.seal.patient(this.$services.antimicrobial.APP_ID) ;
-        var response = await this.$services.seal.inpatientdate(this.$services.antimicrobial.APP_ID) ;
-        if (response.inpatient_start_date) {
-            this.inpatient_start_date = response.inpatient_start_date ;
-            this.launchModal.period_type = 'I' ;
-        } else {
-            this.launchModal.period_type = 'C' ;
+        try {
+            this.patient = await this.$services.seal.patient(this.$services.antimicrobial.APP_ID) ;
+            var response = await this.$services.seal.inpatientdate(this.$services.antimicrobial.APP_ID) ;
+            if (response.inpatient_start_date) {
+                this.inpatient_start_date = response.inpatient_start_date ;
+                this.launchModal.period_type = 'I' ;
+            } else {
+                this.launchModal.period_type = 'C' ;
+            }
+        } catch (err) {
+            this.$bvModal.show("launch-modal") ;           
+            this.systemError = true ;
+            console.log("Error in fetch method :" + err) ;
         }
-
     },
     mounted() {
         console.log("In Mounted methood of antimicrobial page") ;
@@ -322,7 +328,6 @@ export default {
         this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;        
         console.log(this.launchModal) ;
         this.inpatient_end_date = this.$moment().format("MM/DD/YYYY") ;
-
         this.$bvModal.show("launch-modal") ;           
     },
     watch : {
@@ -562,6 +567,7 @@ export default {
         generateCultureNotes() {
 
             var _self = this ;
+
             var cultureNotes = "Culture History:\n"
                         + "----------------------" ;
             
@@ -611,416 +617,421 @@ export default {
             console.log(this.launchModal) ;
             
             var _self = this ;
-
+            
+            this.systemError = false ;
             this.launchModal.loading = true ;
-                            
-            if (this.launchModal.period_type == 'I') {
-                this.launchModal.rpt_start_date = this.$moment(this.inpatient_start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
-                this.launchModal.rpt_end_date = this.$moment(this.inpatient_end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
-            } else {
-                this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
-                this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
-            }
-
-            var rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime() ;
-            var rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime() ;
-
-            this.$set(this.launchModal, 'rpt_start_date_long', rpt_start_date_long) ;
-            this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
-
-            var responses = [] ;
-            var response = {} ;
-
-            this.log("Fetching Surgical Data") ;
-            this.loadingMessage = "Surgical Data" ;
-            var surgicalData = await this.$services.antimicrobial.surgicalData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
-
-            this.log(JSON.stringify(surgicalData)) ;
-
-            this.log("Fetching Culture Data") ;
-            this.loadingMessage = "Culture Data" ;
-            var cresponse = await this.$services.antimicrobial.cultureData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
-
-            this.log(JSON.stringify(cresponse)) ;  
             
-            // reset arrays
-            this.inpatient_arr.splice(0, this.inpatient_arr.length) ;
-            this.outpatient_arr.splice(0, this.outpatient_arr.length) ;
-            this.cultureData.splice(0, this.cultureData.length) ;
+            try {            
+                if (this.launchModal.period_type == 'I') {
+                    this.launchModal.rpt_start_date = this.$moment(this.inpatient_start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+                    this.launchModal.rpt_end_date = this.$moment(this.inpatient_end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+                } else {
+                    this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+                    this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
+                }
 
-            var rowColor = "" ;
-            cresponse.forEach( spec => {
-                rowColor = (rowColor == ""?"specimen-css":"") ;
-                spec.results.forEach(res => {
-                    if (res.value == 'See Test Comment' && spec.narrative) 
-                        res.value = spec.narrative ;
-                    var cresult = {
-                        id: res.id,
-                        collection_dttm_long: spec.collection_dt,
-                        collection_dttm: _self.$moment(spec.collection_dt).format("MM/DD/YYYY HH:mm"),
-                        specimen_id: ((res.specimen_id && res.specimen_id != spec.specimen_id) ? spec.specimen_id + '/' + res.specimen_id : spec.specimen_id) ,
-                        specimen_test: res.name,
-                        result: (res.result ? res.result + ': ' : '') + (res.value?res.value:"") ,
-                        normal: res.result,
-                        status: res.status,
-                        specimen_source: res.specimen_source,                        
-                        rowSelected: false,
-                        surgery_name: '',
-                        surgery_start_dttm: '',
-                        surgery_end_dttm: '',
-                        susceptibility: ((res.memberId && res.memberId.length > 0)?"View Report":"") ,
-                        susceptability_data: [],
-                        memberId: (res.memberId ? res.memberId.substr(res.memberId.indexOf("/") + 1) : ""),
-                        row_color: rowColor
-                    } ;
-                    if (!cresult.result) cresult.result = "" ;     
-                    var sIdx = surgicalData.findIndex(elem => {
-                        return (spec.collection_dt >= elem.dtstart && spec.collection_dt <= elem.dtend) ;
-                    }) ;
-                    if (sIdx >= 0) {
-                        cresult.surgery_name = surgicalData[sIdx].surgery.toLowerCase() ;
-                        cresult.surgery_start_dttm = _self.$moment(surgicalData[sIdx].dtstart).format("MM/DD/YYYY HH:mm") ;
-                        cresult.surgery_end_dttm = _self.$moment(surgicalData[sIdx].dtend).format("MM/DD/YYYY HH:mm") ;
-                    }
-                    this.cultureData.push(cresult) ;
-                })
-            }) ;
-            //this.filteredRows = this.cultureData ;    
-            this.totalRows = this.cultureData.length ;
-            
-            this.log("Processing cultureData....") ;
-            this.log(JSON.stringify(this.cultureData)) ;  
+                var rpt_start_date_long = this.$moment(this.launchModal.rpt_start_date, "YYYY-MM-DD").toDate().getTime() ;
+                var rpt_end_date_long = this.$moment(this.launchModal.rpt_end_date, "YYYY-MM-DD").toDate().getTime() ;
 
-            var susp = [] ;
-            cresponse.forEach(spec => {
-               spec.results.forEach(result => {
-                    if (result.memberId) {
-                        susp.push(result.memberId.substr(result.memberId.indexOf("/") + 1)) ;
-                    }
-                }) ;
-            }) ;
-            this.log("Before invoking susceptability call size :" + susp.length) ;
-            
-            this.loadingMessage = "Susceptability Data" ;
-            this.$services.antimicrobial.susceptability(susp).then(sresponses => {
-                var susceptability = [] ;                      
-                _self.log("After invoking susceptability call size :" + sresponses.length) ;
-                sresponses.forEach(sresponse => {
-                    try {
-                    _self.log("susceptability response");
-                    _self.log(JSON.stringify(sresponse.data)) ;
-                    var str = "" ;                     
-                    if (sresponse.data.susceptability_data) {
-                        sresponse.data.susceptability_data.forEach(tresult => {
-                            str += tresult.test + "\t\t" + tresult.result + "\t\t" + tresult.value + "\t\t" + tresult.note + "\n" ;
+                this.$set(this.launchModal, 'rpt_start_date_long', rpt_start_date_long) ;
+                this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
+
+                var responses = [] ;
+                var response = {} ;
+
+                this.log("Fetching Surgical Data") ;
+                this.loadingMessage = "Surgical Data" ;
+                var surgicalData = await this.$services.antimicrobial.surgicalData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
+
+                this.log(JSON.stringify(surgicalData)) ;
+
+                this.log("Fetching Culture Data") ;
+                this.loadingMessage = "Culture Data" ;
+                var cresponse = await this.$services.antimicrobial.cultureData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date ) ;            
+
+                this.log(JSON.stringify(cresponse)) ;  
+                
+                // reset arrays
+                this.inpatient_arr.splice(0, this.inpatient_arr.length) ;
+                this.outpatient_arr.splice(0, this.outpatient_arr.length) ;
+                this.cultureData.splice(0, this.cultureData.length) ;
+
+                var rowColor = "" ;
+                cresponse.forEach( spec => {
+                    rowColor = (rowColor == ""?"specimen-css":"") ;
+                    spec.results.forEach(res => {
+                        if (res.value == 'See Test Comment' && spec.narrative) 
+                            res.value = spec.narrative ;
+                        var cresult = {
+                            id: res.id,
+                            collection_dttm_long: spec.collection_dt,
+                            collection_dttm: _self.$moment(spec.collection_dt).format("MM/DD/YYYY HH:mm"),
+                            specimen_id: ((res.specimen_id && res.specimen_id != spec.specimen_id) ? spec.specimen_id + '/' + res.specimen_id : spec.specimen_id) ,
+                            specimen_test: res.name,
+                            result: (res.result ? res.result + ': ' : '') + (res.value?res.value:"") ,
+                            normal: res.result,
+                            status: res.status,
+                            specimen_source: res.specimen_source,                        
+                            rowSelected: false,
+                            surgery_name: '',
+                            surgery_start_dttm: '',
+                            surgery_end_dttm: '',
+                            susceptibility: ((res.memberId && res.memberId.length > 0)?"View Report":"") ,
+                            susceptability_data: [],
+                            memberId: (res.memberId ? res.memberId.substr(res.memberId.indexOf("/") + 1) : ""),
+                            row_color: rowColor
+                        } ;
+                        if (!cresult.result) cresult.result = "" ;     
+                        var sIdx = surgicalData.findIndex(elem => {
+                            return (spec.collection_dt >= elem.dtstart && spec.collection_dt <= elem.dtend) ;
                         }) ;
-                        console.log("got sreport for " + sresponse.data.memberId) ;
-                        console.log(str) ;
-                        susceptability.push({ memberId: sresponse.data.memberId, report: str }) ;
-                        
-                        // set the sus data to cultureData
-                        var sIdx = _self.cultureData.findIndex(elem => elem.memberId == sresponse.data.memberId) ;
-                        _self.log("Found the memberId :" + sresponse.data.memberId + " in cultureData Idx :" + sIdx) ;
-                        _self.cultureData[sIdx].susceptability_data = sresponse.data.susceptability_data ;
-
-                    }
-                    } catch (err) {
-                        _self.log("Error in handling susceptability response :" + err) ;
-                    }
+                        if (sIdx >= 0) {
+                            cresult.surgery_name = surgicalData[sIdx].surgery.toLowerCase() ;
+                            cresult.surgery_start_dttm = _self.$moment(surgicalData[sIdx].dtstart).format("MM/DD/YYYY HH:mm") ;
+                            cresult.surgery_end_dttm = _self.$moment(surgicalData[sIdx].dtend).format("MM/DD/YYYY HH:mm") ;
+                        }
+                        this.cultureData.push(cresult) ;
+                    })
                 }) ;
-                _self.log("culturedata including susceptability matrix") ;
-                _self.log(JSON.stringify(_self.cultureData)) ;  
-            }) ;
+                //this.filteredRows = this.cultureData ;    
+                this.totalRows = this.cultureData.length ;
+                
+                this.log("Processing cultureData....") ;
+                this.log(JSON.stringify(this.cultureData)) ;  
 
-            this.loadingMessage = "Medication Data" ;
-            response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "", '', this.$services.antimicrobial.APP_ID ) ;            
-            responses.push(response) ;
+                var susp = [] ;
+                cresponse.forEach(spec => {
+                spec.results.forEach(result => {
+                        if (result.memberId) {
+                            susp.push(result.memberId.substr(result.memberId.indexOf("/") + 1)) ;
+                        }
+                    }) ;
+                }) ;
+                this.log("Before invoking susceptability call size :" + susp.length) ;
+                
+                this.loadingMessage = "Susceptability Data" ;
+                this.$services.antimicrobial.susceptability(susp).then(sresponses => {
+                    var susceptability = [] ;                      
+                    _self.log("After invoking susceptability call size :" + sresponses.length) ;
+                    sresponses.forEach(sresponse => {
+                        try {
+                        _self.log("susceptability response");
+                        _self.log(JSON.stringify(sresponse.data)) ;
+                        var str = "" ;                     
+                        if (sresponse.data.susceptability_data) {
+                            sresponse.data.susceptability_data.forEach(tresult => {
+                                str += tresult.test + "\t\t" + tresult.result + "\t\t" + tresult.value + "\t\t" + tresult.note + "\n" ;
+                            }) ;
+                            console.log("got sreport for " + sresponse.data.memberId) ;
+                            console.log(str) ;
+                            susceptability.push({ memberId: sresponse.data.memberId, report: str }) ;
+                            
+                            // set the sus data to cultureData
+                            var sIdx = _self.cultureData.findIndex(elem => elem.memberId == sresponse.data.memberId) ;
+                            _self.log("Found the memberId :" + sresponse.data.memberId + " in cultureData Idx :" + sIdx) ;
+                            _self.cultureData[sIdx].susceptability_data = sresponse.data.susceptability_data ;
 
-            while (response.nextUrl) {
-                response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "", response.nextUrl, this.$services.antimicrobial.APP_ID) ;
+                        }
+                        } catch (err) {
+                            _self.log("Error in handling susceptability response :" + err) ;
+                        }
+                    }) ;
+                    _self.log("culturedata including susceptability matrix") ;
+                    _self.log(JSON.stringify(_self.cultureData)) ;  
+                }) ;
+
+                this.loadingMessage = "Medication Data" ;
+                response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "", '', this.$services.antimicrobial.APP_ID ) ;            
                 responses.push(response) ;
-            }
 
-            console.log("med orders done") ;
-            console.log(responses) ;
-            
-            var medNames = [] ;
-            var meds = [] ;  
-            responses.forEach((response) => {                
-                response.cats.forEach((med) => {
-                    try {
-                        // Only antibiotics - added antiviral and antifungal - request from Dr Amy Chang
-                        if (med.thera_class && 
-                                (["antibiotics", "antivirals", "antifungals", "antiparasitics", "antiinfectives", "antiinfectives/miscellaneous"]
-                                    .indexOf(med.thera_class.toLowerCase()) >= 0)
-                         ) {                            
-                            var medIdx = medNames.indexOf(med.name) ;
-                            if (medIdx === -1) {
-                                medNames.push(med.name) ;
-                                meds.push(med) ;
-                            } else {
-                                meds[medIdx].data = [].concat(meds[medIdx].data, med.data) ;
-                                meds[medIdx].routes = this.$services.medreview.unique_merge(meds[medIdx].routes, med.routes) ;
-                                meds[medIdx].pcat = this.$services.medreview.unique_merge(meds[medIdx].pcat, med.pcat) ;
-                                meds[medIdx].ingredient = this.$services.medreview.unique_merge(meds[medIdx].ingredient, med.ingredient) ;
-                                meds[medIdx].med_order_ids = [].concat(meds[medIdx].med_order_ids, med.med_order_ids) ;                                
-                            }
-                        }
-                    } catch (err) {
-                        _self.log("Error in merging medstat response for " + JSON.stringify(med)) ;
-                        _self.log(err)   ;
-                    }
-                });              
-            }) ;
+                while (response.nextUrl) {
+                    response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "", response.nextUrl, this.$services.antimicrobial.APP_ID) ;
+                    responses.push(response) ;
+                }
 
-            /**************  New Code Starts here  **************/
-            var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.antimicrobial.APP_ID) ;
-
-            console.log("encounters....") ;
-            console.log(encounters) ;
-
-            var wsjson = {} ;
-            
-            _self.log("ABX Meds data :" + JSON.stringify(meds)) ;
-            
-            _self.log("Got encounters: " + JSON.stringify(encounters)) ;
-
-            encounters.forEach(enc => {
-                wsjson[enc.pat_enc_csn_id] = {
-                    "PatientID": _self.patient.epicPatientId,
-                    "PatientIDType": "External", 
-                    "ContactID": enc.pat_enc_csn_id,
-                    "ContactIDType": "CSN",
-                    "OrderIDs": []
-                } ;
-            });
-
-            meds.forEach(med => {
-                console.log(med) ;
-                med.data.forEach(row => {
-                    for (var i=0; i<encounters.length; i++) {
-                        if ((row.x >= encounters[i].start && row.x <= encounters[i].end) || 
-                            (row.x2 >= encounters[i].start && row.x2 <= encounters[i].end)) {
-                            if (row.med_order_id) {   // for some reason row is created with empty ID
-                                wsjson[encounters[i].pat_enc_csn_id].OrderIDs.push({ "ID": row.med_order_id, "Type" : "External"}) ;
-                            }
-                        }
-                    }
-                }) ;
-            }) ;
-
-            console.log("Final ws call json") ;
-            console.log(wsjson) ;
-
-            this.loadingMessage = "MAR Data" ;
-            
-            _self.log("before calling MAR data") ;
-
-            // remove inpatient data                
-            meds.forEach(function(med) {
-                med.data = med.data.filter(function(elem) { return elem.pcat.toLowerCase().indexOf("inpatient") < 0 ; } ) ;
-            }) ;
-
-            this.$services.seal.mardata(wsjson, this.$services.antimicrobial.APP_ID).then(responses => {
-                console.log("responses length " + responses.length) ;
-                _self.log("Got MAR data responses " + responses.length ) ;
-
-                responses.forEach(response => {                    
-                    response.data.Orders.forEach(order => {
-                        _self.log("Processing MAR Data for order " + order.Name) ;
-                        var medIdx = meds.findIndex(function (med) { return (med.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
-                        var med = {} ;
-                        if (medIdx >= 0) {
-                            med = meds[medIdx] ;
-                            med.name = order.Name ;
-                        } else {
-                            console.log("********* This should NOT happen - can't match order id for " + order.Name) ;
-                            return ;
-                        }
-                        var last_used = "" ;
-                        var last_used_long = 0 ;
-
-                        for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
-                            var ma = order.MedicationAdministrations[mIdx] ;
-                            if (ma.Action != "Not Given") {
-                                var adminTime = new Date(ma.AdministrationInstant).getTime() ;
-                                if (adminTime >= rpt_start_date_long && adminTime <= rpt_end_date_long) {
-                                    if (last_used_long < adminTime) {
-                                        last_used = this.$moment(new Date(adminTime)).format("MM/DD/YYYY") ;
-                                        last_used_long = adminTime ;
-                                    }
-                                    if (ma.Dose) {
-                                        med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
-                                            name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, action: ma.Action, pcat: "inpatient"  }) ;
-                                    } else if (ma.Rate) {
-                                        med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
-                                            name: order.Name, dose: ma.Rate.Value, unit: ma.Rate.Unit, action: ma.Action, pcat: "inpatient"  }) ;                                            
-                                    }
+                console.log("med orders done") ;
+                console.log(responses) ;
+                
+                var medNames = [] ;
+                var meds = [] ;  
+                responses.forEach((response) => {                
+                    response.cats.forEach((med) => {
+                        try {
+                            // Only antibiotics - added antiviral and antifungal - request from Dr Amy Chang
+                            if (med.thera_class && 
+                                    (["antibiotics", "antivirals", "antifungals", "antiparasitics", "antiinfectives", "antiinfectives/miscellaneous"]
+                                        .indexOf(med.thera_class.toLowerCase()) >= 0)
+                            ) {                            
+                                var medIdx = medNames.indexOf(med.name) ;
+                                if (medIdx === -1) {
+                                    medNames.push(med.name) ;
+                                    meds.push(med) ;
+                                } else {
+                                    meds[medIdx].data = [].concat(meds[medIdx].data, med.data) ;
+                                    meds[medIdx].routes = this.$services.medreview.unique_merge(meds[medIdx].routes, med.routes) ;
+                                    meds[medIdx].pcat = this.$services.medreview.unique_merge(meds[medIdx].pcat, med.pcat) ;
+                                    meds[medIdx].ingredient = this.$services.medreview.unique_merge(meds[medIdx].ingredient, med.ingredient) ;
+                                    meds[medIdx].med_order_ids = [].concat(meds[medIdx].med_order_ids, med.med_order_ids) ;                                
                                 }
                             }
+                        } catch (err) {
+                            _self.log("Error in merging medstat response for " + JSON.stringify(med)) ;
+                            _self.log(err)   ;
                         }
-                        med.last_used_long = last_used_long ;
-                        med.last_used = last_used ;
-                        med.total_rows = med.data.length ;
-                    }) ;
+                    });              
                 }) ;
-                // meds only with data is used
-                meds = meds.filter(med => {return med.data.length > 0}) ;                
 
-                var ingredients = [] ;
+                /**************  New Code Starts here  **************/
+                var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.antimicrobial.APP_ID) ;
+
+                console.log("encounters....") ;
+                console.log(encounters) ;
+
+                var wsjson = {} ;
+                
+                _self.log("ABX Meds data :" + JSON.stringify(meds)) ;
+                
+                _self.log("Got encounters: " + JSON.stringify(encounters)) ;
+
+                encounters.forEach(enc => {
+                    wsjson[enc.pat_enc_csn_id] = {
+                        "PatientID": _self.patient.epicPatientId,
+                        "PatientIDType": "External", 
+                        "ContactID": enc.pat_enc_csn_id,
+                        "ContactIDType": "CSN",
+                        "OrderIDs": []
+                    } ;
+                });
+
                 meds.forEach(med => {
-                    try {
-                    var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
-                    _self.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
-                    if (ingIdx > -1) {
-                        ingredients[ingIdx] = this.$services.medreview.merge_meds(ingredients[ingIdx], med) ;
-                    } else {
-                        var ingObj = JSON.parse(JSON.stringify(med))  ;
-                        ingObj.name = (med.ingredient?med.ingredient:med.name) ;                    
-                        ingredients.push(ingObj) ;
-                    }    
-                    } catch (err) {
-                        _self.log("error in ingredient constructions :" + err) ;
-                    }            
+                    console.log(med) ;
+                    med.data.forEach(row => {
+                        for (var i=0; i<encounters.length; i++) {
+                            if ((row.x >= encounters[i].start && row.x <= encounters[i].end) || 
+                                (row.x2 >= encounters[i].start && row.x2 <= encounters[i].end)) {
+                                if (row.med_order_id) {   // for some reason row is created with empty ID
+                                    wsjson[encounters[i].pat_enc_csn_id].OrderIDs.push({ "ID": row.med_order_id, "Type" : "External"}) ;
+                                }
+                            }
+                        }
+                    }) ;
                 }) ;
+
+                console.log("Final ws call json") ;
+                console.log(wsjson) ;
+
+                this.loadingMessage = "MAR Data" ;
                 
-                _self.log("ABX Ingredients: " + JSON.stringify(ingredients)) ;                
-                // sort the dates for each ing
-                ingredients.forEach(ing => {
-                    ing.data.sort(function(a, b) { return a.x - b.x }) ;
-                }) ;
-    
-                // sort by name first
-                ingredients.sort((ing_a, ing_b) => {
-                    return ing_a.name.localeCompare(ing_b.name) ;
-                }) ;
-                
-                // truncate timestamp to date
-                ingredients.forEach(ing => {
-                    ing.data.forEach(dt => { dt.x = _self.$moment(dt.x).startOf('day').valueOf() ; dt.x2 = _self.$moment(dt.x2).startOf('day').valueOf() ; }) ;
+                _self.log("before calling MAR data") ;
+
+                // remove inpatient data                
+                meds.forEach(function(med) {
+                    med.data = med.data.filter(function(elem) { return elem.pcat.toLowerCase().indexOf("inpatient") < 0 ; } ) ;
                 }) ;
 
+                this.$services.seal.mardata(wsjson, this.$services.antimicrobial.APP_ID).then(responses => {
+                    console.log("responses length " + responses.length) ;
+                    _self.log("Got MAR data responses " + responses.length ) ;
 
-                // sort the ing based on the last date in the dates list
-                ingredients.sort((ing_a, ing_b) => {
-                    // if end date is same, use the start date for sorting
-                    if (ing_a.data[ing_a.data.length - 1].x2 == ing_b.data[ing_b.data.length - 1].x2)
-                        return ing_a.data[ing_a.data.length - 1].x - ing_b.data[ing_b.data.length - 1].x ;
-                    else
-                        return ing_a.data[ing_a.data.length - 1].x2 - ing_b.data[ing_b.data.length - 1].x2 ;
-                }) ;
+                    responses.forEach(response => {                    
+                        response.data.Orders.forEach(order => {
+                            _self.log("Processing MAR Data for order " + order.Name) ;
+                            var medIdx = meds.findIndex(function (med) { return (med.med_order_ids.indexOf(order.OrderID.ID) >= 0) }) ;
+                            var med = {} ;
+                            if (medIdx >= 0) {
+                                med = meds[medIdx] ;
+                                med.name = order.Name ;
+                            } else {
+                                console.log("********* This should NOT happen - can't match order id for " + order.Name) ;
+                                return ;
+                            }
+                            var last_used = "" ;
+                            var last_used_long = 0 ;
 
-                _self.log("ABX Ingredients after ordering: " + JSON.stringify(ingredients)) ;
+                            for (var mIdx=0;mIdx<order.MedicationAdministrations.length;mIdx++) {
+                                var ma = order.MedicationAdministrations[mIdx] ;
+                                if (ma.Action != "Not Given") {
+                                    var adminTime = new Date(ma.AdministrationInstant).getTime() ;
+                                    if (adminTime >= rpt_start_date_long && adminTime <= rpt_end_date_long) {
+                                        if (last_used_long < adminTime) {
+                                            last_used = this.$moment(new Date(adminTime)).format("MM/DD/YYYY") ;
+                                            last_used_long = adminTime ;
+                                        }
+                                        if (ma.Dose) {
+                                            med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
+                                                name: order.Name, dose: ma.Dose.Value, unit: ma.Dose.Unit, action: ma.Action, pcat: "inpatient"  }) ;
+                                        } else if (ma.Rate) {
+                                            med.data.push({ x: adminTime, x2: adminTime, y: medIdx, color: "darkgreen",
+                                                name: order.Name, dose: ma.Rate.Value, unit: ma.Rate.Unit, action: ma.Action, pcat: "inpatient"  }) ;                                            
+                                        }
+                                    }
+                                }
+                            }
+                            med.last_used_long = last_used_long ;
+                            med.last_used = last_used ;
+                            med.total_rows = med.data.length ;
+                        }) ;
+                    }) ;
+                    // meds only with data is used
+                    meds = meds.filter(med => {return med.data.length > 0}) ;                
 
-                _self.notes = "Antimicrobial History:\n"
-                            + "----------------------\n\n" ;
-
-                this.loadingMessage = "Anitmicrobial Summary" ;
-
-                var futureSectionCreated = false ;
-                
-                ingredients.forEach(ing => {
-                    var dates = "" ;
-
-                    _self.log("Processign ing :" + ing.name) ;                                
-                    ing.data.forEach(dt => {
-                        if (!dt.validEndDate) dt.validEndDate = "Y" ;
-                        dt.x = _self.$moment(dt.x).startOf("day") ;
-                        dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                    var ingredients = [] ;
+                    meds.forEach(med => {
+                        try {
+                        var ingIdx = ingredients.findIndex(function(ing) { return (ing.ingredient == med.ingredient) } ) ;
+                        _self.log("found ingredient " + med.ingredient + " in ingredients idx :" + ingIdx) ;
+                        if (ingIdx > -1) {
+                            ingredients[ingIdx] = this.$services.medreview.merge_meds(ingredients[ingIdx], med) ;
+                        } else {
+                            var ingObj = JSON.parse(JSON.stringify(med))  ;
+                            ingObj.name = (med.ingredient?med.ingredient:med.name) ;                    
+                            ingredients.push(ingObj) ;
+                        }    
+                        } catch (err) {
+                            _self.log("error in ingredient constructions :" + err) ;
+                        }            
+                    }) ;
+                    
+                    _self.log("ABX Ingredients: " + JSON.stringify(ingredients)) ;                
+                    // sort the dates for each ing
+                    ingredients.forEach(ing => {
+                        ing.data.sort(function(a, b) { return a.x - b.x }) ;
+                    }) ;
+        
+                    // sort by name first
+                    ingredients.sort((ing_a, ing_b) => {
+                        return ing_a.name.localeCompare(ing_b.name) ;
+                    }) ;
+                    
+                    // truncate timestamp to date
+                    ingredients.forEach(ing => {
+                        ing.data.forEach(dt => { dt.x = _self.$moment(dt.x).startOf('day').valueOf() ; dt.x2 = _self.$moment(dt.x2).startOf('day').valueOf() ; }) ;
                     }) ;
 
-                    var idx = 0 ;            
-                    while (true) {
-                        var dt = ing.data[idx] ;
 
-                        _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
-                        _self.log(dt) ;
-                                            
-                        if (dt.pcat == "Community") {    // != Inpatient
-                            dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
-                            idx++ ;
-                        } else {
-                            dates += dt.x.format("MM/DD/YY") ;
-                            while (true) {
-                                idx++ ;                            
-                                if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
-                                    dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
-                                    break ;
-                                }
-                                dt = ing.data[idx] ;
-                            }
-                        }                     
-                        if (idx >= ing.data.length) break ;
-                    }
-                    dates = dates.trim() ;
-                    if (dates.endsWith(",")) dates = dates.slice(0, -1) ;
-                    ing.dates = dates ;
-
-                    if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
-                        if (_self.notes.endsWith("\n\n"))
-                            _self.notes += ing.name + " " + ing.dates + "\n";    
+                    // sort the ing based on the last date in the dates list
+                    ingredients.sort((ing_a, ing_b) => {
+                        // if end date is same, use the start date for sorting
+                        if (ing_a.data[ing_a.data.length - 1].x2 == ing_b.data[ing_b.data.length - 1].x2)
+                            return ing_a.data[ing_a.data.length - 1].x - ing_b.data[ing_b.data.length - 1].x ;
                         else
-                            _self.notes += "\n" + ing.name + " " + ing.dates + "\n";    
-                        futureSectionCreated = true ;
-                    } else {
-                        _self.notes += ing.name + " " + ing.dates + "\n";
-                    }
-                }) ;
-                
-                ingredients.forEach(ing => {                
-                    var inpatient_dates = "" ;
-                    var recentDate = 0 ;
-                    var earliestDate = 0 ;
-
-                    _self.log("Processign ing :" + ing.name) ;                                
-                    ing.data.forEach(dt => {
-                        if (!dt.validEndDate) dt.validEndDate = "Y" ;
-                        dt.x = _self.$moment(dt.x).startOf("day") ;
-                        dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                            return ing_a.data[ing_a.data.length - 1].x2 - ing_b.data[ing_b.data.length - 1].x2 ;
                     }) ;
 
-                    var idx = 0 ;
-                    while (true) {
-                        var dt = ing.data[idx] ;
-                        
-                        _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
-                        _self.log(dt) ;
-                        
-                        if (dt.pcat == "Community") {
-                            this.outpatient_arr.push({med_name: ing.name, dates: dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") , 
-                                                        qty: dt.quantity + " " + dt.form, refills: dt.numberOfRefills, 
-                                                        earliest_date: dt.x.valueOf(), recent_date: dt.x2.valueOf(), thera_class: ing.thera_class }) ;                        
-                            idx++ ;
-                        } else {
-                            if (earliestDate == 0)
-                                earliestDate = dt.x.valueOf() ;
-                            inpatient_dates += dt.x.format("MM/DD/YY") ;                        
-                            while (true) {
-                                idx++ ;                            
-                                if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
-                                    inpatient_dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
-                                    recentDate = dt.x2.valueOf() ;
-                                    break ;
+                    _self.log("ABX Ingredients after ordering: " + JSON.stringify(ingredients)) ;
+
+                    _self.notes = "Antimicrobial History:\n"
+                                + "----------------------\n\n" ;
+
+                    this.loadingMessage = "Anitmicrobial Summary" ;
+
+                    var futureSectionCreated = false ;
+                    
+                    ingredients.forEach(ing => {
+                        var dates = "" ;
+
+                        _self.log("Processign ing :" + ing.name) ;                                
+                        ing.data.forEach(dt => {
+                            if (!dt.validEndDate) dt.validEndDate = "Y" ;
+                            dt.x = _self.$moment(dt.x).startOf("day") ;
+                            dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                        }) ;
+
+                        var idx = 0 ;            
+                        while (true) {
+                            var dt = ing.data[idx] ;
+
+                            _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
+                            _self.log(dt) ;
+                                                
+                            if (dt.pcat == "Community") {    // != Inpatient
+                                dates += dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") + " Qty: " + dt.quantity + " " + dt.form + " Refills: " + dt.numberOfRefills + " (outpatient) , ";
+                                idx++ ;
+                            } else {
+                                dates += dt.x.format("MM/DD/YY") ;
+                                while (true) {
+                                    idx++ ;                            
+                                    if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
+                                        dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
+                                        break ;
+                                    }
+                                    dt = ing.data[idx] ;
                                 }
-                                dt = ing.data[idx] ;
-                            }
-                        }                                       
-                        if (idx >= ing.data.length) break ;
-                    }
-                    if (inpatient_dates.trim().length > 0) {
-                        inpatient_dates = inpatient_dates.trim() ;
-                        if (inpatient_dates.endsWith(",")) inpatient_dates = inpatient_dates.slice(0, -1) ;
-                        _self.inpatient_arr.push({med_name: ing.name, dates: inpatient_dates, earliest_date: earliestDate, recent_date: recentDate, thera_class: ing.thera_class}) ;
-                    }
-                }) ;
+                            }                     
+                            if (idx >= ing.data.length) break ;
+                        }
+                        dates = dates.trim() ;
+                        if (dates.endsWith(",")) dates = dates.slice(0, -1) ;
+                        ing.dates = dates ;
 
-                this.launchModal.loading = false ;
-                this.$bvModal.hide("launch-modal") ;
+                        if (dates.indexOf("-Present") > 0 && !futureSectionCreated) {
+                            if (_self.notes.endsWith("\n\n"))
+                                _self.notes += ing.name + " " + ing.dates + "\n";    
+                            else
+                                _self.notes += "\n" + ing.name + " " + ing.dates + "\n";    
+                            futureSectionCreated = true ;
+                        } else {
+                            _self.notes += ing.name + " " + ing.dates + "\n";
+                        }
+                    }) ;
+                    
+                    ingredients.forEach(ing => {                
+                        var inpatient_dates = "" ;
+                        var recentDate = 0 ;
+                        var earliestDate = 0 ;
 
+                        _self.log("Processign ing :" + ing.name) ;                                
+                        ing.data.forEach(dt => {
+                            if (!dt.validEndDate) dt.validEndDate = "Y" ;
+                            dt.x = _self.$moment(dt.x).startOf("day") ;
+                            dt.x2 = _self.$moment(dt.x2).startOf("day") ;
+                        }) ;
 
-                _self.log("All done") ;
+                        var idx = 0 ;
+                        while (true) {
+                            var dt = ing.data[idx] ;
+                            
+                            _self.log("     start :" + dt.x.format("MM/DD/YYYY") + " end :" + dt.x2.format("MM/DD/YYYY") + " valid: " + dt.validEndDate) ;
+                            _self.log(dt) ;
+                            
+                            if (dt.pcat == "Community") {
+                                this.outpatient_arr.push({med_name: ing.name, dates: dt.x.format("MM/DD/YY") + "-" + dt.x2.format("MM/DD/YY") , 
+                                                            qty: dt.quantity + " " + dt.form, refills: dt.numberOfRefills, 
+                                                            earliest_date: dt.x.valueOf(), recent_date: dt.x2.valueOf(), thera_class: ing.thera_class }) ;                        
+                                idx++ ;
+                            } else {
+                                if (earliestDate == 0)
+                                    earliestDate = dt.x.valueOf() ;
+                                inpatient_dates += dt.x.format("MM/DD/YY") ;                        
+                                while (true) {
+                                    idx++ ;                            
+                                    if (idx >= ing.data.length || ing.data[idx].pcat == 'Community' || ing.data[idx].x.diff(dt.x2, 'days') > 1) {
+                                        inpatient_dates += '-' + dt.x2.format("MM/DD/YY") + ", " ;
+                                        recentDate = dt.x2.valueOf() ;
+                                        break ;
+                                    }
+                                    dt = ing.data[idx] ;
+                                }
+                            }                                       
+                            if (idx >= ing.data.length) break ;
+                        }
+                        if (inpatient_dates.trim().length > 0) {
+                            inpatient_dates = inpatient_dates.trim() ;
+                            if (inpatient_dates.endsWith(",")) inpatient_dates = inpatient_dates.slice(0, -1) ;
+                            _self.inpatient_arr.push({med_name: ing.name, dates: inpatient_dates, earliest_date: earliestDate, recent_date: recentDate, thera_class: ing.thera_class}) ;
+                        }
+                    }) ;
 
-            }) ;            
+                    this.launchModal.loading = false ;
+                    this.loadingMessage = "" ;
+                    this.$bvModal.hide("launch-modal") ;
+                    _self.log("All done") ;
+
+                }) ;            
+            } catch (err) {
+                this.systemError = true ;
+                _self.log("Error in generateChart Method :" + err) ;
+            }
 
             /**************  New Code Ends here  **************/
 

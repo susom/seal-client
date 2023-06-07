@@ -35,12 +35,13 @@
         <nuxt />
       </b-col>
     </b-row>
-    <feedback-form />
+    <feedback-form />    
   </b-container>
 </template>
 
 <script>
 import FeedbackForm from '~/components/FeedbackForm.vue';
+
 export default {
   components: { FeedbackForm },
   data () {

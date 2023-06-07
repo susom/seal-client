@@ -257,14 +257,25 @@
                     <b-button pill variant="primary" class="ml-3 mt-3" @click="populateData" :disabled="!launchModal.errors.start_date || !launchModal.errors.end_date">Run Report</b-button>  
                 </b-col>
             </b-row> 
+            <StatusMessage :loadingMessage="loadingMessage" :systemError="systemError" />
+            <!--
             <b-row v-show="launchModal.loading">
                 <b-col cols="12"  class="text-center">
                     <b-button variant="info" disabled size="sm" class="mt-3" style="width:100%">
                         <b-spinner small type="grow" class="mr-2"></b-spinner>
-                        Generating report data...
+                        <span v-if="systemError">
+                            System Error in processing your request...
+                        </span>
+                        <span v-else>
+                            {{ loadingMessage }}
+                        </span>
                     </b-button>
                 </b-col>
+                <b-col cols="12" class="text-center mt-2 mb-2" style="color:red;font-size:1.2em" v-if="systemError">
+                    We encountered a system error while processing your request. The issue has been logged and we will let you know once it has been resolved.
+                </b-col>
             </b-row> 
+            -->
         </b-modal>    
         <b-modal id="synopsis-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
             body-bg-variant="dark">
@@ -294,6 +305,7 @@
 
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
 import Highcharts from 'highcharts' ;
+import StatusMessage from '~/components/StatusMessage.vue';
 
     /**
      * Set the global timezone to PST
@@ -307,7 +319,7 @@ import Highcharts from 'highcharts' ;
     });
 
 export default {
-    components: { EditableDatePicker },
+    components: { EditableDatePicker, StatusMessage },
     data () {
         return {
             patient: {},
@@ -368,7 +380,9 @@ export default {
                 {label: 'Tags', key: 'dosageRoutes', sortable: false},
                 {label: 'Last MAR', key: 'last_used', sortable: false},
                 {label: 'Total Doses', key: 'total_doses', sortable: false}
-            ]
+            ],
+            loadingMessage: "",
+            systemError: false
         }
     },
     async fetch() {
@@ -384,11 +398,11 @@ export default {
 
         this.launchModal.start_date = this.$moment().add(-1, 'year').format("MM/DD/YYYY") ;
         this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;        
-        this.$bvModal.show("launch-modal") ;
+        this.$bvModal.show("launch-modal") ;                
 
         this.leftSurgChartOptions = this.getSurgChart([]) ;
         this.rightSurgChartOptions = this.getSurgChart([]) ;
-
+                
     },  
     computed : {
         startDateFormatted () {
@@ -425,6 +439,8 @@ export default {
         async populateData() {
             
             var _self = this ; 
+            this.loadingMessage = "Generating report data..." ;
+            this.systemError = false ;
 
             try {
                 this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
@@ -437,6 +453,7 @@ export default {
                 this.rightMeds.loading = true ;
                 this.launchModal.loading = true ;
 
+                this.loadingMessage = "Loading Oph Encounters..." ;
                 var evisits = await this.$services.synopsis.eyevisits(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
                 this.log("Eye Visits") ;
                 this.log(JSON.stringify(evisits)) ;
@@ -447,6 +464,8 @@ export default {
                 var lIOPdata = [] ;                               
                                 
                 var patient = await this.$services.seal.patient(this.$services.synopsis.APP_ID) ;
+                
+                this.loadingMessage = "Generating Surgical History..." ;
                 var surgicalHistory = await this.$services.synopsis.surgicalhistory(patient.epicPatientId, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
                 this.log("Surgical History Response") ;
                 this.log(JSON.stringify(surgicalHistory)) ;
@@ -480,6 +499,7 @@ export default {
                 this.log("Left: " + JSON.stringify(this.leftEyeSurgeries)) ;
                 this.log("Right: " + JSON.stringify(this.rightEyeSurgeries)) ;
 
+                this.loadingMessage = "Generating Oph Exam/Tests..." ;
                 var ophTests = await this.$services.synopsis.ophtests(patient.epicPatientId, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date) ;
                 this.log("Oph Tests Response") ;
                 this.log(JSON.stringify(ophTests)) ;
@@ -512,8 +532,7 @@ export default {
                 this.log("Oph Tests Map") ;
                 this.log("Left: " + JSON.stringify(this.leftEyeTests)) ;
                 this.log("Right: " + JSON.stringify(this.rightEyeTests)) ;
-
-
+                            
                 this.$services.synopsis.getresults(evisits).then(responses => {
                     _self.log("Got responses for smartdata results :" + responses.length) ;
                     responses.forEach(response => {
@@ -546,6 +565,7 @@ export default {
                 var responses = [] ;
                 var meds = [] ;
 
+                this.loadingMessage = "Collecting Medications..." ;
                 var response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.synopsis.APP_ID ) ;
                 responses.push(response) ;
                 
@@ -622,12 +642,14 @@ export default {
                 meds.forEach(function(med) {
                     med.data = med.data.filter(function(elem) { return elem.pcat.toLowerCase().indexOf("inpatient") < 0 ; } ) ;
                 }) ;
-                                
+                     
+                this.loadingMessage = "Collecting MAR Data..." ;
                 this.$services.seal.mardata(wsjson, this.$services.synopsis.APP_ID).then(responses => {
                     console.log("responses length " + responses.length) ;
                     _self.log("Got MAR data responses " + responses.length) ;
+                    this.loadingMessage = "Processing MAR Data..." ;
 
-                    responses.forEach(response => {                    
+                    responses.forEach(response => {                                            
                         response.data.Orders.forEach(order => {
                             try {
                             _self.log("Processing MAR Data for order " + order.Name) ;
@@ -696,11 +718,14 @@ export default {
                     this.launchModal.loading = false ;
 
                     console.log("final result of generate report call") ;
-                    
+                    this.loadingMessage = "" ;
                     _self.$bvModal.hide("launch-modal") ;                    
                 }) ;
 
             } catch (err) {
+                console.log(err) ;
+                this.loadingMessage = "System Error in processing request" ;
+                this.systemError = true ;
                 _self.log("Error in populateData Method :" + err) ;
             }                
         },
