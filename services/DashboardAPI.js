@@ -46,6 +46,15 @@ export default class DashboardAPI {
         })          
     }
 
+    newUsers(startdate, enddate, appId) {    
+        return this.axios({
+            method: 'get',
+            url: "/fhir-app/dashboard/api/v1/newusers?start_date=" + startdate + "&end_date=" + enddate + "&app_id=" + appId + "&pid=" + this.store.state.patientId + "&aid=" + this.APP_ID
+        }).then((response) => {            
+            return response.data.data ;
+        })          
+    }
+
     apps() {    
         return this.axios({
             method: 'get',

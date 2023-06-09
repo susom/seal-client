@@ -17,7 +17,7 @@
         <b-row align-content="center" class="ml-4 mr-2 rounded-lg">
             <b-col cols="11" class="text-center h5 pb-2 pt-2 bg-secondary rounded-lg">
                 Inpatient Time Period between {{startDateFormatted}} and {{endDateFormatted}}  
-                <b-button class="ml-4" size="sm" variant="primary" @click="$bvModal.show('launch-modal')">Modify Period</b-button>
+                <b-button class="ml-4" size="sm" variant="primary" @click="systemError=false; loadingMessage=''; $bvModal.show('launch-modal')">Modify Period</b-button>
                 <b-button style="float:right;" class="mr-2" size="sm" variant="primary" @click="openMMEPopup" v-b-toggle.sidebar-right>MME Conversion Factors</b-button>
             </b-col>
         </b-row>
@@ -513,8 +513,8 @@ export default {
         }
     },
     async fetch() {
-        this.log("In Fetch method of a3 pain tab page") ;        
-
+        this.log("In Fetch method of a3 pain tab page") ;
+        /* Commented cause ROAD is not enabled yet
         try {
             var response = await this.$services.seal.inpatientdate(this.$services.a3pain.APP_ID) ;                          
             this.log("Inpatient date :" + JSON.stringify(response)) ;
@@ -529,7 +529,8 @@ export default {
             this.systemError = true ;
             this.$bvModal.show("launch-modal") ;
             console.log("Error in fetch method :" + err) ;    
-        }            
+        } 
+        */
     },
     mounted () {
         this.log("In mounted method of the a3 pain tab page") ;    
@@ -699,14 +700,12 @@ export default {
                     }
                     } catch (err) {
                         this.resultText += "Error in merging medstat response for " + JSON.stringify(med) + "\n" ;
-                        this.resultText += err + "\n" ;
-                        this.systemError = true ;
+                        this.resultText += err + "\n" ;                        
                     }
                 });              
             }) ;
             } catch (err) {
-                this.resultText += "Error in merging medstat responses " + err + "\n" ;
-                this.systemError = true ;
+                this.resultText += "Error in merging medstat responses " + err + "\n" ;                
             }
 
             var wsjson = {} ;
@@ -905,6 +904,7 @@ export default {
                     }) ;
                     
                     if (pca_mars) {
+                        this.loadingMessage = "Processing PCA/PCEA data" ;
                         pca_mars.forEach(med => {
                             try {
                             var genericName = med.generic_name ;
@@ -931,8 +931,7 @@ export default {
                                 medColor = categories[catIdx].color ;
                             }
                             } catch (err) {
-                                this.resultText += "\n Error in PCA Mar outer loop " + err ;
-                                this.systemError = true ;
+                                this.resultText += "\n Error in PCA Mar outer loop " + err ;                                
                             }
                             med.data.forEach(point => {
                                 try {                            
@@ -949,8 +948,7 @@ export default {
                                         meds: [ {name: med.name, dose: point.dosage, unit: med.unit, mme: point.mme, route: pcaRoute } ] } ) ;
                                 }    
                                 } catch (err) {
-                                    this.resultText += " Error in PCA Mar inside point loop " + err ;
-                                    this.systemError = true ;
+                                    this.resultText += " Error in PCA Mar inside point loop " + err ;                                    
                                 }                        
                             }); 
                         }) ;
@@ -987,11 +985,11 @@ export default {
                     this.log("Before calling refreshMMEChart method....") ;
                     this.refreshMMEChart() ;
                     
-                    this.log("Before calling generateROADChart method...") ;
+                    // this.log("Before calling generateROADChart method...") ;
                     
-                    this.generateRoadChart() ;
+                    // this.generateRoadChart() ;
                     
-                    this.log("Done creating road chart") ;
+                    // this.log("Done creating road chart") ;
 
                     } catch (err) {
                         this.log("Error in no idea 1 :" + err) ;    
@@ -1005,7 +1003,7 @@ export default {
                     this.$services.a3pain.pain(_self.launchModal.rpt_start_date, _self.launchModal.rpt_end_date, _self.patient.epicPatientId)
                         .then(response => {
                             try {
-                                this.loadingMessage = "Processing Pain data" ;
+                                //this.loadingMessage = "Processing Pain data" ;
                             this.log("response from pain call " + response.length) ;
                             console.log(response) ;
                             
@@ -1030,7 +1028,7 @@ export default {
                                                         
                             } catch (err) {
                                 this.log("Error in pain handler code :" + err) ;
-                                this.systemError = true ;
+                                //this.systemError = true ;
                             }
                         }) ; 
                     

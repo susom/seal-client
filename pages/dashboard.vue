@@ -90,7 +90,7 @@
                                 Top 10 Users for last 30 days
                             </b-col>
                             <b-col>
-                                <b-select v-model="top10SelectedApp" @change="top10AppChanged" :options="apps" size="sm" required/>
+                                <b-select v-model="top10SelectedApp" @change="top10AppChanged" :options="appsWithAllApps" size="sm" required/>
                             </b-col>
                         </b-row>
                     </b-card-title>
@@ -98,6 +98,36 @@
                          <b-table striped :fields="top10Fields" :items="top10" small show-empty />
                     </b-card-text>
                 </b-card>
+            </b-col>
+            <b-col cols="5"> 
+                <b-card>
+                    <b-card-title>
+                        <b-row>
+                            <b-col cols="6">
+                                New Users Listing
+                            </b-col>
+                            <!--
+                            <b-col>
+                                <b-select v-model="newUserSelectedApp" @change="newUserAppChanged" :options="apps" size="sm" required/>
+                            </b-col>
+                            -->
+                        </b-row>
+                    </b-card-title>
+                    <b-card-text> 
+                        <b-row class="mb-2">
+                            <b-col style="text-align:left" cols="3">
+                                <editable-date-picker :required="true" v-model="newUsers.startdate" />
+                            </b-col>
+                            <b-col style="text-align:left" cols="3">                                
+                                <editable-date-picker :required="true" v-model="newUsers.enddate" />
+                            </b-col>
+                            <b-col style="text-align:left">                                
+                                <b-select v-model="newUsers.selectedApp" :options="appsWithSelectApp" size="sm" required/>
+                            </b-col>
+                        </b-row>                                               
+                         <b-table striped :fields="newUsers.fields" :items="newUsers.list" small show-empty />
+                    </b-card-text>
+                </b-card>                
             </b-col>
         </b-row>
         <b-row class="mt-3 ml-2 mb-3" v-if="$store.getters.sealTeam">
@@ -139,11 +169,22 @@ export default {
                 {key: 'prov_type', label: 'Provider Type', sortable: false},
                 {key: 'total_login', label: '# of logins', sortable: false, tdClass:'text-center'},
             ],
+            top10SelectedApp: -1,
+            newUsers: {
+                fields : [
+                    {key: 'user_id', label: 'ID', sortable: false},
+                    {key: 'full_name', label: 'Name', sortable: false},
+                    {key: 'prov_type', label: 'Provider Type', sortable: false}                
+                ],
+                list: [],
+                selectedApp: -1,
+                startdate: '',
+                enddate: ''
+            },
             showDebug: false,
             resultText: '',
             initApp: true,
-            apps: [],
-            top10SelectedApp: -1
+            apps: []            
         }
     },
     async fetch() {
@@ -159,7 +200,7 @@ export default {
             app.text = app.name ;
             return app ;
         });
-        this.apps.unshift({value: -1, text: "All Apps"}) ;
+        //this.apps.unshift({value: -1, text: "All Apps"}) ;
 
         console.log(this.apps) ;
         this.log("Got the list of apps... " + JSON.stringify(this.apps)) ;
@@ -178,9 +219,12 @@ export default {
         this.enddate = this.$moment().format("MM/DD/YYYY") ;
         this.groupBy = 'yyyy-mm' ;
 
-        this.log("In mounted method - before calling fetchchartdata") ;
-        
+        this.log("In mounted method - before calling fetchchartdata") ;        
         this.fetchChartData() ; 
+
+        this.newUsers.startdate = this.$moment().subtract(30, 'days').format("MM/DD/YYYY") ;
+        this.newUsers.enddate = this.$moment().format("MM/DD/YYYY") ;
+
 
     },
     watch: {
@@ -192,9 +236,27 @@ export default {
         enddate: function(newval) {
             if (!this.initApp)
                 this.fetchChartData() ;
-        }
+        },
+        'newUsers.startdate' : function(newval) {
+            if (!this.initApp)
+                this.fetchNewUsersData() ;
+        },
+        'newUsers.enddate' : function(newval) {
+            if (!this.initApp)
+                this.fetchNewUsersData() ;
+        },
+        'newUsers.selectedApp' : function(newval) {
+            if (!this.initApp)
+                this.fetchNewUsersData() ;
+        }        
     },
     computed : {
+        appsWithAllApps() {
+            return [{value: -1, text: "All Apps"}].concat(this.apps) ;
+        },
+        appsWithSelectApp() {
+            return [{value: -1, text: "Select an App"}].concat(this.apps) ;
+        },        
         chartOptions() {
             return {
                 chart: {
@@ -410,6 +472,10 @@ export default {
             this.appstats2 = await this.$services.dashboard.appstats2(this.startdate, this.enddate, this.groupBy) ;
             this.updateChartSeries2() ;
         },
+        async fetchNewUsersData() {
+            this.log("Inside fetchNewUsersData method..." + this.newUsers.startdate + " to " + this.newUsers.enddate + " appId: " + this.newUsers.selectedApp) ;
+            this.newUsers.list = await this.$services.dashboard.newUsers(this.newUsers.startdate, this.newUsers.enddate, this.newUsers.selectedApp) ;
+        },        
         async updateChartSeries2 () {
 
             this.log("Inside updateChartSeries2 Method") ;

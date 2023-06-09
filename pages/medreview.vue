@@ -18,7 +18,7 @@
         <b-row align-content="center">
             <b-col cols="10" class="text-center h5 pb-2">
                 Medications administered and laboratory results between {{startDateFormatted}} and {{endDateFormatted}}  
-                <b-button class="ml-4" size="sm" variant="primary" @click="$bvModal.show('launch-modal')">Modify Report</b-button>
+                <b-button class="ml-4" size="sm" variant="primary" @click="systemError=false; loadingMessage=''; $bvModal.show('launch-modal')">Modify Report</b-button>
             </b-col>
             <!--
             <b-col class="mt-2">
@@ -251,6 +251,8 @@
                     <b-button pill variant="primary" class="ml-3 mt-3" @click="generateCharts" :disabled="!launchModal.errors.start_date || !launchModal.errors.end_date">Fetch Patient Data</b-button>  
                 </b-col>
             </b-row> 
+            <StatusMessage :loadingMessage="loadingMessage" :systemError="systemError" />
+            <!--
             <b-row v-show="launchModal.loading">
                 <b-col cols="12"  class="text-center">
                     <b-button variant="info" disabled size="sm" class="mt-3" style="width:100%">
@@ -259,6 +261,7 @@
                     </b-button>
                 </b-col>
             </b-row> 
+            -->
         </b-modal>
         <b-modal id="medreview-help-modal" size="xl" centered hide-footer title="App Instructions and Helpful Tips" 
             body-bg-variant="dark">
@@ -309,12 +312,13 @@ import offlineExporting from 'highcharts/modules/offline-exporting' ;
 import exportData from 'highcharts/modules/export-data' ;
 import EditableDatePicker from '~/components/EditableDatePicker.vue';
 import OutsideMeds from '~/components/OutsideMeds.vue';
+import StatusMessage from '~/components/StatusMessage.vue';
 
 offlineExporting(Highcharts) ;
 exportData(Highcharts) ;
 
 export default {
-    components: { Splitpanes, Pane, MedReviewTable, EditableDatePicker, OutsideMeds },
+    components: { Splitpanes, Pane, MedReviewTable, EditableDatePicker, OutsideMeds, StatusMessage },
     data() {
         return {
             launchModal : {              
@@ -384,7 +388,8 @@ export default {
             debugLog:"",
             medChartOptions: {},
             combinedLabChartOpen: true,
-            combinedLabChartOptions: { }
+            combinedLabChartOptions: { },            
+            systemError: false
         }
     },
     watch : {
@@ -770,7 +775,8 @@ export default {
             this.debugLog = "Generating charts \n" ;
 
             this.launchModal.loading = true ;
-                         
+            this.systemError = false ;                         
+
             this.launchModal.rpt_start_date = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
             this.launchModal.rpt_end_date = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').format("YYYY-MM-DD") ;
 
@@ -812,20 +818,25 @@ export default {
                 tip += "<br>Time: " + Highcharts.dateFormat('%m/%d/%Y %I:%M %p', this.point.x) ;
                 return tip ;
             }
-            this.loadingMessage = "Medication Data" ;
+            this.loadingMessage = "Fetching Medication Data" ;
 
             var _self = this ;
 
             var responses = [] ;
             var response = {} ;
-
-            response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
-            //response = this.getLocalMedData() ;
-            responses.push(response) ;
-
-            while (response.nextUrl) {
-                response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.medreview.APP_ID) ;
+            try {
+                response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
+                //response = this.getLocalMedData() ;
                 responses.push(response) ;
+
+                while (response.nextUrl) {
+                    response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.medreview.APP_ID) ;
+                    responses.push(response) ;
+                }
+            } catch (err) {
+                this.systemError = true ;
+                this.debugLog += "Error in getting med data " + err + "\n" ;    
+                return ;
             }
 
             console.log("med orders done") ;
@@ -859,9 +870,16 @@ export default {
             }
             //this.medications = meds ;
 
-            this.loadingMessage = "Encounter Data" ;
-
-            var encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.medreview.APP_ID) ;
+            this.loadingMessage = "Fetching Encounter Data" ;
+            
+            var encounters = [] ;
+            try {
+                encounters = await this.$services.seal.encounters(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, '', this.$services.medreview.APP_ID) ;
+            } catch (err) {
+                this.systemError = true ;
+                this.debugLog += "Error in getting encounter data " + err + "\n" ;    
+                return ;
+            }
 
             console.log("encounters....") ;
             console.log(encounters) ;
@@ -897,9 +915,7 @@ export default {
             }) ;
 
             console.log("Final ws call json") ;
-            console.log(wsjson) ;
-
-            this.loadingMessage = "MAR Data" ;
+            console.log(wsjson) ;            
             
             this.debugLog += "before calling MAR data \n" ;
 
@@ -948,9 +964,12 @@ export default {
                 _self.debugLog += "Error in removing invalid data :" + err + "\n" ;
             }
 
+            this.loadingMessage = "Fetching MAR Data" ;
+
             this.$services.seal.mardata(wsjson, this.$services.medreview.APP_ID).then(responses => {
                 console.log("responses length " + responses.length) ;
                 this.debugLog += "Got MAR data responses " + responses.length + "\n" ;
+                this.loadingMessage = "Processing MAR Data" ;
 
                 responses.forEach(response => {                    
                     response.data.Orders.forEach(order => {
@@ -1011,12 +1030,14 @@ export default {
             }) ;
 
             this.debugLog += "Getting lab obs data \n" ;
+            this.loadingMessage = "Fetching Lab Data" ;
             this.labs.charts = await this.getObsData("laboratory") ;
             this.log(this.labs.charts.map(lab => lab.name)) ;            
             //this.labs.charts = this.getLocalLabsData().data ;
             console.log("Labs data : {}", this.labs) ;
 
             this.debugLog += "Getting vitals obs data \n" ;
+            this.loadingMessage = "Fetching Vitals Data" ;
             this.vitals.charts = await this.getObsData("vital-signs") ;
             console.log("Vitals data : {}", this.vitals) ;
             this.log(this.vitals.charts.map(lab => lab.name)) ;
@@ -1047,6 +1068,7 @@ export default {
             }) ;
             } catch (err) {
                 this.log("Error in getObsData for " + category + ": " + err) ;
+                this.systemError = true ;
             }
             return labs ;
         },
