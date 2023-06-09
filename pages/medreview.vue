@@ -423,7 +423,6 @@ export default {
         })
 
         this.patient = await this.$services.seal.patient(this.$services.medreview.APP_ID) ;
-        //this.patient = this.getLocalPatientData() ;
 
         console.log("got patient data") ;
         console.log(this.patient) ;
@@ -435,7 +434,6 @@ export default {
         this.launchModal.end_date = this.$moment().format("MM/DD/YYYY") ;
         console.log(this.launchModal) ;
         this.$bvModal.show("launch-modal") ;        
-        //this.combinedLabChartOptions = this.getLocalCombinedData() ;
     },
     computed : {
         startDateFormatted () {            
@@ -826,7 +824,6 @@ export default {
             var response = {} ;
             try {
                 response = await this.$services.seal.medicationData(this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
-                //response = this.getLocalMedData() ;
                 responses.push(response) ;
 
                 while (response.nextUrl) {
@@ -1033,7 +1030,6 @@ export default {
             this.loadingMessage = "Fetching Lab Data" ;
             this.labs.charts = await this.getObsData("laboratory") ;
             this.log(this.labs.charts.map(lab => lab.name)) ;            
-            //this.labs.charts = this.getLocalLabsData().data ;
             console.log("Labs data : {}", this.labs) ;
 
             this.debugLog += "Getting vitals obs data \n" ;
@@ -1045,30 +1041,31 @@ export default {
         },
         async getObsData(category) {
             try {
-            var responses = [] ;
-            var response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
-            responses.push(response) ;
-            while (response.nextUrl) {
-                response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.medreview.APP_ID) ;
+                var responses = [] ;
+                var response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", '', this.$services.medreview.APP_ID ) ;
                 responses.push(response) ;
-            }
-            
-            var labs = [] ;
-            this.debugLog += "Ajax calls done for " + category + " obs data \n" ;
+                while (response.nextUrl) {
+                    response = await this.$services.seal.obsData(category, this.launchModal.rpt_start_date, this.launchModal.rpt_end_date, "ALL", response.nextUrl, this.$services.medreview.APP_ID) ;
+                    responses.push(response) ;
+                }
+                
+                var labs = [] ;
+                this.debugLog += "Ajax calls done for " + category + " obs data \n" ;
 
-            responses.forEach(function(response) {
-                response.data.forEach(function(lab) {
-                    var labIdx = labs.findIndex(function(elem) { return elem.name == lab.name}) ;
-                    if (labIdx === -1) {
-                        lab.rendered = false ;
-                        lab.visible = false ;
-                        labs.push(lab) ;
-                    }
-                });
-            }) ;
+                responses.forEach(function(response) {
+                    response.data.forEach(function(lab) {
+                        var labIdx = labs.findIndex(function(elem) { return elem.name == lab.name}) ;
+                        if (labIdx === -1) {
+                            lab.rendered = false ;
+                            lab.visible = false ;
+                            labs.push(lab) ;
+                        }
+                    });
+                }) ;
             } catch (err) {
                 this.log("Error in getObsData for " + category + ": " + err) ;
                 this.systemError = true ;
+                this.$bvModal.show("launch-modal") ;
             }
             return labs ;
         },
@@ -1093,517 +1090,7 @@ export default {
             this.redrawMedChart() ;
         },
         merge(string1, string2) {
-            return this.$services.medreview.unique_merge(string1, string2) ;
-        },     
-        getLocalMedData() {
-            return {
-                "start_time": 1305097200000,
-                "end_time": 1305097200000,
-                "start_time_yyyymmdd": "2011-05-11",
-                "end_time_yyyymmdd": "2011-05-11",
-                "enc_pat_id": "e7uurjqx-qWSveUWOXHBkNQ3",
-                "syndrome": "ALL",
-                "cats": [
-                    {
-                        "name": "nicotine 21 mg/24hr td pt24",
-                        "data": [
-                            {
-                                "med_order_id": "889628",
-                                "x": 1228896000000,
-                                "x2": 1462950000000,
-                                "y": 0,
-                                "name": "nicotine 21 mg/24hr td pt24",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "DRESS",
-                        "med_order_ids": [
-                            "889628"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eSXWCxLKQS56lH9uth9o5wXSxnzY.6iKGpVCa0LWWcrHOuzaQta4gaQTRpO9EnvX03",
-                        "pcat": "Community",
-                        "routes": "Transdermal",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "12/10/2008",
-                        "first_used_long": 1228896000000,
-                        "rxCodes": [
-                            "7407",
-                            "198030"
-                        ],
-                        "ingredient": "nicotine"
-                    },
-                    {
-                        "name": "nicotine 7 mg/24hr td pt24",
-                        "data": [
-                            {
-                                "med_order_id": "889630",
-                                "x": 1228896000000,
-                                "x2": 1462950000000,
-                                "y": 1,
-                                "name": "nicotine 7 mg/24hr td pt24",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "DRESS",
-                        "med_order_ids": [
-                            "889630"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/ec2EdIz35pNyygTeozpkhw4RvZ71WEfy5CXCoSalg3zdglNu2yDJTbKhCO2d1AhKm3",
-                        "pcat": "Community",
-                        "routes": "Transdermal",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "12/10/2008",
-                        "first_used_long": 1228896000000,
-                        "rxCodes": [
-                            "7407",
-                            "198031"
-                        ],
-                        "ingredient": "nicotine"
-                    },
-                    {
-                        "name": "nicotine 14 mg/24hr td pt24",
-                        "data": [
-                            {
-                                "med_order_id": "889629",
-                                "x": 1228896000000,
-                                "x2": 1462950000000,
-                                "y": 2,
-                                "name": "nicotine 14 mg/24hr td pt24",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "DRESS",
-                        "med_order_ids": [
-                            "889629"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eBQbIRqmHguWneK5v8Og9E-4xSOYwWwD2hQqK3t9pZZ.MetK8Qb.7eXm.nmi5eamV3",
-                        "pcat": "Community",
-                        "routes": "Transdermal",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "12/10/2008",
-                        "first_used_long": 1228896000000,
-                        "rxCodes": [
-                            "7407",
-                            "198029"
-                        ],
-                        "ingredient": "nicotine"
-                    },
-                    {
-                        "name": "codeine-guaifenesin 10-100 mg/5ml po syrp",
-                        "data": [
-                            {
-                                "med_order_id": "889598",
-                                "x": 1282806000000,
-                                "x2": 1462950000000,
-                                "y": 3,
-                                "name": "codeine-guaifenesin 10-100 mg/5ml po syrp",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "DRESS,HIT",
-                        "med_order_ids": [
-                            "889598"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eFaEzG1KIkTzmJpqIINo7DDm0q3GB9d93nIX0fD9OhkV03KzOhejXiQkZVvIUr.8j3",
-                        "pcat": "Community",
-                        "routes": "Oral",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "08/26/2010",
-                        "first_used_long": 1282806000000,
-                        "rxCodes": [
-                            "2670",
-                            "5032",
-                            "214442",
-                            "995868"
-                        ],
-                        "ingredient": "codeine,guaifenesin"
-                    },
-                    {
-                        "name": "famotidine 20 mg po tabs",
-                        "data": [
-                            {
-                                "med_order_id": "889599",
-                                "x": 1266048000000,
-                                "x2": 1462950000000,
-                                "y": 4,
-                                "name": "famotidine 20 mg po tabs",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "",
-                        "med_order_ids": [
-                            "889599"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/e4a358bdlVtjl8Jqsf3-8u-DpWQVe6lF9iRbDkfc3qzqImMfALFq9SgOUzo89R5L43",
-                        "pcat": "Community",
-                        "routes": "Oral",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "02/13/2010",
-                        "first_used_long": 1266048000000,
-                        "rxCodes": [
-                            "4278",
-                            "310273"
-                        ],
-                        "thera_class": "GASTROINTESTINAL",
-                        "pharma_class": "HISTAMINE H2-RECEPTOR INHIBITORS",
-                        "ingredient": "famotidine"
-                    },
-                    {
-                        "name": "acetaminophen-codeine 300-30 mg po tabs",
-                        "data": [
-                            {
-                                "med_order_id": "889616",
-                                "x": 1242802800000,
-                                "x2": 1462950000000,
-                                "y": 5,
-                                "name": "acetaminophen-codeine 300-30 mg po tabs",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "",
-                        "med_order_ids": [
-                            "889616"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/ebYiUvEmAflK.4LtZVebjlqtNv79DLP0Qug.KhlrlyOho1czxYM9UItdVVQfRlkej3",
-                        "pcat": "Community",
-                        "routes": "Oral",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "05/20/2009",
-                        "first_used_long": 1242802800000,
-                        "rxCodes": [
-                            "161",
-                            "2670",
-                            "817579",
-                            "993781"
-                        ],
-                        "thera_class": "ANALGESICS",
-                        "pharma_class": "OPIOID ANALGESIC AND NON-SALICYLATE ANALGESICS",
-                        "ingredient": "acetaminophen,codeine"
-                    },
-                    {
-                        "name": "levothyroxine sodium 100 mcg po tabs",
-                        "data": [
-                            {
-                                "med_order_id": "889600",
-                                "x": 1266048000000,
-                                "x2": 1462950000000,
-                                "y": 6,
-                                "name": "levothyroxine sodium 100 mcg po tabs",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "",
-                        "med_order_ids": [
-                            "889600"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eA9IZM.lvQVOXTDPYrt97mqyOk-nP.8P-1WyJLwV2PDApPnmXtYuOAwtCA2vBEcqM3",
-                        "pcat": "Community",
-                        "routes": "Oral",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "02/13/2010",
-                        "first_used_long": 1266048000000,
-                        "rxCodes": [
-                            "10582",
-                            "40144",
-                            "892246",
-                            "1372638"
-                        ],
-                        "ingredient": "levothyroxine"
-                    },
-                    {
-                        "name": "diltiazem hcl er coated beads 240 mg po cp24",
-                        "data": [
-                            {
-                                "med_order_id": "889601",
-                                "x": 1266048000000,
-                                "x2": 1462950000000,
-                                "y": 7,
-                                "name": "diltiazem hcl er coated beads 240 mg po cp24",
-                                "color": "lightgreen",
-                                "pcat": "Community"
-                            }
-                        ],
-                        "syndromes": "",
-                        "med_order_ids": [
-                            "889601"
-                        ],
-                        "medId": "https://apporchard.epic.com/interconnect-aocurprd-oauth/api/FHIR/STU3/Medication/eAMyTcggmIulnQ2tTBjDzeBvrUMvvs73LjpnaBVzXDkTlUN-avGintCN5sX-Od95I3",
-                        "pcat": "Community",
-                        "routes": "Oral",
-                        "last_used": "05/11/2016",
-                        "last_used_long": 1462950000000,
-                        "first_used": "02/13/2010",
-                        "first_used_long": 1266048000000,
-                        "rxCodes": [
-                            "3443",
-                            "203211",
-                            "830837"
-                        ],
-                        "ingredient": "diltiazem"
-                    }
-                ],
-                "name": "Medications",
-                "id": "medications"
-            } ;
-        },
-        getLocalEncData() {
-            return {
-                "data": [
-                    {
-                        "start": 1384615500000,
-                        "end": 1384616400000,
-                        "pat_enc_csn_id": "11589"
-                    },
-                    {
-                        "start": 1379697900000,
-                        "end": 1379698800000,
-                        "pat_enc_csn_id": "11590"
-                    },
-                    {
-                        "start": 1309868682000,
-                        "end": 1400359878000,
-                        "pat_enc_csn_id": "11592"
-                    }
-                ]
-            }
-        },
-        getLocalLabsData() {
-            return {
-                "data": [
-                    {
-                        "id": "Lcharthematocrit",
-                        "name": "Hematocrit",
-                        "syndromes": ""
-                    },
-                    {
-                        "id": "Lcharthemoglobin",
-                        "name": "Hemoglobin",
-                        "syndromes": "ITP"
-                    }
-                ]
-            }
-        },
-        getLocalVitalsData() {
-            return {
-                "data": [
-                    {
-                        "id": "Vchartbp",
-                        "name": "BP",
-                        "syndromes": ""
-                    },
-                    {
-                        "id": "Vchartheight",
-                        "name": "Height",
-                        "syndromes": ""
-                    },
-                    {
-                        "id": "Vchartpulse",
-                        "name": "Pulse",
-                        "syndromes": ""
-                    },
-                    {
-                        "id": "Vchartresp",
-                        "name": "Resp",
-                        "syndromes": ""
-                    },
-                    {
-                        "id": "Vchartspo",
-                        "name": "SpO2",
-                        "syndromes": ""
-                    },
-                    {
-                        "id": "Vcharttemp",
-                        "name": "Temp",
-                        "syndromes": ""
-                    },
-                    {
-                        "id": "Vchartweight",
-                        "name": "Weight",
-                        "syndromes": ""
-                    }
-                ]
-            }
-        },
-        getLocalCombinedData() {
-            var co =    {
-                    "chart": {
-                        "marginLeft": 100,
-                        "zoomType": "x",
-                        "displayErrors": true,
-                        "height": 500
-                    },
-                    "exporting": {
-                        "libURL": "https://www.noidea.com",
-                        "buttons": {
-                            "contextButton": {
-                                "menuItems": [
-                                    {
-                                        "text": "Print Chart"
-                                    }
-                                ]
-                            }
-                        },
-                        "fallbackToExportServer": false
-                    },
-                    "title": {
-                        "text": "Lab Results",
-                        "align": "center"
-                    },
-                    "credits": {
-                        "enabled": false
-                    },
-                    "legend": {
-                        "enabled": true
-                    },
-                    "xAxis": {
-                        "crosshair": true,
-                        "events": {},
-                        "type": "datetime",
-                        "min": 1202457600000,
-                        "max": 1644912000000
-                    },
-                    "yAxis": [
-                        {
-                            "title": {
-                                "text": null
-                            }
-                        }
-                    ],
-                    "tooltip": {
-                        "shadow": false,
-                        "valueDecimals": 2
-                    },
-                    "plotOptions": {
-                        "series": {
-                            "dataLabels": {
-                                "enabled": false,
-                                "crop": false,
-                                "overflow": "none",
-                                "align": "left",
-                                "verticalAlign": "middle"
-                            }
-                        }
-                    },
-                    "series": [
-                        {
-                            "type": "line",
-                            "fillOpacity": 0.3,
-                            "xDateFormat": "%m/%d/%Y",
-                            "tooltip": {
-                                "shared": true
-                            },
-                            "data": [
-                                {
-                                    "x": 1309869900000,
-                                    "y": 30.77,
-                                    "unit": "fL"
-                                }
-                            ],
-                            "turboThrehold": 0,
-                            "name": "MCV"
-                        }
-                    ]
-                } ;
-            return co ;
-        },
-        getLocalPatientData() {
-            return {
-                "firstName": "Casey C",
-                "lastName": "Willow",
-                "fullName": "Casey C Willow",
-                "gender": "Male",
-                "birthDate": "1950-10-30",
-                "street": "134 Elm Street",
-                "city": "Madison",
-                "stateCode": "WI",
-                "postalCode": "53706",
-                "countryCode": "US",
-                "epicPatientId": "Z5089",
-                "mrn": "203139",
-                "cmeds": [
-                    {
-                        "seal_medication_id": 2,
-                        "med_name": "srini: test med",
-                        "syndromes": "",
-                        "med_periods": [
-                            {
-                                "ptype": "Inpatient",
-                                "end_date": "07/06/2021",
-                                "start_date": "07/14/2021"
-                            }
-                        ],
-                        "med_note": "sajkhjkashdkaj\nlkhklhkhkhkj",
-                        "created_by_name": "User, SHC",
-                        "updated_by_name": "User, SHC",
-                        "created_dttm_str": "07/02/2021 03:46:27 PM",
-                        "updated_dttm_str": "07/02/2021 04:24:28 PM"
-                    }
-                ],
-                "seal_conditions": [
-                    {
-                        "seal_condition_id": 8,
-                        "conditions": "Essential hypertension",
-                        "condition_date_long": 1225263600000,
-                        "condition_date_str": "10/29/2008",
-                        "risk_category": "Hypertension History",
-                        "condition_source": "EPIC",
-                        "notes": "",
-                        "status_code": "A",
-                        "created_by": "SHC",
-                        "updated_by": "SHC",
-                        "created_by_name": "User, SHC",
-                        "updated_by_name": "User, SHC",
-                        "created_dttm_str": "08/11/2021 09:48:50 AM",
-                        "updated_dttm_str": "09/03/2021 03:04:00 PM"
-                    },
-                    {
-                        "seal_condition_id": 2,
-                        "conditions": "Heart Patient\nHas problems",
-                        "condition_date_long": 1628578800000,
-                        "condition_date_str": "08/10/2021",
-                        "risk_category": "Hypertension History",
-                        "condition_source": "USER",
-                        "notes": "",
-                        "status_code": "A",
-                        "created_by": "SHC",
-                        "updated_by": "SHC",
-                        "created_by_name": "User, SHC",
-                        "updated_by_name": "User, SHC",
-                        "created_dttm_str": "08/10/2021 05:55:18 PM",
-                        "updated_dttm_str": "09/03/2021 03:08:04 PM"
-                    },
-                    {
-                        "seal_condition_id": 4,
-                        "conditions": "Family History of Diabetes\nSugar Sugar and Sugar",
-                        "condition_date_long": 1623135600000,
-                        "condition_date_str": "06/08/2021",
-                        "risk_category": "Diabetes History",
-                        "condition_source": "USER",
-                        "notes": "",
-                        "status_code": "A",
-                        "created_by": "SHC",
-                        "updated_by": "SHC",
-                        "created_by_name": "User, SHC",
-                        "updated_by_name": "User, SHC",
-                        "created_dttm_str": "08/10/2021 06:51:29 PM",
-                        "updated_dttm_str": "09/03/2021 03:08:49 PM"
-                    }
-                ]
-            }
+            return this.$services.medreview.unique_merge(string1, string2) ;        
         }
     },
     head() {

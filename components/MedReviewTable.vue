@@ -12,7 +12,7 @@
                 <b-icon icon="file-excel" @click="labs.search=''"></b-icon>
             </b-input-group-append>                                            
             -->
-        </b-input-group>
+        </b-input-group>        
         <b-table striped :items="labs.charts" :fields="labs.fields"
             small :busy="labs.loading"
             selectable
@@ -55,9 +55,7 @@ export default {
             toggleAllLabs: false,
             totalPoints: 0,
             mandatory: true,
-            minusOne: -1,
-            rpt_start_date_long: 0,
-            rpt_end_date_long: 0
+            minusOne: -1
         }
     },
     mounted () {
@@ -78,16 +76,15 @@ export default {
                 lab.selected = !val ;
                 this.onLabRowClick(lab) ;
             }) ;
-        },
-        launchModal: function(val) {
-            console.log("In watch for launchmodal {}", val) ;
-            this.rpt_start_date_long = val.rpt_start_date_long ;
-            this.rpt_end_date_long = val.rpt_end_date_long ;
         }       
     },
     methods : {
         async onLabRowClick(item) {
             console.log("Row is cliked on {}", item) ;
+            console.log("Launch Modal :" + JSON.stringify(this.launchModal)) ;
+
+            var rpt_start_date_long = this.$moment(this.launchModal.start_date, 'MM/DD/YYYY').toDate().getTime() ;
+            var rpt_end_date_long = this.$moment(this.launchModal.end_date, 'MM/DD/YYYY').toDate().getTime() ;
 
             this.$set(item, 'selected', !item.selected) ;
             item.visible  = !item.visible ;            
@@ -99,8 +96,8 @@ export default {
                     return ;
                 }
                 var chartOptions = this.$services.medreview.getDefaultChartConfig(chartdata.data[0]) ;
-                chartOptions.xAxis.min = this.rpt_start_date_long ;
-                chartOptions.xAxis.max = this.rpt_end_date_long ;
+                chartOptions.xAxis.min = rpt_start_date_long ;
+                chartOptions.xAxis.max = rpt_end_date_long ;
                 chartOptions.series[0].type = "line" ;
                 chartOptions.chart.height = 300 ;
                 //console.log("chartoptions before setting the plotlines,.....") ;
