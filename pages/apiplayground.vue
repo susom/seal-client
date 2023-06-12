@@ -177,13 +177,13 @@ export default {
         }
     },
     async fetch() {
-
+        var APP_ID = 1 ;
         console.log("In mounted method of the api playground page") ;        
-        this.$store.commit('setAppId', 1) ;
-        this.$services.a3pain.dblog("APIHome", "In API Playground Home Page") ;
+        this.$store.commit('setAppId', APP_ID) ;
+        this.$services.seal.dblog("APIHome", "In API Playground Home Page", APP_ID) ;
         this.$store.commit('setPageTitle', "SEAL Explore APIs") ;
 
-        this.patient = await this.$services.a3pain.patient() ;
+        this.patient = await this.$services.seal.patient(1) ;
     },
     mounted() {
         try {
