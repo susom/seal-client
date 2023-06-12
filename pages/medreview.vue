@@ -785,6 +785,9 @@ export default {
             this.$set(this.launchModal, 'rpt_end_date_long', rpt_end_date_long) ;
 
             await this.$services.medreview.resetSession() ;
+            // reset labs & vitals
+            this.labs.charts = [] ;
+            this.vitals.charts = [] ;
 
             this.combinedLabChartOptions = this.$services.medreview.getDefaultChartConfig({ 
                 height: 500, title: '', 
