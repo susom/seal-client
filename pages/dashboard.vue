@@ -191,7 +191,7 @@ export default {
 
         console.log("In mounted method of the dashboard tab page") ;        
         this.$store.commit('setAppId', 5) ;
-        this.$services.a3pain.dblog("DashboardHome", "In Dashboard Home Page") ;
+        this.$services.dashboard.dblog("DashboardHome", "In Dashboard Home Page") ;
         this.$store.commit('setPageTitle', "SEAL Dashboard") ;        
 
         this.apps = await this.$services.dashboard.apps() ;
