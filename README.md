@@ -1,4 +1,6 @@
-# seal-client
+
+# This repository is no longer used. Please refer to [sealonfhir](https://github.com/susom/sealonfhir) repository for latest work on SEAL.
+
 
 ## Build Setup
 
